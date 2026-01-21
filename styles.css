@@ -36,6 +36,19 @@ a { color: inherit; text-decoration: none }
 
 .container { max-width: var(--max); margin: 0 auto; padding: 0 18px }
 
+/* Logo Banner */
+.logo-banner {
+  background: var(--napa-blue);
+  padding: 20px 0;
+  text-align: center;
+}
+
+.header-logo {
+  max-width: 320px;
+  height: auto;
+  display: inline-block;
+}
+
 /* Header */
 .site-header {
   position: sticky;
