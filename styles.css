@@ -283,6 +283,16 @@ h2 {
 
 .small { font-size: 13px; color: var(--stainless-gray) }
 
+/* Legal pages */
+.legal-content { max-width: 800px }
+.legal-content h2 { font-size: 18px; margin-top: 28px }
+.legal-content p { color: var(--stainless-gray); margin: 10px 0 }
+.legal-content ul.bullets { color: var(--stainless-gray); margin: 10px 0 10px 24px }
+
+/* Footer links */
+.footer a { color: var(--stainless-gray) }
+.footer a:hover { color: var(--white); text-decoration: underline }
+
 /* Responsive */
 @media (max-width: 900px) {
   .hero-inner, .split { grid-template-columns: 1fr }
