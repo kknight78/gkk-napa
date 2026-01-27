@@ -192,21 +192,46 @@ export default {
 
       if (shouldNotify && env.RESEND_API_KEY && env.FROM_EMAIL && env.NOTIFY_EMAILS) {
         try {
+          // Extract amount fields from metadata
+          const invoiceAmountCents = parseInt(obj.metadata?.invoice_amount_cents || "0", 10);
+          const convenienceFeeCents = parseInt(obj.metadata?.convenience_fee_cents || "0", 10);
+          const finalAmountCents = parseInt(obj.metadata?.final_amount_cents || "0", 10);
+
+          const invoiceAmountUsd = (invoiceAmountCents / 100).toFixed(2);
+          const convenienceFeeUsd = (convenienceFeeCents / 100).toFixed(2);
+          const finalAmountUsd = (finalAmountCents / 100).toFixed(2);
+
+          // Estimate Stripe fees (2.9% + $0.30 for card, 0.8% capped at $5 for ACH)
+          let estimatedStripeFee = "N/A";
+          let estimatedNetDeposit = "N/A";
+          if (finalAmountCents > 0) {
+            let stripeFeeAmount;
+            if (payMethod === "card") {
+              stripeFeeAmount = Math.round(finalAmountCents * 0.029 + 30);
+            } else if (payMethod === "ach") {
+              stripeFeeAmount = Math.min(Math.round(finalAmountCents * 0.008), 500); // 0.8% capped at $5
+            }
+            if (stripeFeeAmount) {
+              estimatedStripeFee = `$${(stripeFeeAmount / 100).toFixed(2)}`;
+              estimatedNetDeposit = `$${((finalAmountCents - stripeFeeAmount) / 100).toFixed(2)}`;
+            }
+          }
+
           // Build email subject and body
           let subject, statusEmoji, statusText;
 
           if (type === "checkout.session.completed") {
             statusEmoji = "✅";
             statusText = "Payment Received";
-            subject = `${statusEmoji} Payment Received - ${store} - $${amountTotal}`;
+            subject = `${statusEmoji} Credit $${invoiceAmountUsd} - ${invoiceRef} - ${store}`;
           } else if (type === "checkout.session.async_payment_succeeded") {
             statusEmoji = "✅";
             statusText = "ACH Payment Cleared";
-            subject = `${statusEmoji} ACH Cleared - ${store} - $${amountTotal}`;
+            subject = `${statusEmoji} ACH Cleared - Credit $${invoiceAmountUsd} - ${invoiceRef} - ${store}`;
           } else if (type === "checkout.session.async_payment_failed") {
             statusEmoji = "❌";
             statusText = "ACH Payment Failed";
-            subject = `${statusEmoji} ACH FAILED - ${store} - $${amountTotal}`;
+            subject = `${statusEmoji} ACH FAILED - ${invoiceRef} - ${store} - DO NOT CREDIT`;
           }
 
           // Stripe dashboard link (use payment intent if available, else session)
@@ -215,18 +240,42 @@ export default {
             ? `https://dashboard.stripe.com/payments/${paymentIntentId}`
             : `https://dashboard.stripe.com/checkout/sessions/${sessionId}`;
 
+          // Build payment breakdown section
+          let paymentBreakdown;
+          if (payMethod === "card" && convenienceFeeCents > 0) {
+            paymentBreakdown = `
+PAYMENT BREAKDOWN
+─────────────────────────────
+Invoice Amount (credit to customer):  $${invoiceAmountUsd}
+Convenience Fee (card surcharge):     $${convenienceFeeUsd}
+─────────────────────────────
+Total Charged to Customer:            $${finalAmountUsd}
+
+Estimated Stripe Processing Fee:      ${estimatedStripeFee}
+Estimated Net Deposit to You:         ${estimatedNetDeposit}`;
+          } else {
+            paymentBreakdown = `
+PAYMENT BREAKDOWN
+─────────────────────────────
+Invoice Amount (credit to customer):  $${invoiceAmountUsd}
+Total Charged to Customer:            $${finalAmountUsd}
+
+Estimated Stripe Processing Fee:      ${estimatedStripeFee}
+Estimated Net Deposit to You:         ${estimatedNetDeposit}`;
+          }
+
           const text = `
 ${statusText}
 
 Store: ${store || "N/A"}
 Invoice/Ref: ${invoiceRef || "N/A"}
-Amount: $${amountTotal || "0.00"} USD
 Method: ${payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A"}
-Status: ${paymentStatus || "N/A"}
+${paymentBreakdown}
 
-Customer Contact:
-  Email: ${payerEmail || "Not provided"}
-  Phone: ${payerPhone || "Not provided"}
+CUSTOMER CONTACT
+─────────────────────────────
+Email: ${payerEmail || "Not provided"}
+Phone: ${payerPhone || "Not provided"}
 
 View in Stripe Dashboard:
 ${stripeLink}
@@ -439,6 +488,9 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       invoice_ref,
       store,
       pay_method,
+      invoice_amount_cents: amountCents.toString(),
+      convenience_fee_cents: convenienceFeeCents.toString(),
+      final_amount_cents: finalAmountCents.toString(),
     };
     if (email) sessionParams.metadata.payer_email = email;
     if (phone) sessionParams.metadata.payer_phone = phone;
