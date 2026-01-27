@@ -5,19 +5,156 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Payment Canceled | GK&K NAPA Stores</title>
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#06115a;color:#fff}
-    .wrap{max-width:900px;margin:0 auto;padding:26px 18px}
-    h1{text-transform:uppercase;letter-spacing:.4px}
-    a{color:#FFC836}
-    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px}
+    :root {
+      --napa-blue: #0A0094;
+      --napa-yellow: #FFC836;
+      --stainless: #DADAD9;
+      --gunmetal: #878786;
+      --bg: #06115a;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+    }
+    .wrap { max-width: 600px; margin: 0 auto; padding: 26px 18px; }
+    h1 {
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card p { margin: 8px 0; color: rgba(255,255,255,.9); }
+    .reassurance {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      font-size: 14px;
+      color: rgba(255,255,255,.8);
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--napa-yellow);
+      color: #111;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      color: var(--white);
+    }
+    .btn:hover { opacity: 0.9; }
+    .help-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+    .help-section h3 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: rgba(255,255,255,.7);
+    }
+    .store-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 500px) {
+      .store-list { grid-template-columns: 1fr; }
+    }
+    .store-item {
+      background: rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .store-item strong {
+      display: block;
+      color: var(--napa-yellow);
+      margin-bottom: 4px;
+    }
+    .store-item a {
+      color: var(--white);
+      text-decoration: none;
+    }
+    .store-item a:hover { text-decoration: underline; }
+    a { color: var(--napa-yellow); }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="icon">↩️</div>
     <h1>Payment canceled</h1>
+
     <div class="card">
-      <p>No payment was processed.</p>
-      <p><a href="/pay">Try again</a> or <a href="/">go back home</a>.</p>
+      <p><strong>No payment was processed.</strong></p>
+      <p>Your card or bank account was not charged. You can try again whenever you're ready.</p>
+
+      <div class="reassurance">
+        💡 <strong>Common reasons to cancel:</strong> wrong amount, need to double-check invoice number, or just changed your mind. No problem!
+      </div>
+
+      <div class="buttons">
+        <a class="btn btn-primary" href="/pay">Try Again</a>
+        <a class="btn btn-secondary" href="/">Back to Home</a>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>Need help? Call your store:</h3>
+      <div class="store-list">
+        <div class="store-item">
+          <strong>NAPA Danville</strong>
+          <a href="tel:+12174469067">(217) 446-9067</a>
+        </div>
+        <div class="store-item">
+          <strong>NAPA Cayuga</strong>
+          <a href="tel:+17654871324">(765) 487-1324</a>
+        </div>
+        <div class="store-item">
+          <strong>NAPA Rockville</strong>
+          <a href="tel:+17655692011">(765) 569-2011</a>
+        </div>
+        <div class="store-item">
+          <strong>NAPA Covington</strong>
+          <a href="tel:+17657932258">(765) 793-2258</a>
+        </div>
+      </div>
     </div>
   </div>
 </body>
