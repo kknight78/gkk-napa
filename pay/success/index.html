@@ -5,21 +5,227 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Payment Submitted | GK&K NAPA Stores</title>
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#06115a;color:#fff}
-    .wrap{max-width:900px;margin:0 auto;padding:26px 18px}
-    h1{text-transform:uppercase;letter-spacing:.4px}
-    a{color:#FFC836}
-    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px}
+    :root {
+      --napa-blue: #0A0094;
+      --napa-yellow: #FFC836;
+      --stainless: #DADAD9;
+      --gunmetal: #878786;
+      --bg: #06115a;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+    }
+    .wrap { max-width: 700px; margin: 0 auto; padding: 26px 18px; }
+    h1 {
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+    .success-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card p { margin: 8px 0; color: rgba(255,255,255,.9); }
+    .method-note {
+      background: rgba(255,200,54,.1);
+      border: 1px solid rgba(255,200,54,.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    .method-note.ach {
+      background: rgba(255,200,54,.15);
+    }
+    .email-note {
+      font-size: 13px;
+      color: rgba(255,255,255,.7);
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+    .store-card {
+      background: rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .store-card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--napa-yellow);
+    }
+    .store-card .address {
+      color: rgba(255,255,255,.85);
+      font-size: 14px;
+      margin: 0 0 4px;
+    }
+    .store-card .phone {
+      color: var(--white);
+      font-size: 18px;
+      font-weight: 700;
+      margin: 8px 0;
+    }
+    .store-card .hours {
+      font-size: 13px;
+      color: rgba(255,255,255,.7);
+      margin-top: 8px;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--napa-yellow);
+      color: #111;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      color: var(--white);
+    }
+    .btn:hover { opacity: 0.9; }
+    .footer-note {
+      margin-top: 20px;
+      font-size: 13px;
+      color: rgba(255,255,255,.6);
+      text-align: center;
+    }
+    a { color: var(--napa-yellow); }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Payment submitted</h1>
+    <div class="success-icon">✅</div>
+    <h1>Payment submitted — thank you!</h1>
+
     <div class="card">
-      <p>Thanks — your payment was submitted through Stripe Checkout.</p>
-      <p>If you have questions, contact your local store.</p>
-      <p><a href="/">Back to home</a></p>
+      <p>Your payment request was sent securely through Stripe Checkout.</p>
+
+      <div class="method-note" id="methodNote">
+        <!-- Filled by JS based on payment method -->
+      </div>
+
+      <div class="email-note">
+        <strong>Receipt/confirmation email:</strong> If you entered an email during checkout, Stripe will send a confirmation to that address.
+      </div>
     </div>
+
+    <div class="store-card" id="storeCard">
+      <h3 id="storeName">Your Store</h3>
+      <p class="address" id="storeAddress"></p>
+      <p class="phone" id="storePhone"></p>
+      <div class="hours" id="storeHours"></div>
+      <div class="buttons">
+        <a class="btn btn-primary" id="callBtn" href="#">📞 Call Store</a>
+        <a class="btn btn-secondary" id="directionsBtn" href="#" target="_blank" rel="noopener">📍 Get Directions</a>
+      </div>
+    </div>
+
+    <div class="buttons" style="margin-top: 20px;">
+      <a class="btn btn-secondary" href="/">← Back to Home</a>
+    </div>
+
+    <p class="footer-note">
+      If you have any questions, call us and reference your Invoice/Reference #.
+    </p>
   </div>
+
+  <script>
+    // Store data
+    const stores = {
+      "NAPA Danville": {
+        name: "NAPA Danville",
+        address: "303 N Gilbert St, Danville, IL 61832",
+        phone: "(217) 446-9067",
+        phoneRaw: "+12174469067",
+        hours: "Mon–Fri: 7:00 AM – 5:30 PM | Sat: 8:00 AM – 5:00 PM | Sun: 10:00 AM – 4:00 PM",
+        mapsQuery: "303%20N%20Gilbert%20St%2C%20Danville%2C%20IL%2061832"
+      },
+      "NAPA Cayuga": {
+        name: "NAPA Cayuga",
+        address: "307 N Logan St, Cayuga, IN 47928",
+        phone: "(765) 487-1324",
+        phoneRaw: "+17654871324",
+        hours: "Mon–Fri: 7:30 AM – 5:30 PM | Sat: 7:30 AM – 1:00 PM | Sun: Closed",
+        mapsQuery: "307%20N%20Logan%20St%2C%20Cayuga%2C%20IN%2047928"
+      },
+      "NAPA Rockville": {
+        name: "NAPA Rockville",
+        address: "115 S Lincoln Rd, Rockville, IN 47872",
+        phone: "(765) 569-2011",
+        phoneRaw: "+17655692011",
+        hours: "Mon–Fri: 7:30 AM – 5:30 PM | Sat: 8:00 AM – 2:00 PM | Sun: Closed",
+        mapsQuery: "115%20S%20Lincoln%20Rd%2C%20Rockville%2C%20IN%2047872"
+      },
+      "NAPA Covington": {
+        name: "NAPA Covington",
+        address: "205 4th St, Covington, IN 47932",
+        phone: "(765) 793-2258",
+        phoneRaw: "+17657932258",
+        hours: "Mon–Fri: 7:00 AM – 5:00 PM | Sat: 8:00 AM – 12:00 PM | Sun: Closed",
+        mapsQuery: "205%204th%20St%2C%20Covington%2C%20IN%2047932"
+      }
+    };
+
+    // Parse query params
+    const params = new URLSearchParams(window.location.search);
+    const storeName = params.get("store") || "NAPA Danville";
+    const method = params.get("method") || "card";
+
+    // Set method-specific message
+    const methodNote = document.getElementById("methodNote");
+    if (method === "ach") {
+      methodNote.classList.add("ach");
+      methodNote.innerHTML = `
+        <strong>⏳ Bank (ACH) payments can take 3–5 business days to clear.</strong><br>
+        Your invoice will be credited once the bank confirms the transfer. We'll notify you when it clears.
+      `;
+    } else {
+      methodNote.innerHTML = `
+        <strong>✓ Card payments are typically confirmed immediately.</strong><br>
+        Your invoice should be credited shortly.
+      `;
+    }
+
+    // Set store info
+    const store = stores[storeName] || stores["NAPA Danville"];
+    document.getElementById("storeName").textContent = store.name;
+    document.getElementById("storeAddress").textContent = store.address;
+    document.getElementById("storePhone").textContent = store.phone;
+    document.getElementById("storeHours").textContent = store.hours;
+    document.getElementById("callBtn").href = `tel:${store.phoneRaw}`;
+    document.getElementById("directionsBtn").href = `https://www.google.com/maps/search/?api=1&query=${store.mapsQuery}`;
+  </script>
 </body>
 </html>

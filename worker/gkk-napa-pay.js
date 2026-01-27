@@ -366,7 +366,7 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
           pay_method,
         },
       },
-      success_url: env.SUCCESS_URL || 'https://gkk-napa.com/pay/success',
+      success_url: `${env.SUCCESS_URL || 'https://gkk-napa.com/pay/success'}?store=${encodeURIComponent(store)}&method=${encodeURIComponent(pay_method)}`,
       cancel_url: env.CANCEL_URL || 'https://gkk-napa.com/pay/cancel',
     };
 
