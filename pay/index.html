@@ -126,8 +126,8 @@
 
         <div>
           <label for="amount">Amount (USD)</label>
-          <input id="amount" type="number" min="1" step="0.01" placeholder="e.g., 125.50" />
-          <div class="hint">Minimum $1.00</div>
+          <input id="amount" type="number" min="1" max="10000" step="0.01" placeholder="e.g., 125.50" />
+          <div class="hint">$1.00 – $10,000 max</div>
         </div>
       </div>
 
@@ -274,7 +274,9 @@
       const po_number = poNumberEl.value.trim();
 
       if (!invoice_ref) return showError("Please enter an invoice/reference number.");
+      if (invoice_ref.length > 100) return showError("Invoice/Reference is too long (max 100 characters).");
       if (amount === null || amount < 1) return showError("Please enter a valid amount (minimum $1.00).");
+      if (amount > 10000) return showError("Maximum payment is $10,000. For larger amounts, please contact your store.");
       if (!email && !phone) return showError("Please provide an email or phone number for confirmation.");
 
       setLoading(true);

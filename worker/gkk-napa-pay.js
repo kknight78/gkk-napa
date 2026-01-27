@@ -312,11 +312,69 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       );
     }
 
-    // Parse amount
-    const amountCents = Math.round(parseFloat(amount_usd) * 100);
-    if (isNaN(amountCents) || amountCents <= 0) {
+    // Validate store is one of the 4 valid options
+    const VALID_STORES = ['NAPA Danville', 'NAPA Cayuga', 'NAPA Rockville', 'NAPA Covington'];
+    if (!VALID_STORES.includes(store)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid amount' }),
+        JSON.stringify({ error: 'Invalid store selection' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse and validate amount ($1 min, $10,000 max)
+    const amountCents = Math.round(parseFloat(amount_usd) * 100);
+    const MIN_AMOUNT_CENTS = 100;      // $1.00
+    const MAX_AMOUNT_CENTS = 1000000;  // $10,000.00
+    if (isNaN(amountCents) || amountCents < MIN_AMOUNT_CENTS) {
+      return new Response(
+        JSON.stringify({ error: 'Minimum payment amount is $1.00' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (amountCents > MAX_AMOUNT_CENTS) {
+      return new Response(
+        JSON.stringify({ error: 'Maximum payment amount is $10,000. For larger payments, please contact your store.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate invoice_ref (1-100 chars, alphanumeric + common punctuation)
+    const SAFE_TEXT_REGEX = /^[a-zA-Z0-9\s\-_.,#&'()\/]+$/;
+    if (!invoice_ref || invoice_ref.length < 1 || invoice_ref.length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Invoice/Reference must be 1-100 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!SAFE_TEXT_REGEX.test(invoice_ref)) {
+      return new Response(
+        JSON.stringify({ error: 'Invoice/Reference contains invalid characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate optional fields if provided
+    if (company && (company.length > 100 || !SAFE_TEXT_REGEX.test(company))) {
+      return new Response(
+        JSON.stringify({ error: 'Company name is too long or contains invalid characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (po_number && (po_number.length > 50 || !SAFE_TEXT_REGEX.test(po_number))) {
+      return new Response(
+        JSON.stringify({ error: 'PO number is too long or contains invalid characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (phone && !/^[0-9()\-+\s.]+$/.test(phone)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid phone format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
