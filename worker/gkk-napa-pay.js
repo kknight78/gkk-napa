@@ -6,6 +6,7 @@
  *
  * Environment Variables Required:
  *   STRIPE_SECRET_KEY - Stripe secret key (test or live)
+ *   STRIPE_WEBHOOK_SECRET - Webhook signing secret (whsec_...)
  *   SUCCESS_URL - Redirect URL after successful payment
  *   CANCEL_URL - Redirect URL if user cancels
  *
@@ -36,6 +37,67 @@ function getCorsHeaders(request) {
   };
 }
 
+// ============ Stripe Webhook Signature Verification ============
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let res = 0;
+  for (let i = 0; i < a.length; i++) res |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return res === 0;
+}
+
+function parseStripeSignatureHeader(sigHeader) {
+  // Example: "t=1700000000,v1=abc...,v0=..."
+  const parts = sigHeader.split(",").map(s => s.trim());
+  const out = {};
+  for (const p of parts) {
+    const [k, v] = p.split("=");
+    if (!k || !v) continue;
+    (out[k] ||= []).push(v);
+  }
+  return out;
+}
+
+async function hmacSha256Hex(secret, message) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return [...new Uint8Array(sigBuf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyStripeWebhookSignature(request, webhookSecret, toleranceSeconds = 300) {
+  const sigHeader = request.headers.get("stripe-signature");
+  if (!sigHeader) return { ok: false, error: "Missing stripe-signature header" };
+
+  const rawBody = await request.text(); // MUST be raw
+  const parsed = parseStripeSignatureHeader(sigHeader);
+
+  const t = parsed.t?.[0];
+  const v1s = parsed.v1 || [];
+  if (!t || v1s.length === 0) return { ok: false, error: "Malformed stripe-signature header" };
+
+  // Optional replay protection
+  const now = Math.floor(Date.now() / 1000);
+  const ts = Number(t);
+  if (!Number.isFinite(ts) || Math.abs(now - ts) > toleranceSeconds) {
+    return { ok: false, error: "Timestamp outside tolerance" };
+  }
+
+  const signedPayload = `${t}.${rawBody}`;
+  const expected = await hmacSha256Hex(webhookSecret, signedPayload);
+
+  const match = v1s.some(v1 => timingSafeEqual(v1, expected));
+  if (!match) return { ok: false, error: "Invalid signature" };
+
+  return { ok: true, rawBody };
+}
+
 export default {
   async fetch(request, env) {
     const corsHeaders = getCorsHeaders(request);
@@ -50,6 +112,78 @@ export default {
     // Only handle POST /create-checkout-session
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
       return handleCreateCheckoutSession(request, env, corsHeaders);
+    }
+
+    // Stripe webhook endpoint (matches Stripe config: /stripe-webhook)
+    if (url.pathname === "/stripe-webhook") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+
+      if (!env.STRIPE_WEBHOOK_SECRET) {
+        return new Response(JSON.stringify({ error: "Missing STRIPE_WEBHOOK_SECRET" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      const verified = await verifyStripeWebhookSignature(request, env.STRIPE_WEBHOOK_SECRET);
+      if (!verified.ok) {
+        return new Response(JSON.stringify({ error: verified.error }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      let event;
+      try {
+        event = JSON.parse(verified.rawBody);
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      const type = event?.type;
+      const obj = event?.data?.object || {};
+
+      // Checkout Session fields (works for completed + async_* events)
+      const sessionId = obj.id;
+      const invoiceRef = obj.client_reference_id || obj.metadata?.invoice_ref;
+      const store = obj.metadata?.store;
+      const payMethod = obj.metadata?.pay_method;
+      const paymentStatus = obj.payment_status; // paid/unpaid/no_payment_required
+      const amountTotal = typeof obj.amount_total === "number" ? (obj.amount_total / 100).toFixed(2) : undefined;
+
+      const payerEmail = obj.customer_details?.email || obj.metadata?.payer_email;
+      const payerPhone = obj.customer_details?.phone || obj.metadata?.payer_phone;
+
+      const isSuccess = (type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded");
+      const isFailure = (type === "checkout.session.async_payment_failed" || type === "checkout.session.expired");
+
+      console.log(JSON.stringify({
+        tag: "STRIPE_WEBHOOK",
+        type,
+        isSuccess,
+        isFailure,
+        sessionId,
+        invoiceRef,
+        store,
+        payMethod,
+        paymentStatus,
+        amountTotal,
+        currency: obj.currency,
+        payerEmail,
+        payerPhone,
+        created: event?.created
+      }));
+
+      // Always return 200 quickly so Stripe doesn't retry
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     return new Response(JSON.stringify({ error: 'Not found' }), {
