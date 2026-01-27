@@ -154,7 +154,7 @@
         <div class="kv"><span>Invoice amount</span><strong id="pvAmount">$0.00</strong></div>
         <div class="kv"><span>Card convenience fee</span><strong id="pvFee">$0.00</strong></div>
         <div class="kv"><span>Total charged</span><strong id="pvTotal">$0.00</strong></div>
-        <div class="hint">Fee is shown here before you're redirected to Stripe.</div>
+        <div class="hint">Review the total above, then click "Continue to Stripe" to proceed.</div>
       </div>
 
       <div class="buttons">
@@ -191,6 +191,9 @@
     const pvFee    = document.getElementById("pvFee");
     const pvTotal  = document.getElementById("pvTotal");
 
+    // Track pending Stripe URL for 2-step card flow
+    let pendingStripeUrl = null;
+
     function showError(msg){
       errEl.style.display = "block";
       errEl.textContent = msg;
@@ -203,8 +206,24 @@
       btnAch.disabled = isLoading;
       btnCard.disabled = isLoading;
       btnAch.textContent = isLoading ? "Working..." : "Pay by Bank (ACH)";
-      btnCard.textContent = isLoading ? "Working..." : "Pay by Card (fee applies)";
+      // Don't reset card button if we're showing "Continue to Stripe"
+      if (!pendingStripeUrl) {
+        btnCard.textContent = isLoading ? "Working..." : "Pay by Card (fee applies)";
+      }
     }
+
+    // Reset pending state when form values change
+    function resetPendingState(){
+      if (pendingStripeUrl) {
+        pendingStripeUrl = null;
+        previewBox.style.display = "none";
+        btnCard.textContent = "Pay by Card (fee applies)";
+      }
+    }
+    invoiceEl.addEventListener("input", resetPendingState);
+    amountEl.addEventListener("input", resetPendingState);
+    storeEl.addEventListener("change", resetPendingState);
+    emailEl.addEventListener("input", resetPendingState);
     function parseAmount(){
       const n = Number(amountEl.value);
       if (!Number.isFinite(n)) return null;
@@ -257,8 +276,14 @@
       }
     }
 
-    // Card: show preview, then redirect
+    // Card: 2-step flow - show preview, then user clicks to continue
     btnCard.addEventListener("click", async () => {
+      // If we already have a pending URL, redirect now
+      if (pendingStripeUrl) {
+        window.location.href = pendingStripeUrl;
+        return;
+      }
+
       const data = await createSession("card");
       if (!data?.url) return;
 
@@ -268,13 +293,14 @@
       pvFee.textContent    = `$${Number(data.convenience_fee_usd || 0).toFixed(2)}`;
       pvTotal.textContent  = `$${Number(data.final_amount_usd || 0).toFixed(2)}`;
 
-      // Small pause so user can see it, then redirect
-      setTimeout(() => { window.location.href = data.url; }, 900);
+      // Store URL and update button for second click
+      pendingStripeUrl = data.url;
+      btnCard.textContent = "Continue to Stripe →";
     });
 
     // ACH: no fee preview needed; redirect immediately
     btnAch.addEventListener("click", async () => {
-      previewBox.style.display = "none";
+      resetPendingState();
       const data = await createSession("ach");
       if (!data?.url) return;
       window.location.href = data.url;
