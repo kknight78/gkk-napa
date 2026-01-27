@@ -143,10 +143,31 @@
         </div>
 
         <div>
-          <label for="email">Email (optional)</label>
-          <input id="email" type="email" placeholder="name@company.com" autocomplete="email" />
-          <div class="hint">For receipt / confirmation in Stripe Checkout.</div>
+          <label for="company">Company (optional)</label>
+          <input id="company" type="text" placeholder="e.g., ACME Auto Repair" autocomplete="organization" />
         </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="name@company.com" autocomplete="email" />
+          <div class="hint">Required if no phone provided.</div>
+        </div>
+
+        <div>
+          <label for="phone">Phone</label>
+          <input id="phone" type="tel" placeholder="(555) 123-4567" autocomplete="tel" />
+          <div class="hint">Required if no email provided.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="po_number">PO # (optional)</label>
+          <input id="po_number" type="text" placeholder="e.g., PO-12345" autocomplete="off" />
+        </div>
+        <div></div>
       </div>
 
       <div class="preview" id="preview" style="display:none;">
@@ -178,13 +199,16 @@
     // Example: "https://gkk-napa-pay.youracct.workers.dev"
     const WORKER_BASE = "https://gkk-napa-pay.kellyraeknight78.workers.dev";
 
-    const invoiceEl = document.getElementById("invoice");
-    const amountEl  = document.getElementById("amount");
-    const storeEl   = document.getElementById("store");
-    const emailEl   = document.getElementById("email");
-    const errEl     = document.getElementById("err");
-    const btnAch    = document.getElementById("btnAch");
-    const btnCard   = document.getElementById("btnCard");
+    const invoiceEl   = document.getElementById("invoice");
+    const amountEl    = document.getElementById("amount");
+    const storeEl     = document.getElementById("store");
+    const companyEl   = document.getElementById("company");
+    const emailEl     = document.getElementById("email");
+    const phoneEl     = document.getElementById("phone");
+    const poNumberEl  = document.getElementById("po_number");
+    const errEl       = document.getElementById("err");
+    const btnAch      = document.getElementById("btnAch");
+    const btnCard     = document.getElementById("btnCard");
 
     const previewBox = document.getElementById("preview");
     const pvAmount = document.getElementById("pvAmount");
@@ -223,7 +247,10 @@
     invoiceEl.addEventListener("input", resetPendingState);
     amountEl.addEventListener("input", resetPendingState);
     storeEl.addEventListener("change", resetPendingState);
+    companyEl.addEventListener("input", resetPendingState);
     emailEl.addEventListener("input", resetPendingState);
+    phoneEl.addEventListener("input", resetPendingState);
+    poNumberEl.addEventListener("input", resetPendingState);
     function parseAmount(){
       const n = Number(amountEl.value);
       if (!Number.isFinite(n)) return null;
@@ -241,10 +268,14 @@
       const invoice_ref = invoiceEl.value.trim();
       const amount = parseAmount();
       const store = storeEl.value;
+      const company = companyEl.value.trim();
       const email = emailEl.value.trim();
+      const phone = phoneEl.value.trim();
+      const po_number = poNumberEl.value.trim();
 
       if (!invoice_ref) return showError("Please enter an invoice/reference number.");
       if (amount === null || amount < 1) return showError("Please enter a valid amount (minimum $1.00).");
+      if (!email && !phone) return showError("Please provide an email or phone number for confirmation.");
 
       setLoading(true);
 
@@ -257,7 +288,10 @@
             invoice_ref,
             store,
             pay_method,
-            email: email || undefined
+            email: email || undefined,
+            phone: phone || undefined,
+            company: company || undefined,
+            po_number: po_number || undefined
           })
         });
 

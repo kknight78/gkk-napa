@@ -62,7 +62,7 @@ export default {
 async function handleCreateCheckoutSession(request, env, corsHeaders) {
   try {
     const body = await request.json();
-    const { amount_usd, invoice_ref, store, pay_method, email } = body;
+    const { amount_usd, invoice_ref, store, pay_method, email, phone, company, po_number } = body;
 
     // Validate required fields
     if (!amount_usd || !invoice_ref || !store || !pay_method) {
@@ -99,10 +99,18 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       convenienceFeeCents = finalAmountCents - amountCents;
     }
 
+    // Build readable description for Stripe Dashboard
+    const descParts = ['Bill Pay', `Invoice: ${invoice_ref}`, `Store: ${store}`];
+    if (company) descParts.push(`Company: ${company}`);
+    if (po_number) descParts.push(`PO: ${po_number}`);
+    const description = descParts.join(' • ');
+
     // Build Stripe Checkout Session params
     const sessionParams = {
       mode: 'payment',
       payment_method_types: pay_method === 'ach' ? ['us_bank_account'] : ['card'],
+      client_reference_id: invoice_ref,
+      phone_number_collection: { enabled: true },
       line_items: [
         {
           price_data: {
@@ -116,6 +124,9 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
           quantity: 1,
         },
       ],
+      payment_intent_data: {
+        description: description,
+      },
       metadata: {
         invoice_ref,
         store,
@@ -126,6 +137,12 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       success_url: env.SUCCESS_URL || 'https://gkk-napa.com/pay/success',
       cancel_url: env.CANCEL_URL || 'https://gkk-napa.com/pay/cancel',
     };
+
+    // Add optional metadata for reconciliation
+    if (email) sessionParams.metadata.payer_email = email;
+    if (phone) sessionParams.metadata.payer_phone = phone;
+    if (company) sessionParams.metadata.company = company;
+    if (po_number) sessionParams.metadata.po_number = po_number;
 
     // Add customer email if provided
     if (email) {
