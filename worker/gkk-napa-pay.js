@@ -160,7 +160,8 @@ export default {
       const amountTotal = typeof obj.amount_total === "number" ? (obj.amount_total / 100).toFixed(2) : undefined;
 
       const payerEmail = obj.customer_details?.email || obj.metadata?.payer_email;
-      const payerPhone = obj.customer_details?.phone || obj.metadata?.payer_phone;
+      // Prefer phone from our form (metadata) over Stripe Checkout's collected phone
+      const payerPhone = obj.metadata?.payer_phone || obj.customer_details?.phone;
 
       const isSuccess = (type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded");
       const isFailure = (type === "checkout.session.async_payment_failed" || type === "checkout.session.expired");
@@ -374,6 +375,17 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
     if (phone) sessionParams.payment_intent_data.metadata.payer_phone = phone;
     if (company) sessionParams.payment_intent_data.metadata.company = company;
     if (po_number) sessionParams.payment_intent_data.metadata.po_number = po_number;
+
+    // Also add metadata at session level (for webhook access)
+    sessionParams.metadata = {
+      invoice_ref,
+      store,
+      pay_method,
+    };
+    if (email) sessionParams.metadata.payer_email = email;
+    if (phone) sessionParams.metadata.payer_phone = phone;
+    if (company) sessionParams.metadata.company = company;
+    if (po_number) sessionParams.metadata.po_number = po_number;
 
     // Add customer email if provided
     if (email) {
