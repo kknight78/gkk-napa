@@ -9,6 +9,9 @@
  *   STRIPE_WEBHOOK_SECRET - Webhook signing secret (whsec_...)
  *   SUCCESS_URL - Redirect URL after successful payment
  *   CANCEL_URL - Redirect URL if user cancels
+ *   RESEND_API_KEY - Resend API key for email notifications
+ *   FROM_EMAIL - Sender email address (e.g., notifications@gkk-napa.com)
+ *   NOTIFY_EMAILS - Comma-separated recipient emails
  *
  * Deploy via Cloudflare Dashboard:
  *   Workers & Pages > Create Worker > Paste this code
@@ -178,6 +181,100 @@ export default {
         payerPhone,
         created: event?.created
       }));
+
+      // Send email notifications for key events
+      const shouldNotify = (
+        type === "checkout.session.completed" ||
+        type === "checkout.session.async_payment_succeeded" ||
+        type === "checkout.session.async_payment_failed"
+      );
+
+      if (shouldNotify && env.RESEND_API_KEY && env.FROM_EMAIL && env.NOTIFY_EMAILS) {
+        try {
+          // Build email subject and body
+          let subject, statusEmoji, statusText;
+
+          if (type === "checkout.session.completed") {
+            statusEmoji = "✅";
+            statusText = "Payment Received";
+            subject = `${statusEmoji} Payment Received - ${store} - $${amountTotal}`;
+          } else if (type === "checkout.session.async_payment_succeeded") {
+            statusEmoji = "✅";
+            statusText = "ACH Payment Cleared";
+            subject = `${statusEmoji} ACH Cleared - ${store} - $${amountTotal}`;
+          } else if (type === "checkout.session.async_payment_failed") {
+            statusEmoji = "❌";
+            statusText = "ACH Payment Failed";
+            subject = `${statusEmoji} ACH FAILED - ${store} - $${amountTotal}`;
+          }
+
+          // Stripe dashboard link (use payment intent if available, else session)
+          const paymentIntentId = obj.payment_intent;
+          const stripeLink = paymentIntentId
+            ? `https://dashboard.stripe.com/payments/${paymentIntentId}`
+            : `https://dashboard.stripe.com/checkout/sessions/${sessionId}`;
+
+          const text = `
+${statusText}
+
+Store: ${store || "N/A"}
+Invoice/Ref: ${invoiceRef || "N/A"}
+Amount: $${amountTotal || "0.00"} USD
+Method: ${payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A"}
+Status: ${paymentStatus || "N/A"}
+
+Customer Contact:
+  Email: ${payerEmail || "Not provided"}
+  Phone: ${payerPhone || "Not provided"}
+
+View in Stripe Dashboard:
+${stripeLink}
+
+---
+This is an automated notification from GK&K NAPA Bill Pay.
+`.trim();
+
+          const emailResponse = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${env.RESEND_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: env.FROM_EMAIL,
+              to: env.NOTIFY_EMAILS.split(",").map(s => s.trim()).filter(Boolean),
+              reply_to: "payments@gkk-napa.com",
+              subject,
+              text,
+            }),
+          });
+
+          if (!emailResponse.ok) {
+            const errBody = await emailResponse.text();
+            console.error(JSON.stringify({
+              tag: "RESEND_EMAIL_ERROR",
+              status: emailResponse.status,
+              error: errBody,
+              type,
+              sessionId,
+            }));
+          } else {
+            console.log(JSON.stringify({
+              tag: "RESEND_EMAIL_SENT",
+              type,
+              sessionId,
+              subject,
+            }));
+          }
+        } catch (emailErr) {
+          console.error(JSON.stringify({
+            tag: "RESEND_EMAIL_EXCEPTION",
+            error: emailErr.message,
+            type,
+            sessionId,
+          }));
+        }
+      }
 
       // Always return 200 quickly so Stripe doesn't retry
       return new Response(JSON.stringify({ received: true }), {
