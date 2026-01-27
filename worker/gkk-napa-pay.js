@@ -103,6 +103,8 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
     const descParts = ['Bill Pay', `Invoice: ${invoice_ref}`, `Store: ${store}`];
     if (company) descParts.push(`Company: ${company}`);
     if (po_number) descParts.push(`PO: ${po_number}`);
+    if (phone) descParts.push(`Phone: ${phone}`);
+    if (email) descParts.push(`Email: ${email}`);
     const description = descParts.join(' • ');
 
     // Build Stripe Checkout Session params
