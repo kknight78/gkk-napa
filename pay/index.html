@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pay Your Bill | GK&K NAPA Stores</title>
+  <meta name="robots" content="noindex" />
+  <style>
+    :root{
+      --napa-blue:#0A0094;
+      --napa-yellow:#FFC836;
+      --stainless:#DADAD9;
+      --gunmetal:#878786;
+      --bg:#06115a;
+      --white:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--white);
+      background: var(--bg);
+    }
+    header{
+      background:var(--napa-blue);
+      border-bottom: 2px solid rgba(255,255,255,.12);
+    }
+    .wrap{max-width:900px;margin:0 auto;padding:22px 18px}
+    h1{
+      margin:0;
+      font-weight:900;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      font-size:28px;
+      line-height:1.1;
+    }
+    p{color:rgba(255,255,255,.85);margin:10px 0 0}
+    .card{
+      margin-top:18px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      padding:16px;
+    }
+    label{display:block;font-weight:700;margin:14px 0 6px}
+    input, select{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.22);
+      background: rgba(0,0,0,.18);
+      color:var(--white);
+      font-size:16px;
+    }
+    .row{display:grid;grid-template-columns: 1fr 1fr; gap:12px}
+    .hint{font-size:13px;color:rgba(255,255,255,.78);margin-top:6px}
+    .buttons{display:flex;flex-wrap:wrap; gap:10px; margin-top:16px}
+    button{
+      border:none;
+      border-radius:12px;
+      padding:12px 14px;
+      font-weight:900;
+      cursor:pointer;
+      font-size:15px;
+    }
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .btn-ach{
+      background: var(--stainless);
+      color:#111;
+    }
+    .btn-card{
+      background: var(--napa-yellow);
+      color:#111;
+    }
+    .fine{
+      margin-top:12px;
+      font-size:13px;
+      color:rgba(255,255,255,.78);
+      line-height:1.35;
+    }
+    .preview{
+      margin-top:14px;
+      padding:12px 12px;
+      border-radius:12px;
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .preview h2{
+      margin:0 0 8px;
+      font-size:14px;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+    }
+    .kv{display:flex;justify-content:space-between;gap:12px;margin:6px 0}
+    .kv span{color:rgba(255,255,255,.88)}
+    .kv strong{color:var(--white)}
+    .error{
+      margin-top:12px;
+      color:#ffd0d0;
+      font-weight:700;
+    }
+    a{color:var(--napa-yellow)}
+    @media (max-width:720px){
+      .row{grid-template-columns:1fr}
+      h1{font-size:24px}
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Pay Your Bill</h1>
+      <p>Enter your invoice/reference and amount, then choose bank (ACH) or card.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="invoice">Invoice / Reference #</label>
+          <input id="invoice" type="text" placeholder="e.g., INV-10432 or Account Name" autocomplete="off" />
+          <div class="hint">This appears on your statement or invoice.</div>
+        </div>
+
+        <div>
+          <label for="amount">Amount (USD)</label>
+          <input id="amount" type="number" min="1" step="0.01" placeholder="e.g., 125.50" />
+          <div class="hint">Minimum $1.00</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="store">Store</label>
+          <select id="store">
+            <option value="NAPA Danville">NAPA Danville</option>
+            <option value="NAPA Cayuga">NAPA Cayuga</option>
+            <option value="NAPA Rockville">NAPA Rockville</option>
+            <option value="NAPA Covington">NAPA Covington</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="email">Email (optional)</label>
+          <input id="email" type="email" placeholder="name@company.com" autocomplete="email" />
+          <div class="hint">For receipt / confirmation in Stripe Checkout.</div>
+        </div>
+      </div>
+
+      <div class="preview" id="preview" style="display:none;">
+        <h2>Card total preview</h2>
+        <div class="kv"><span>Invoice amount</span><strong id="pvAmount">$0.00</strong></div>
+        <div class="kv"><span>Card convenience fee</span><strong id="pvFee">$0.00</strong></div>
+        <div class="kv"><span>Total charged</span><strong id="pvTotal">$0.00</strong></div>
+        <div class="hint">Fee is shown here before you're redirected to Stripe.</div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn-ach" id="btnAch">Pay by Bank (ACH)</button>
+        <button class="btn-card" id="btnCard">Pay by Card (fee applies)</button>
+      </div>
+
+      <div class="fine">
+        By paying online you agree to our
+        <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
+        <br />
+        Bank (ACH) payments may take additional time to clear.
+      </div>
+
+      <div class="error" id="err" style="display:none;"></div>
+    </div>
+  </main>
+
+  <script>
+    // IMPORTANT: Set this to your Cloudflare Worker base URL
+    // Example: "https://gkk-napa-pay.youracct.workers.dev"
+    const WORKER_BASE = "https://gkk-napa-pay.kellyraeknight78.workers.dev";
+
+    const invoiceEl = document.getElementById("invoice");
+    const amountEl  = document.getElementById("amount");
+    const storeEl   = document.getElementById("store");
+    const emailEl   = document.getElementById("email");
+    const errEl     = document.getElementById("err");
+    const btnAch    = document.getElementById("btnAch");
+    const btnCard   = document.getElementById("btnCard");
+
+    const previewBox = document.getElementById("preview");
+    const pvAmount = document.getElementById("pvAmount");
+    const pvFee    = document.getElementById("pvFee");
+    const pvTotal  = document.getElementById("pvTotal");
+
+    function showError(msg){
+      errEl.style.display = "block";
+      errEl.textContent = msg;
+    }
+    function clearError(){
+      errEl.style.display = "none";
+      errEl.textContent = "";
+    }
+    function setLoading(isLoading){
+      btnAch.disabled = isLoading;
+      btnCard.disabled = isLoading;
+      btnAch.textContent = isLoading ? "Working..." : "Pay by Bank (ACH)";
+      btnCard.textContent = isLoading ? "Working..." : "Pay by Card (fee applies)";
+    }
+    function parseAmount(){
+      const n = Number(amountEl.value);
+      if (!Number.isFinite(n)) return null;
+      return Math.round(n * 100) / 100;
+    }
+
+    async function createSession(pay_method){
+      clearError();
+
+      if (!WORKER_BASE.includes("http")) {
+        showError("Worker URL not set. Please set WORKER_BASE in /pay/index.html.");
+        return null;
+      }
+
+      const invoice_ref = invoiceEl.value.trim();
+      const amount = parseAmount();
+      const store = storeEl.value;
+      const email = emailEl.value.trim();
+
+      if (!invoice_ref) return showError("Please enter an invoice/reference number.");
+      if (amount === null || amount < 1) return showError("Please enter a valid amount (minimum $1.00).");
+
+      setLoading(true);
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount_usd: amount.toFixed(2),
+            invoice_ref,
+            store,
+            pay_method,
+            email: email || undefined
+          })
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data?.error || "Could not create Stripe session.");
+        }
+
+        return data;
+      } catch (e) {
+        showError(e.message || "Unexpected error creating payment session.");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Card: show preview, then redirect
+    btnCard.addEventListener("click", async () => {
+      const data = await createSession("card");
+      if (!data?.url) return;
+
+      // Show preview values
+      previewBox.style.display = "block";
+      pvAmount.textContent = `$${Number(amountEl.value || 0).toFixed(2)}`;
+      pvFee.textContent    = `$${Number(data.convenience_fee_usd || 0).toFixed(2)}`;
+      pvTotal.textContent  = `$${Number(data.final_amount_usd || 0).toFixed(2)}`;
+
+      // Small pause so user can see it, then redirect
+      setTimeout(() => { window.location.href = data.url; }, 900);
+    });
+
+    // ACH: no fee preview needed; redirect immediately
+    btnAch.addEventListener("click", async () => {
+      previewBox.style.display = "none";
+      const data = await createSession("ach");
+      if (!data?.url) return;
+      window.location.href = data.url;
+    });
+  </script>
+</body>
+</html>
