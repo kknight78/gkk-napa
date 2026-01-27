@@ -126,23 +126,23 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       ],
       payment_intent_data: {
         description: description,
-      },
-      metadata: {
-        invoice_ref,
-        store,
-        entered_amount_cents: amountCents.toString(),
-        convenience_fee_cents: convenienceFeeCents.toString(),
-        pay_method,
+        metadata: {
+          invoice_ref,
+          store,
+          entered_amount_cents: amountCents.toString(),
+          convenience_fee_cents: convenienceFeeCents.toString(),
+          pay_method,
+        },
       },
       success_url: env.SUCCESS_URL || 'https://gkk-napa.com/pay/success',
       cancel_url: env.CANCEL_URL || 'https://gkk-napa.com/pay/cancel',
     };
 
-    // Add optional metadata for reconciliation
-    if (email) sessionParams.metadata.payer_email = email;
-    if (phone) sessionParams.metadata.payer_phone = phone;
-    if (company) sessionParams.metadata.company = company;
-    if (po_number) sessionParams.metadata.po_number = po_number;
+    // Add optional metadata for reconciliation (on payment intent)
+    if (email) sessionParams.payment_intent_data.metadata.payer_email = email;
+    if (phone) sessionParams.payment_intent_data.metadata.payer_phone = phone;
+    if (company) sessionParams.payment_intent_data.metadata.company = company;
+    if (po_number) sessionParams.payment_intent_data.metadata.po_number = po_number;
 
     // Add customer email if provided
     if (email) {
