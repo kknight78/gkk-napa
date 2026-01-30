@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Payment Submitted | GK&K NAPA Stores</title>
+  <title>Payment Submitted | G&KK NAPA Stores</title>
   <style>
     :root {
       --napa-blue: #0A0094;
@@ -39,6 +39,24 @@
       margin-bottom: 16px;
     }
     .card p { margin: 8px 0; color: rgba(255,255,255,.9); }
+    .success-message {
+      background: rgba(142,207,142,.1);
+      border: 1px solid rgba(142,207,142,.25);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 14px 0;
+    }
+    .success-message h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      color: #8ecf8e;
+    }
+    .success-message p {
+      margin: 0;
+      font-size: 14px;
+      color: rgba(255,255,255,.85);
+      line-height: 1.5;
+    }
     .method-note {
       background: rgba(255,200,54,.1);
       border: 1px solid rgba(255,200,54,.3);
@@ -65,10 +83,16 @@
       margin-top: 16px;
     }
     .store-card h3 {
-      margin: 0 0 8px;
-      font-size: 16px;
+      margin: 0 0 4px;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: .3px;
+      color: rgba(255,255,255,.6);
+    }
+    .store-card .store-name {
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 700;
       color: var(--napa-yellow);
     }
     .store-card .address {
@@ -78,14 +102,14 @@
     }
     .store-card .phone {
       color: var(--white);
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 700;
-      margin: 8px 0;
+      margin: 10px 0;
     }
     .store-card .hours {
       font-size: 13px;
       color: rgba(255,255,255,.7);
-      margin-top: 8px;
+      margin-top: 10px;
     }
     .buttons {
       display: flex;
@@ -127,37 +151,41 @@
 <body>
   <div class="wrap">
     <div class="success-icon">✅</div>
-    <h1>Payment submitted — thank you!</h1>
+    <h1>Payment Submitted Successfully</h1>
 
     <div class="card">
-      <p>Your payment request was sent securely through Stripe Checkout.</p>
+      <div class="success-message">
+        <h2>Your payment has been submitted</h2>
+        <p>Your payment was processed securely through Stripe. Your account will be credited once the payment clears.</p>
+      </div>
 
       <div class="method-note" id="methodNote">
         <!-- Filled by JS based on payment method -->
       </div>
 
       <div class="email-note">
-        <strong>Receipt/confirmation email:</strong> If you entered an email during checkout, Stripe will send a confirmation to that address.
+        <strong>Email receipt:</strong> If you entered an email during checkout, you will receive a confirmation receipt from Stripe at that address.
       </div>
     </div>
 
-    <div class="store-card" id="storeCard">
-      <h3 id="storeName">Your Store</h3>
+    <div class="store-card">
+      <h3>Questions? Contact your store:</h3>
+      <p class="store-name" id="storeName">Your Store</p>
       <p class="address" id="storeAddress"></p>
       <p class="phone" id="storePhone"></p>
       <div class="hours" id="storeHours"></div>
       <div class="buttons">
-        <a class="btn btn-primary" id="callBtn" href="#">📞 Call Store</a>
-        <a class="btn btn-secondary" id="directionsBtn" href="#" target="_blank" rel="noopener">📍 Get Directions</a>
+        <a class="btn btn-primary" id="callBtn" href="#">Call Store</a>
+        <a class="btn btn-secondary" id="directionsBtn" href="#" target="_blank" rel="noopener">Get Directions</a>
       </div>
     </div>
 
     <div class="buttons" style="margin-top: 20px;">
-      <a class="btn btn-secondary" href="/">← Back to Home</a>
+      <a class="btn btn-secondary" href="/">Back to Home</a>
     </div>
 
     <p class="footer-note">
-      If you have any questions, call us and reference your Invoice/Reference #.
+      Have your Account # (ACCT#) ready when calling about this payment.
     </p>
   </div>
 
@@ -169,7 +197,7 @@
         address: "303 N Gilbert St, Danville, IL 61832",
         phone: "(217) 446-9067",
         phoneRaw: "+12174469067",
-        hours: "Mon–Fri: 7:00 AM – 5:30 PM | Sat: 8:00 AM – 5:00 PM | Sun: 10:00 AM – 4:00 PM",
+        hours: "Mon-Fri: 7:00 AM - 5:30 PM | Sat: 8:00 AM - 5:00 PM | Sun: 10:00 AM - 4:00 PM",
         mapsQuery: "303%20N%20Gilbert%20St%2C%20Danville%2C%20IL%2061832"
       },
       "NAPA Cayuga": {
@@ -177,7 +205,7 @@
         address: "307 N Logan St, Cayuga, IN 47928",
         phone: "(765) 487-1324",
         phoneRaw: "+17654871324",
-        hours: "Mon–Fri: 7:30 AM – 5:30 PM | Sat: 7:30 AM – 1:00 PM | Sun: Closed",
+        hours: "Mon-Fri: 7:30 AM - 5:30 PM | Sat: 7:30 AM - 1:00 PM | Sun: Closed",
         mapsQuery: "307%20N%20Logan%20St%2C%20Cayuga%2C%20IN%2047928"
       },
       "NAPA Rockville": {
@@ -185,7 +213,7 @@
         address: "115 S Lincoln Rd, Rockville, IN 47872",
         phone: "(765) 569-2011",
         phoneRaw: "+17655692011",
-        hours: "Mon–Fri: 7:30 AM – 5:30 PM | Sat: 8:00 AM – 2:00 PM | Sun: Closed",
+        hours: "Mon-Fri: 7:30 AM - 5:30 PM | Sat: 8:00 AM - 2:00 PM | Sun: Closed",
         mapsQuery: "115%20S%20Lincoln%20Rd%2C%20Rockville%2C%20IN%2047872"
       },
       "NAPA Covington": {
@@ -193,7 +221,7 @@
         address: "205 4th St, Covington, IN 47932",
         phone: "(765) 793-2258",
         phoneRaw: "+17657932258",
-        hours: "Mon–Fri: 7:00 AM – 5:00 PM | Sat: 8:00 AM – 12:00 PM | Sun: Closed",
+        hours: "Mon-Fri: 7:00 AM - 5:00 PM | Sat: 8:00 AM - 12:00 PM | Sun: Closed",
         mapsQuery: "205%204th%20St%2C%20Covington%2C%20IN%2047932"
       }
     };
@@ -208,13 +236,13 @@
     if (method === "ach") {
       methodNote.classList.add("ach");
       methodNote.innerHTML = `
-        <strong>⏳ Bank (ACH) payments can take 3–5 business days to clear.</strong><br>
-        Your invoice will be credited once the bank confirms the transfer. We'll notify you when it clears.
+        <strong>Bank (ACH) payments typically take 3-5 business days to clear.</strong><br>
+        Your account will be credited once the bank confirms the transfer. You'll receive an email notification when the payment clears.
       `;
     } else {
       methodNote.innerHTML = `
-        <strong>✓ Card payments are typically confirmed immediately.</strong><br>
-        Your invoice should be credited shortly.
+        <strong>Card payments are typically confirmed immediately.</strong><br>
+        Your account should be credited shortly.
       `;
     }
 

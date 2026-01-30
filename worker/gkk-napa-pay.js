@@ -1,5 +1,5 @@
 /**
- * GK&K NAPA Bill Pay - Cloudflare Worker
+ * G&KK NAPA Bill Pay - Cloudflare Worker
  *
  * Creates Stripe Checkout Sessions for ACH and Card payments.
  * Card payments include a convenience fee (gross-up calculation).
@@ -22,19 +22,32 @@
 const CARD_PCT = 0.029; // 2.9%
 const CARD_FIXED_CENTS = 30; // $0.30
 
+// Payment limits (keep in sync with frontend)
+const MIN_CENTS = 100;           // $1.00
+const ACH_MAX_CENTS = 5000000;   // $50,000.00
+const CARD_MAX_CENTS = 1000000;  // $10,000.00
+
 // Allowed origins for CORS
 const allowedOrigins = new Set([
   "https://gkk-napa.com",
   "https://www.gkk-napa.com",
-  // Cloudflare Pages preview domain:
   "https://gkk-napa.pages.dev",
 ]);
+
+// Check if origin is allowed (including preview subdomains)
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (allowedOrigins.has(origin)) return true;
+  // Allow Cloudflare Pages preview deployments (e.g., https://<hash>.gkk-napa.pages.dev)
+  if (origin.endsWith(".gkk-napa.pages.dev")) return true;
+  return false;
+}
 
 // Get CORS headers based on request origin
 function getCorsHeaders(request) {
   const origin = request.headers.get("Origin");
   return {
-    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://gkk-napa.com",
+    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : "https://gkk-napa.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
@@ -151,17 +164,24 @@ export default {
       const type = event?.type;
       const obj = event?.data?.object || {};
 
-      // Checkout Session fields (works for completed + async_* events)
+      // Extract metadata fields
       const sessionId = obj.id;
-      const invoiceRef = obj.client_reference_id || obj.metadata?.invoice_ref;
+      const company = obj.metadata?.company;
+      const accountNumber = obj.metadata?.account_number;
+      const statementNumber = obj.metadata?.statement_number;
       const store = obj.metadata?.store;
       const payMethod = obj.metadata?.pay_method;
-      const paymentStatus = obj.payment_status; // paid/unpaid/no_payment_required
-      const amountTotal = typeof obj.amount_total === "number" ? (obj.amount_total / 100).toFixed(2) : undefined;
+      const paymentStatus = obj.payment_status;
 
-      const payerEmail = obj.customer_details?.email || obj.metadata?.payer_email;
-      // Prefer phone from our form (metadata) over Stripe Checkout's collected phone
-      const payerPhone = obj.metadata?.payer_phone || obj.customer_details?.phone;
+      // Amount fields
+      const paymentAmountCents = parseInt(obj.metadata?.payment_amount_cents || "0", 10);
+      const discountAmountCents = parseInt(obj.metadata?.discount_amount_cents || "0", 10);
+      const convenienceFeeCents = parseInt(obj.metadata?.convenience_fee_cents || "0", 10);
+      const totalChargedCents = parseInt(obj.metadata?.total_charged_cents || "0", 10);
+      // discount_deadline removed - discount now auto-calculated as 10%
+
+      const payerEmail = obj.customer_details?.email || obj.metadata?.customer_email;
+      const payerPhone = obj.metadata?.customer_phone || obj.customer_details?.phone;
 
       const isSuccess = (type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded");
       const isFailure = (type === "checkout.session.async_payment_failed" || type === "checkout.session.expired");
@@ -172,11 +192,16 @@ export default {
         isSuccess,
         isFailure,
         sessionId,
-        invoiceRef,
+        company,
+        accountNumber,
+        statementNumber,
         store,
         payMethod,
         paymentStatus,
-        amountTotal,
+        paymentAmountCents,
+        discountAmountCents,
+        convenienceFeeCents,
+        totalChargedCents,
         currency: obj.currency,
         payerEmail,
         payerPhone,
@@ -192,28 +217,24 @@ export default {
 
       if (shouldNotify && env.RESEND_API_KEY && env.FROM_EMAIL && env.NOTIFY_EMAILS) {
         try {
-          // Extract amount fields from metadata
-          const invoiceAmountCents = parseInt(obj.metadata?.invoice_amount_cents || "0", 10);
-          const convenienceFeeCents = parseInt(obj.metadata?.convenience_fee_cents || "0", 10);
-          const finalAmountCents = parseInt(obj.metadata?.final_amount_cents || "0", 10);
-
-          const invoiceAmountUsd = (invoiceAmountCents / 100).toFixed(2);
+          const paymentAmountUsd = (paymentAmountCents / 100).toFixed(2);
+          const discountAmountUsd = (discountAmountCents / 100).toFixed(2);
           const convenienceFeeUsd = (convenienceFeeCents / 100).toFixed(2);
-          const finalAmountUsd = (finalAmountCents / 100).toFixed(2);
+          const totalChargedUsd = (totalChargedCents / 100).toFixed(2);
 
           // Estimate Stripe fees (2.9% + $0.30 for card, 0.8% capped at $5 for ACH)
           let estimatedStripeFee = "N/A";
           let estimatedNetDeposit = "N/A";
-          if (finalAmountCents > 0) {
+          if (totalChargedCents > 0) {
             let stripeFeeAmount;
             if (payMethod === "card") {
-              stripeFeeAmount = Math.round(finalAmountCents * 0.029 + 30);
+              stripeFeeAmount = Math.round(totalChargedCents * 0.029 + 30);
             } else if (payMethod === "ach") {
-              stripeFeeAmount = Math.min(Math.round(finalAmountCents * 0.008), 500); // 0.8% capped at $5
+              stripeFeeAmount = Math.min(Math.round(totalChargedCents * 0.008), 500);
             }
             if (stripeFeeAmount) {
               estimatedStripeFee = `$${(stripeFeeAmount / 100).toFixed(2)}`;
-              estimatedNetDeposit = `$${((finalAmountCents - stripeFeeAmount) / 100).toFixed(2)}`;
+              estimatedNetDeposit = `$${((totalChargedCents - stripeFeeAmount) / 100).toFixed(2)}`;
             }
           }
 
@@ -223,53 +244,57 @@ export default {
           if (type === "checkout.session.completed") {
             statusEmoji = "✅";
             statusText = "Payment Received";
-            subject = `${statusEmoji} Credit $${invoiceAmountUsd} - ${invoiceRef} - ${store}`;
+            const feeNote = payMethod === "card" && convenienceFeeCents > 0 ? ` (plus $${convenienceFeeUsd} card fee)` : "";
+            subject = `${statusEmoji} Payment Received - ${store} - $${paymentAmountUsd}${feeNote}`;
           } else if (type === "checkout.session.async_payment_succeeded") {
             statusEmoji = "✅";
             statusText = "ACH Payment Cleared";
-            subject = `${statusEmoji} ACH Cleared - Credit $${invoiceAmountUsd} - ${invoiceRef} - ${store}`;
+            subject = `${statusEmoji} ACH Cleared - ${store} - $${paymentAmountUsd}`;
           } else if (type === "checkout.session.async_payment_failed") {
             statusEmoji = "❌";
             statusText = "ACH Payment Failed";
-            subject = `${statusEmoji} ACH FAILED - ${invoiceRef} - ${store} - DO NOT CREDIT`;
+            subject = `${statusEmoji} ACH FAILED - ${store} - ACCT# ${accountNumber || 'N/A'} - DO NOT CREDIT`;
           }
 
-          // Stripe dashboard link (use payment intent if available, else session)
+          // Stripe dashboard link
           const paymentIntentId = obj.payment_intent;
           const stripeLink = paymentIntentId
             ? `https://dashboard.stripe.com/payments/${paymentIntentId}`
             : `https://dashboard.stripe.com/checkout/sessions/${sessionId}`;
 
           // Build payment breakdown section
-          let paymentBreakdown;
-          if (payMethod === "card" && convenienceFeeCents > 0) {
-            paymentBreakdown = `
+          let paymentBreakdown = `
 PAYMENT BREAKDOWN
 ─────────────────────────────
-Invoice Amount (credit to customer):  $${invoiceAmountUsd}
-Convenience Fee (card surcharge):     $${convenienceFeeUsd}
-─────────────────────────────
-Total Charged to Customer:            $${finalAmountUsd}
+Payment amount (applied to account):  $${paymentAmountUsd}`;
 
-Estimated Stripe Processing Fee:      ${estimatedStripeFee}
-Estimated Net Deposit to You:         ${estimatedNetDeposit}`;
-          } else {
-            paymentBreakdown = `
-PAYMENT BREAKDOWN
-─────────────────────────────
-Invoice Amount (credit to customer):  $${invoiceAmountUsd}
-Total Charged to Customer:            $${finalAmountUsd}
-
-Estimated Stripe Processing Fee:      ${estimatedStripeFee}
-Estimated Net Deposit to You:         ${estimatedNetDeposit}`;
+          if (discountAmountCents > 0) {
+            paymentBreakdown += `
+10% early-pay discount claimed:       $${discountAmountUsd}`;
           }
+
+          if (payMethod === "card" && convenienceFeeCents > 0) {
+            paymentBreakdown += `
+Card convenience fee:                 $${convenienceFeeUsd}`;
+          }
+
+          paymentBreakdown += `
+─────────────────────────────
+Total charged to customer:            $${totalChargedUsd}
+
+Estimated Stripe Processing Fee:      ${estimatedStripeFee}
+Estimated Net Deposit to You:         ${estimatedNetDeposit}`;
 
           const text = `
 ${statusText}
 
-Store: ${store || "N/A"}
-Invoice/Ref: ${invoiceRef || "N/A"}
-Method: ${payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A"}
+ACCOUNT DETAILS
+─────────────────────────────
+Company:            ${company || "N/A"}
+Account # (ACCT#):  ${accountNumber || "N/A"}
+Statement # (SM#):  ${statementNumber || "N/A"}
+Store:              ${store || "N/A"}
+Method:             ${payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A"}
 ${paymentBreakdown}
 
 CUSTOMER CONTACT
@@ -281,7 +306,7 @@ View in Stripe Dashboard:
 ${stripeLink}
 
 ---
-This is an automated notification from GK&K NAPA Bill Pay.
+This is an automated notification from G&KK NAPA Bill Pay.
 `.trim();
 
           const emailResponse = await fetch("https://api.resend.com/emails", {
@@ -343,12 +368,22 @@ This is an automated notification from GK&K NAPA Bill Pay.
 async function handleCreateCheckoutSession(request, env, corsHeaders) {
   try {
     const body = await request.json();
-    const { amount_usd, invoice_ref, store, pay_method, email, phone, company, po_number } = body;
+    const {
+      company,
+      account_number,
+      email,
+      phone,
+      store,
+      statement_number,
+      amount_usd,
+      discount_amount_usd,
+      pay_method
+    } = body;
 
     // Validate required fields
-    if (!amount_usd || !invoice_ref || !store || !pay_method) {
+    if (!company || !account_number || !amount_usd || !store || !pay_method) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: amount_usd, invoice_ref, store, pay_method' }),
+        JSON.stringify({ error: 'Missing required fields: company, account_number, amount_usd, store, pay_method' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -370,51 +405,90 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       );
     }
 
-    // Parse and validate amount ($1 min, $10,000 max)
-    const amountCents = Math.round(parseFloat(amount_usd) * 100);
-    const MIN_AMOUNT_CENTS = 100;      // $1.00
-    const MAX_AMOUNT_CENTS = 1000000;  // $10,000.00
-    if (isNaN(amountCents) || amountCents < MIN_AMOUNT_CENTS) {
+    // Parse and validate payment amount
+    const paymentAmountCents = Math.round(parseFloat(amount_usd) * 100);
+    if (isNaN(paymentAmountCents) || paymentAmountCents < MIN_CENTS) {
       return new Response(
         JSON.stringify({ error: 'Minimum payment amount is $1.00' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    if (amountCents > MAX_AMOUNT_CENTS) {
-      return new Response(
-        JSON.stringify({ error: 'Maximum payment amount is $10,000. For larger payments, please contact your store.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+    // Check max based on payment method
+    const maxCentsForMethod = pay_method === 'card' ? CARD_MAX_CENTS : ACH_MAX_CENTS;
+    if (paymentAmountCents > maxCentsForMethod) {
+      if (pay_method === 'card') {
+        return new Response(
+          JSON.stringify({ error: 'Card payments are limited to $10,000. Please use Bank (ACH) for larger amounts.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Maximum payment is $50,000. For larger payments, please contact your store.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Validate invoice_ref (1-100 chars, alphanumeric + common punctuation)
+    // Validate company (required, 1-100 chars)
     const SAFE_TEXT_REGEX = /^[a-zA-Z0-9\s\-_.,#&'()\/]+$/;
-    if (!invoice_ref || invoice_ref.length < 1 || invoice_ref.length > 100) {
+    const ACCOUNT_REGEX = /^[a-zA-Z0-9\-_]+$/;
+    if (!company || company.length < 1 || company.length > 100) {
       return new Response(
-        JSON.stringify({ error: 'Invoice/Reference must be 1-100 characters' }),
+        JSON.stringify({ error: 'Company Name must be 1-100 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    if (!SAFE_TEXT_REGEX.test(invoice_ref)) {
+    if (!SAFE_TEXT_REGEX.test(company)) {
       return new Response(
-        JSON.stringify({ error: 'Invoice/Reference contains invalid characters' }),
+        JSON.stringify({ error: 'Company Name contains invalid characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate optional fields if provided
-    if (company && (company.length > 100 || !SAFE_TEXT_REGEX.test(company))) {
+    // Validate account_number (required, 1-50 chars, alphanumeric)
+    if (!account_number || account_number.length < 1 || account_number.length > 50) {
       return new Response(
-        JSON.stringify({ error: 'Company name is too long or contains invalid characters' }),
+        JSON.stringify({ error: 'Account # must be 1-50 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    if (po_number && (po_number.length > 50 || !SAFE_TEXT_REGEX.test(po_number))) {
+    if (!ACCOUNT_REGEX.test(account_number)) {
       return new Response(
-        JSON.stringify({ error: 'PO number is too long or contains invalid characters' }),
+        JSON.stringify({ error: 'Account # contains invalid characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Validate statement_number (optional, 1-50 chars if provided)
+    if (statement_number && (statement_number.length > 50 || !ACCOUNT_REGEX.test(statement_number))) {
+      return new Response(
+        JSON.stringify({ error: 'Statement # is too long or contains invalid characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate discount fields
+    let discountAmountCents = 0;
+    if (discount_amount_usd) {
+      discountAmountCents = Math.round(parseFloat(discount_amount_usd) * 100);
+      if (isNaN(discountAmountCents) || discountAmountCents < 0) {
+        return new Response(
+          JSON.stringify({ error: 'Discount amount must be a positive number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (discountAmountCents > paymentAmountCents) {
+        return new Response(
+          JSON.stringify({ error: 'Discount amount cannot exceed payment amount' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // discount_deadline removed - discount is now auto-calculated as 10% on frontend
+
+    // Validate optional contact fields
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return new Response(
         JSON.stringify({ error: 'Invalid email format' }),
@@ -429,35 +503,46 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
     }
 
     // Calculate final amount (with convenience fee for card)
-    let finalAmountCents = amountCents;
+    // IMPORTANT: Charge is based on payment amount only, NOT reduced by discount
+    // Discount is stored for reconciliation but does not affect the charge
+    let totalChargedCents = paymentAmountCents;
     let convenienceFeeCents = 0;
 
     if (pay_method === 'card') {
       // Gross-up calculation: final = (amount + fixed) / (1 - pct)
-      finalAmountCents = Math.ceil((amountCents + CARD_FIXED_CENTS) / (1 - CARD_PCT));
-      convenienceFeeCents = finalAmountCents - amountCents;
+      totalChargedCents = Math.ceil((paymentAmountCents + CARD_FIXED_CENTS) / (1 - CARD_PCT));
+      convenienceFeeCents = totalChargedCents - paymentAmountCents;
+    }
+
+    // Validate total charged doesn't exceed limits (safety check after gross-up)
+    // This ensures we never create a Stripe session for an out-of-policy total
+    const totalMaxCents = pay_method === 'card' ? CARD_MAX_CENTS + 50000 : ACH_MAX_CENTS; // Allow ~$500 buffer for card fees
+    if (totalChargedCents > totalMaxCents) {
+      return new Response(
+        JSON.stringify({ error: 'Total amount (including fees) exceeds maximum allowed. Please reduce the payment amount or use Bank (ACH).' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Build readable description for Stripe Dashboard
-    const descParts = ['Bill Pay', `Invoice: ${invoice_ref}`, `Store: ${store}`];
-    if (company) descParts.push(`Company: ${company}`);
-    if (po_number) descParts.push(`PO: ${po_number}`);
-    const description = descParts.join(' • ');
+    const descParts = ['Bill Pay', `Company: ${company}`, `ACCT#: ${account_number}`, `Store: ${store}`];
+    if (statement_number) descParts.push(`SM#: ${statement_number}`);
+    const description = descParts.join(' | ');
 
     // Build Stripe Checkout Session params
     const sessionParams = {
       mode: 'payment',
       payment_method_types: pay_method === 'ach' ? ['us_bank_account'] : ['card'],
-      client_reference_id: invoice_ref,
+      client_reference_id: account_number,
       phone_number_collection: { enabled: true },
       line_items: [
         {
           price_data: {
             currency: 'usd',
-            unit_amount: finalAmountCents,
+            unit_amount: totalChargedCents,
             product_data: {
               name: `Bill Payment - ${store}`,
-              description: `Invoice/Ref: ${invoice_ref}`,
+              description: `ACCT#: ${account_number}${statement_number ? ` | SM#: ${statement_number}` : ''}`,
             },
           },
           quantity: 1,
@@ -466,36 +551,39 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       payment_intent_data: {
         description: description,
         metadata: {
-          invoice_ref,
+          company,
+          account_number,
           store,
-          entered_amount_cents: amountCents.toString(),
-          convenience_fee_cents: convenienceFeeCents.toString(),
           pay_method,
+          payment_amount_cents: paymentAmountCents.toString(),
+          convenience_fee_cents: convenienceFeeCents.toString(),
+          total_charged_cents: totalChargedCents.toString(),
         },
       },
       success_url: `${env.SUCCESS_URL || 'https://gkk-napa.com/pay/success'}?store=${encodeURIComponent(store)}&method=${encodeURIComponent(pay_method)}`,
       cancel_url: env.CANCEL_URL || 'https://gkk-napa.com/pay/cancel',
     };
 
-    // Add optional metadata for reconciliation (on payment intent)
-    if (email) sessionParams.payment_intent_data.metadata.payer_email = email;
-    if (phone) sessionParams.payment_intent_data.metadata.payer_phone = phone;
-    if (company) sessionParams.payment_intent_data.metadata.company = company;
-    if (po_number) sessionParams.payment_intent_data.metadata.po_number = po_number;
+    // Add optional fields to payment_intent metadata
+    if (statement_number) sessionParams.payment_intent_data.metadata.statement_number = statement_number;
+    if (discountAmountCents > 0) sessionParams.payment_intent_data.metadata.discount_amount_cents = discountAmountCents.toString();
+    if (email) sessionParams.payment_intent_data.metadata.customer_email = email;
+    if (phone) sessionParams.payment_intent_data.metadata.customer_phone = phone;
 
     // Also add metadata at session level (for webhook access)
     sessionParams.metadata = {
-      invoice_ref,
+      company,
+      account_number,
       store,
       pay_method,
-      invoice_amount_cents: amountCents.toString(),
+      payment_amount_cents: paymentAmountCents.toString(),
       convenience_fee_cents: convenienceFeeCents.toString(),
-      final_amount_cents: finalAmountCents.toString(),
+      total_charged_cents: totalChargedCents.toString(),
     };
-    if (email) sessionParams.metadata.payer_email = email;
-    if (phone) sessionParams.metadata.payer_phone = phone;
-    if (company) sessionParams.metadata.company = company;
-    if (po_number) sessionParams.metadata.po_number = po_number;
+    if (statement_number) sessionParams.metadata.statement_number = statement_number;
+    if (discountAmountCents > 0) sessionParams.metadata.discount_amount_cents = discountAmountCents.toString();
+    if (email) sessionParams.metadata.customer_email = email;
+    if (phone) sessionParams.metadata.customer_phone = phone;
 
     // Add customer email if provided
     if (email) {
@@ -538,8 +626,9 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
     return new Response(
       JSON.stringify({
         url: session.url,
-        final_amount_usd: (finalAmountCents / 100).toFixed(2),
+        payment_amount_usd: (paymentAmountCents / 100).toFixed(2),
         convenience_fee_usd: (convenienceFeeCents / 100).toFixed(2),
+        final_amount_usd: (totalChargedCents / 100).toFixed(2),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

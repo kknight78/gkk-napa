@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pay Your Bill | G&KK NAPA Stores</title>
+  <title>Pay Your Bill | NAPA Auto Parts | G&KK</title>
   <meta name="robots" content="noindex" />
+  <link rel="icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg">
   <style>
     :root{
       --napa-blue:#0A0094;
@@ -25,6 +27,15 @@
       background:var(--napa-blue);
       border-bottom: 2px solid rgba(255,255,255,.12);
     }
+    .header-inner{
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+    .header-logo{
+      height:40px;
+      width:auto;
+    }
     .wrap{max-width:900px;margin:0 auto;padding:22px 18px}
     h1{
       margin:0;
@@ -42,7 +53,20 @@
       border-radius:16px;
       padding:16px;
     }
+    .section-title{
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:var(--napa-yellow);
+      margin:20px 0 10px;
+      padding-bottom:6px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+      font-weight:700;
+    }
+    .section-title:first-child{margin-top:0}
     label{display:block;font-weight:700;margin:14px 0 6px}
+    label .req{color:#ff6b6b;margin-left:2px}
+    label .opt{color:rgba(255,255,255,.5);font-weight:400;font-size:13px;margin-left:6px}
     input, select{
       width:100%;
       padding:12px 12px;
@@ -52,8 +76,10 @@
       color:var(--white);
       font-size:16px;
     }
+    input::placeholder{color:rgba(255,255,255,.4)}
+    select option{background:#1a1a4a;color:var(--white)}
     .row{display:grid;grid-template-columns: 1fr 1fr; gap:12px}
-    .hint{font-size:13px;color:rgba(255,255,255,.78);margin-top:6px}
+    .hint{font-size:13px;color:rgba(255,255,255,.5);margin-top:6px}
     .buttons{display:flex;flex-wrap:wrap; gap:10px; margin-top:16px}
     button{
       border:none;
@@ -75,107 +101,217 @@
     .fine{
       margin-top:12px;
       font-size:13px;
-      color:rgba(255,255,255,.78);
+      color:rgba(255,255,255,.5);
       line-height:1.35;
     }
     .preview{
       margin-top:14px;
-      padding:12px 12px;
+      padding:12px 14px;
       border-radius:12px;
-      background: rgba(0,0,0,.18);
+      background: rgba(0,0,0,.25);
       border:1px solid rgba(255,255,255,.14);
     }
     .preview h2{
-      margin:0 0 8px;
+      margin:0 0 10px;
       font-size:14px;
       text-transform:uppercase;
       letter-spacing:.4px;
+      color:var(--napa-yellow);
     }
-    .kv{display:flex;justify-content:space-between;gap:12px;margin:6px 0}
-    .kv span{color:rgba(255,255,255,.88)}
+    .kv{display:flex;justify-content:space-between;gap:12px;margin:6px 0;font-size:14px}
+    .kv span{color:rgba(255,255,255,.7)}
     .kv strong{color:var(--white)}
+    .kv.subtotal{border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px;margin-bottom:8px}
+    .kv.discount span{color:#8ecf8e}
+    .kv.discount strong{color:#8ecf8e}
+    .kv.total{border-top:1px solid rgba(255,255,255,.15);padding-top:8px;margin-top:10px}
+    .kv.total strong{color:var(--napa-yellow);font-size:15px}
+    .kv.total-ach strong{color:var(--stainless)}
     .error{
       margin-top:12px;
       color:#ffd0d0;
       font-weight:700;
     }
     a{color:var(--napa-yellow)}
+
+    /* Discount section */
+    .discount-toggle{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      margin:14px 0 8px;
+      cursor:pointer;
+    }
+    .discount-toggle input[type="checkbox"]{
+      width:20px;
+      height:20px;
+      min-width:20px;
+      margin:0;
+      margin-top:2px;
+      cursor:pointer;
+    }
+    .discount-toggle input[type="checkbox"]:disabled{
+      opacity:.4;
+      cursor:not-allowed;
+    }
+    .discount-toggle span{
+      font-weight:600;
+      font-size:14px;
+      color:rgba(255,255,255,.9);
+      line-height:1.4;
+    }
+    .discount-toggle.disabled span{
+      color:rgba(255,255,255,.4);
+    }
+
+    /* Card limit warning */
+    .card-limit-warning{
+      margin-top:10px;
+      padding:10px 12px;
+      background:rgba(255,107,107,.15);
+      border:1px solid rgba(255,107,107,.3);
+      border-radius:8px;
+      font-size:13px;
+      color:#ffb0b0;
+      font-weight:600;
+    }
+    .btn-card.disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+
+    /* What happens next */
+    .next-steps{
+      margin-top:16px;
+      padding:14px 16px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:12px;
+    }
+    .next-steps h3{
+      margin:0 0 10px;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+      color:rgba(255,255,255,.6);
+    }
+    .next-steps ul{
+      margin:0;
+      padding:0 0 0 18px;
+      font-size:13px;
+      color:rgba(255,255,255,.75);
+      line-height:1.6;
+    }
+    .next-steps li{margin:4px 0}
+
     @media (max-width:720px){
       .row{grid-template-columns:1fr}
       h1{font-size:24px}
+      .header-inner{flex-direction:column;align-items:flex-start;gap:10px}
     }
   </style>
 </head>
 
 <body>
   <header>
-    <div class="wrap">
-      <h1>Pay Your Bill</h1>
-      <p>Enter your invoice/reference and amount, then choose bank (ACH) or card.</p>
+    <div class="wrap header-inner">
+      <img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - G&KK" class="header-logo">
+      <div>
+        <h1>Pay Your Bill</h1>
+        <p>Enter the details from your statement, then choose bank (ACH) or card.</p>
+      </div>
     </div>
   </header>
 
   <main class="wrap">
     <div class="card">
+      <!-- Account & Contact Section -->
+      <div class="section-title">Account & Contact</div>
+
       <div class="row">
         <div>
-          <label for="invoice">Invoice / Reference #</label>
-          <input id="invoice" type="text" placeholder="e.g., INV-10432 or Account Name" autocomplete="off" />
-          <div class="hint">This appears on your statement or invoice.</div>
+          <label for="company">Company Name<span class="req">*</span></label>
+          <input id="company" type="text" placeholder="e.g., ACME Auto Repair" autocomplete="organization" />
         </div>
 
         <div>
-          <label for="amount">Amount (USD)</label>
-          <input id="amount" type="number" min="1" max="10000" step="0.01" placeholder="e.g., 125.50" />
-          <div class="hint">$1.00 – $10,000 max</div>
+          <label for="account_number">Account # (ACCT#)<span class="req">*</span></label>
+          <input id="account_number" type="text" placeholder="e.g., 100006256" autocomplete="off" />
+          <div class="hint">Found near the top of your statement.</div>
         </div>
       </div>
 
       <div class="row">
         <div>
-          <label for="store">Store</label>
+          <label for="email">Email<span class="req">*</span></label>
+          <input id="email" type="email" placeholder="name@company.com" autocomplete="email" />
+          <div class="hint">Where to send receipt (required if no phone).</div>
+        </div>
+
+        <div>
+          <label for="phone">Phone<span class="req">*</span></label>
+          <input id="phone" type="tel" placeholder="(555) 123-4567" autocomplete="tel" />
+          <div class="hint">Required unless email provided.</div>
+        </div>
+      </div>
+
+      <!-- Payment Details Section -->
+      <div class="section-title">Payment Details</div>
+
+      <div class="row">
+        <div>
+          <label for="store">Store<span class="req">*</span></label>
           <select id="store">
-            <option value="NAPA Danville">NAPA Danville</option>
-            <option value="NAPA Cayuga">NAPA Cayuga</option>
-            <option value="NAPA Rockville">NAPA Rockville</option>
-            <option value="NAPA Covington">NAPA Covington</option>
+            <option value="NAPA Danville" data-display="Danville - 100006256">Danville - 100006256</option>
+            <option value="NAPA Cayuga" data-display="Cayuga">Cayuga</option>
+            <option value="NAPA Rockville" data-display="Rockville">Rockville</option>
+            <option value="NAPA Covington" data-display="Covington">Covington</option>
           </select>
         </div>
 
         <div>
-          <label for="company">Company (optional)</label>
-          <input id="company" type="text" placeholder="e.g., ACME Auto Repair" autocomplete="organization" />
+          <label for="statement_number">Statement # (SM#)<span class="opt">(optional)</span></label>
+          <input id="statement_number" type="text" placeholder="e.g., 1520 or 1530" autocomplete="off" />
         </div>
       </div>
 
-      <div class="row">
-        <div>
-          <label for="email">Email</label>
-          <input id="email" type="email" placeholder="name@company.com" autocomplete="email" />
-          <div class="hint">Required if no phone provided.</div>
-        </div>
-
-        <div>
-          <label for="phone">Phone</label>
-          <input id="phone" type="tel" placeholder="(555) 123-4567" autocomplete="tel" />
-          <div class="hint">Required if no email provided.</div>
-        </div>
+      <div>
+        <label for="amount">Payment Amount (USD)<span class="req">*</span></label>
+        <input id="amount" type="number" min="1" max="50000" step="0.01" placeholder="e.g., 125.50" />
+        <div class="hint">$1.00 - $50,000 max (ACH). Card limited to $10,000.</div>
       </div>
 
-      <div class="row">
-        <div>
-          <label for="po_number">PO # (optional)</label>
-          <input id="po_number" type="text" placeholder="e.g., PO-12345" autocomplete="off" />
-        </div>
-        <div></div>
+      <!-- Discount Section (immediately under Payment Amount) -->
+      <label class="discount-toggle" id="discount_toggle">
+        <input type="checkbox" id="discount_check" />
+        <span>Payment reflects discount offer listed on invoice (select customers only prior to the 11th of the month).</span>
+      </label>
+
+      <!-- Payment Summary -->
+      <div class="preview" id="preview">
+        <h2>Payment Summary</h2>
+        <!-- Discount breakdown (shown when discount checked) -->
+        <div class="kv" id="pvTotalBeforeRow" style="display:none"><span>Total (before discount)</span><strong id="pvTotalBefore">$0.00</strong></div>
+        <div class="kv discount" id="pvDiscountRow" style="display:none"><span>10% early-pay discount</span><strong id="pvDiscount">-$0.00</strong></div>
+        <div class="kv subtotal" id="pvSubtotalRow" style="display:none"><span>Payment amount</span><strong id="pvSubtotal">$0.00</strong></div>
+        <!-- Standard payment line (shown when no discount) -->
+        <div class="kv" id="pvAmountRow"><span>Payment amount (applied to account)</span><strong id="pvAmount">$0.00</strong></div>
+        <!-- Fee line -->
+        <div class="kv" id="pvFeeRow" style="display:none"><span>Card convenience fee</span><strong id="pvFee">$0.00</strong></div>
+        <!-- Totals -->
+        <div class="kv total" id="pvTotalCardRow"><span>Total charged today (Credit Card)</span><strong id="pvTotalCard">$0.00</strong></div>
+        <div class="kv total total-ach" id="pvTotalAchRow"><span>Total charged today (ACH)</span><strong id="pvTotalAch">$0.00</strong></div>
       </div>
 
-      <div class="preview" id="preview" style="display:none;">
-        <h2>Card total preview</h2>
-        <div class="kv"><span>Invoice amount</span><strong id="pvAmount">$0.00</strong></div>
-        <div class="kv"><span>Card convenience fee</span><strong id="pvFee">$0.00</strong></div>
-        <div class="kv"><span>Total charged</span><strong id="pvTotal">$0.00</strong></div>
-        <div class="hint">Review the total above, then click "Continue to Stripe" to proceed.</div>
+      <!-- What Happens Next -->
+      <div class="next-steps">
+        <h3>What happens next</h3>
+        <ul>
+          <li>You'll be redirected to Stripe Checkout to complete payment securely.</li>
+          <li>After payment, you'll see a confirmation screen.</li>
+          <li>If you enter an email, you'll receive a receipt.</li>
+          <li>Your account will be credited for the Payment Amount shown above.</li>
+        </ul>
       </div>
 
       <div class="buttons">
@@ -183,11 +319,19 @@
         <button class="btn-card" id="btnCard">Pay by Card (fee applies)</button>
       </div>
 
+      <div class="card-limit-warning" id="cardLimitWarning" style="display:none;">
+        For amounts over $10,000, please use Bank (ACH) or call your store.
+      </div>
+
+      <div class="fine" style="margin-top:8px;">
+        <strong>Tip:</strong> Large payments are best via Bank (ACH) - no convenience fee.
+      </div>
+
       <div class="fine">
         By paying online you agree to our
         <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
         <br />
-        Bank (ACH) payments may take additional time to clear.
+        Bank (ACH) payments may take 3-5 business days to clear.
       </div>
 
       <div class="error" id="err" style="display:none;"></div>
@@ -196,27 +340,70 @@
 
   <script>
     // IMPORTANT: Set this to your Cloudflare Worker base URL
-    // Example: "https://gkk-napa-pay.youracct.workers.dev"
     const WORKER_BASE = "https://gkk-napa-pay.kellyraeknight78.workers.dev";
 
-    const invoiceEl   = document.getElementById("invoice");
-    const amountEl    = document.getElementById("amount");
-    const storeEl     = document.getElementById("store");
-    const companyEl   = document.getElementById("company");
-    const emailEl     = document.getElementById("email");
-    const phoneEl     = document.getElementById("phone");
-    const poNumberEl  = document.getElementById("po_number");
-    const errEl       = document.getElementById("err");
-    const btnAch      = document.getElementById("btnAch");
-    const btnCard     = document.getElementById("btnCard");
+    // Payment limits (keep in sync with worker)
+    const MIN_USD = 1.00;
+    const ACH_MAX_USD = 50000.00;
+    const CARD_MAX_USD = 10000.00;
+
+    // Elements
+    const companyEl = document.getElementById("company");
+    const accountNumberEl = document.getElementById("account_number");
+    const emailEl = document.getElementById("email");
+    const phoneEl = document.getElementById("phone");
+    const storeEl = document.getElementById("store");
+    const statementNumberEl = document.getElementById("statement_number");
+    const amountEl = document.getElementById("amount");
+    const discountToggleEl = document.getElementById("discount_toggle");
+    const discountCheckEl = document.getElementById("discount_check");
+    const errEl = document.getElementById("err");
+    const btnAch = document.getElementById("btnAch");
+    const btnCard = document.getElementById("btnCard");
 
     const previewBox = document.getElementById("preview");
+    const pvTotalBeforeRow = document.getElementById("pvTotalBeforeRow");
+    const pvTotalBefore = document.getElementById("pvTotalBefore");
+    const pvDiscountRow = document.getElementById("pvDiscountRow");
+    const pvDiscount = document.getElementById("pvDiscount");
+    const pvSubtotalRow = document.getElementById("pvSubtotalRow");
+    const pvSubtotal = document.getElementById("pvSubtotal");
+    const pvAmountRow = document.getElementById("pvAmountRow");
     const pvAmount = document.getElementById("pvAmount");
-    const pvFee    = document.getElementById("pvFee");
-    const pvTotal  = document.getElementById("pvTotal");
+    const pvFeeRow = document.getElementById("pvFeeRow");
+    const pvFee = document.getElementById("pvFee");
+    const pvTotalCardRow = document.getElementById("pvTotalCardRow");
+    const pvTotalCard = document.getElementById("pvTotalCard");
+    const pvTotalAchRow = document.getElementById("pvTotalAchRow");
+    const pvTotalAch = document.getElementById("pvTotalAch");
+    const cardLimitWarning = document.getElementById("cardLimitWarning");
+
+    // Card fee constants (must match worker)
+    const CARD_PCT = 0.029;
+    const CARD_FIXED_CENTS = 30;
 
     // Track pending Stripe URL for 2-step card flow
     let pendingStripeUrl = null;
+    let pendingFeeData = null;
+
+    // Check if discount is available (only 1st-10th of month)
+    function isDiscountAvailable() {
+      const today = new Date();
+      const dayOfMonth = today.getDate();
+      return dayOfMonth <= 10;
+    }
+
+    // Initialize discount checkbox state
+    function initDiscountCheckbox() {
+      const available = isDiscountAvailable();
+      discountCheckEl.disabled = !available;
+      if (!available) {
+        discountCheckEl.checked = false;
+        discountToggleEl.classList.add("disabled");
+      } else {
+        discountToggleEl.classList.remove("disabled");
+      }
+    }
 
     function showError(msg){
       errEl.style.display = "block";
@@ -227,35 +414,150 @@
       errEl.textContent = "";
     }
     function setLoading(isLoading){
-      btnAch.disabled = isLoading;
-      btnCard.disabled = isLoading;
-      btnAch.textContent = isLoading ? "Working..." : "Pay by Bank (ACH)";
-      // Don't reset card button if we're showing "Continue to Stripe"
-      if (!pendingStripeUrl) {
-        btnCard.textContent = isLoading ? "Working..." : "Pay by Card (fee applies)";
+      if (isLoading) {
+        btnAch.disabled = true;
+        btnCard.disabled = true;
+        btnAch.textContent = "Working...";
+        if (!pendingStripeUrl) {
+          btnCard.textContent = "Working...";
+        }
+      } else {
+        btnAch.textContent = "Pay by Bank (ACH)";
+        if (!pendingStripeUrl) {
+          btnCard.textContent = "Pay by Card (fee applies)";
+        }
+        updateButtonState(); // Re-apply validation state
       }
     }
+
+    // Toggle discount - just update preview (no fields to show anymore)
+    discountCheckEl.addEventListener("change", () => {
+      updatePreview();
+      resetPendingState();
+    });
 
     // Reset pending state when form values change
     function resetPendingState(){
       if (pendingStripeUrl) {
         pendingStripeUrl = null;
-        previewBox.style.display = "none";
+        pendingFeeData = null;
         btnCard.textContent = "Pay by Card (fee applies)";
+        updateButtonState();
       }
     }
-    invoiceEl.addEventListener("input", resetPendingState);
-    amountEl.addEventListener("input", resetPendingState);
-    storeEl.addEventListener("change", resetPendingState);
-    companyEl.addEventListener("input", resetPendingState);
-    emailEl.addEventListener("input", resetPendingState);
-    phoneEl.addEventListener("input", resetPendingState);
-    poNumberEl.addEventListener("input", resetPendingState);
-    function parseAmount(){
-      const n = Number(amountEl.value);
-      if (!Number.isFinite(n)) return null;
+
+    // Add change listeners to reset pending state and check form validity
+    [companyEl, accountNumberEl, emailEl, phoneEl, statementNumberEl, amountEl].forEach(el => {
+      el.addEventListener("input", () => { resetPendingState(); updatePreview(); updateButtonState(); });
+    });
+    storeEl.addEventListener("change", () => { resetPendingState(); updatePreview(); updateButtonState(); });
+
+    // Check if all required fields are filled
+    function isFormValid() {
+      const company = companyEl.value.trim();
+      const account_number = accountNumberEl.value.trim();
+      const email = emailEl.value.trim();
+      const phone = phoneEl.value.trim();
+      const amount = parseAmount(amountEl);
+
+      if (!company) return false;
+      if (!account_number) return false;
+      if (!email && !phone) return false;
+      if (amount < MIN_USD) return false;
+
+      return true;
+    }
+
+    // Update button enabled/disabled state
+    function updateButtonState() {
+      const valid = isFormValid();
+      const amount = parseAmount(amountEl);
+      const exceedsCardLimit = amount > CARD_MAX_USD;
+
+      // ACH button - just needs valid form
+      btnAch.disabled = !valid;
+
+      // Card button - needs valid form AND under card limit (unless pending)
+      if (!pendingStripeUrl) {
+        if (!valid) {
+          btnCard.disabled = true;
+          btnCard.classList.remove("disabled");
+          btnCard.textContent = "Pay by Card (fee applies)";
+        } else if (exceedsCardLimit) {
+          btnCard.disabled = true;
+          btnCard.classList.add("disabled");
+          btnCard.textContent = "Card unavailable (over $10,000)";
+        } else {
+          btnCard.disabled = false;
+          btnCard.classList.remove("disabled");
+          btnCard.textContent = "Pay by Card (fee applies)";
+        }
+      }
+    }
+
+    function parseAmount(el){
+      const n = Number(el.value);
+      if (!Number.isFinite(n) || n < 0) return 0;
       return Math.round(n * 100) / 100;
     }
+
+    function calculateCardFee(amountCents) {
+      // Gross-up: final = (amount + fixed) / (1 - pct)
+      const finalCents = Math.ceil((amountCents + CARD_FIXED_CENTS) / (1 - CARD_PCT));
+      return finalCents - amountCents;
+    }
+
+    function updatePreview() {
+      const paymentAmount = parseAmount(amountEl);
+      const paymentCents = Math.round(paymentAmount * 100);
+      const feeCents = calculateCardFee(paymentCents);
+      const isDiscountChecked = discountCheckEl.checked && isDiscountAvailable();
+
+      if (isDiscountChecked) {
+        // Discount view: show total before discount, discount amount, then payment
+        // Payment amount = 90% of original, so original = payment / 0.9
+        const totalBeforeDiscount = paymentAmount / 0.9;
+        const discountAmount = totalBeforeDiscount - paymentAmount;
+
+        pvTotalBeforeRow.style.display = "flex";
+        pvTotalBefore.textContent = `$${totalBeforeDiscount.toFixed(2)}`;
+
+        pvDiscountRow.style.display = "flex";
+        pvDiscount.textContent = `-$${discountAmount.toFixed(2)}`;
+
+        pvSubtotalRow.style.display = "flex";
+        pvSubtotal.textContent = `$${paymentAmount.toFixed(2)}`;
+
+        // Hide standard payment line
+        pvAmountRow.style.display = "none";
+      } else {
+        // Standard view: just show payment amount
+        pvTotalBeforeRow.style.display = "none";
+        pvDiscountRow.style.display = "none";
+        pvSubtotalRow.style.display = "none";
+
+        pvAmountRow.style.display = "flex";
+        pvAmount.textContent = `$${paymentAmount.toFixed(2)}`;
+      }
+
+      // Always show fee row
+      pvFeeRow.style.display = "flex";
+      pvFee.textContent = `$${(feeCents / 100).toFixed(2)}`;
+
+      // Show both totals
+      const totalCard = paymentAmount + (feeCents / 100);
+      pvTotalCard.textContent = `$${totalCard.toFixed(2)}`;
+      pvTotalAch.textContent = `$${paymentAmount.toFixed(2)}`;
+
+      // Check card limit and show/hide warning
+      const exceedsCardLimit = paymentAmount > CARD_MAX_USD;
+      cardLimitWarning.style.display = exceedsCardLimit ? "block" : "none";
+    }
+
+    // Initialize
+    initDiscountCheckbox();
+    updatePreview();
+    updateButtonState();
 
     async function createSession(pay_method){
       clearError();
@@ -265,19 +567,41 @@
         return null;
       }
 
-      const invoice_ref = invoiceEl.value.trim();
-      const amount = parseAmount();
-      const store = storeEl.value;
       const company = companyEl.value.trim();
+      const account_number = accountNumberEl.value.trim();
       const email = emailEl.value.trim();
       const phone = phoneEl.value.trim();
-      const po_number = poNumberEl.value.trim();
+      const store = storeEl.value; // Use the value attribute, not display text
+      const statement_number = statementNumberEl.value.trim();
+      const amount = parseAmount(amountEl);
 
-      if (!invoice_ref) return showError("Please enter an invoice/reference number.");
-      if (invoice_ref.length > 100) return showError("Invoice/Reference is too long (max 100 characters).");
-      if (amount === null || amount < 1) return showError("Please enter a valid amount (minimum $1.00).");
-      if (amount > 10000) return showError("Maximum payment is $10,000. For larger amounts, please contact your store.");
+      // Discount info (only if checkbox checked and available)
+      const isDiscountChecked = discountCheckEl.checked && isDiscountAvailable();
+      let discount_amount_usd = undefined;
+      if (isDiscountChecked) {
+        // Calculate the 10% discount amount
+        const totalBeforeDiscount = amount / 0.9;
+        discount_amount_usd = (totalBeforeDiscount - amount).toFixed(2);
+      }
+
+      // Validation
+      if (!company) return showError("Please enter your Company Name.");
+      if (company.length > 100) return showError("Company Name is too long (max 100 characters).");
+      if (!account_number) return showError("Please enter your Account # (ACCT#) from your statement.");
+      if (account_number.length > 50) return showError("Account # is too long (max 50 characters).");
       if (!email && !phone) return showError("Please provide an email or phone number for confirmation.");
+      if (statement_number && statement_number.length > 50) return showError("Statement # is too long (max 50 characters).");
+      if (amount < MIN_USD) return showError(`Please enter a valid payment amount (minimum $${MIN_USD.toFixed(2)}).`);
+
+      // Check max based on payment method
+      const maxForMethod = pay_method === 'card' ? CARD_MAX_USD : ACH_MAX_USD;
+      if (amount > maxForMethod) {
+        if (pay_method === 'card') {
+          return showError(`Card payments are limited to $${CARD_MAX_USD.toLocaleString()}. Please use Bank (ACH) for larger amounts.`);
+        } else {
+          return showError(`Maximum payment is $${ACH_MAX_USD.toLocaleString()}. For larger amounts, please contact your store.`);
+        }
+      }
 
       setLoading(true);
 
@@ -286,14 +610,15 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            amount_usd: amount.toFixed(2),
-            invoice_ref,
-            store,
-            pay_method,
+            company,
+            account_number,
             email: email || undefined,
             phone: phone || undefined,
-            company: company || undefined,
-            po_number: po_number || undefined
+            store,
+            statement_number: statement_number || undefined,
+            amount_usd: amount.toFixed(2),
+            discount_amount_usd: discount_amount_usd || undefined,
+            pay_method
           })
         });
 
@@ -312,7 +637,7 @@
       }
     }
 
-    // Card: 2-step flow - show preview, then user clicks to continue
+    // Card: 2-step flow - show preview with fee, then user clicks to continue
     btnCard.addEventListener("click", async () => {
       // If we already have a pending URL, redirect now
       if (pendingStripeUrl) {
@@ -320,23 +645,26 @@
         return;
       }
 
+      // Check card limit before proceeding
+      const amount = parseAmount(amountEl);
+      if (amount > CARD_MAX_USD) {
+        showError(`Card payments are limited to $${CARD_MAX_USD.toLocaleString()}. Please use Bank (ACH) for larger amounts.`);
+        return;
+      }
+
       const data = await createSession("card");
       if (!data?.url) return;
 
-      // Show preview values
-      previewBox.style.display = "block";
-      pvAmount.textContent = `$${Number(amountEl.value || 0).toFixed(2)}`;
-      pvFee.textContent    = `$${Number(data.convenience_fee_usd || 0).toFixed(2)}`;
-      pvTotal.textContent  = `$${Number(data.final_amount_usd || 0).toFixed(2)}`;
-
       // Store URL and update button for second click
       pendingStripeUrl = data.url;
-      btnCard.textContent = "Continue to Stripe →";
+      pendingFeeData = data;
+      btnCard.textContent = "Continue to Stripe \u2192";
     });
 
     // ACH: no fee preview needed; redirect immediately
     btnAch.addEventListener("click", async () => {
       resetPendingState();
+      updatePreview(); // Reset to non-card view
       const data = await createSession("ach");
       if (!data?.url) return;
       window.location.href = data.url;
