@@ -5,10 +5,199 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>G&KK NAPA Stores | Danville • Cayuga • Rockville • Covington</title>
   <meta name="description" content="G&KK NAPA Auto Parts stores serving Danville (IL), Cayuga (IN), Rockville (IN), and Covington (IN). Locations, hours, and commercial bill pay." />
+  <link rel="canonical" href="https://gkk-napa.com/" />
+  <meta name="theme-color" content="#004b8d" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="G&KK NAPA Stores" />
+  <meta property="og:title" content="G&KK NAPA Auto Parts | 4 Locations in IL & IN" />
+  <meta property="og:description" content="Quality auto parts for service garages, mechanics, and DIYers. Danville IL, Cayuga IN, Rockville IN, Covington IN. Pay your commercial bill online." />
+  <meta property="og:url" content="https://gkk-napa.com/" />
+  <meta property="og:image" content="https://gkk-napa.com/assets/store-front.png" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="G&KK NAPA Auto Parts | 4 Locations in IL & IN" />
+  <meta name="twitter:description" content="Quality auto parts for service garages, mechanics, and DIYers. Danville IL, Cayuga IN, Rockville IN, Covington IN." />
+  <meta name="twitter:image" content="https://gkk-napa.com/assets/store-front.png" />
+
   <link rel="icon" sizes="192x192" href="/assets/favicon-192.jpg" type="image/jpeg">
   <link rel="shortcut icon" href="/assets/favicon-32.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg" type="image/jpeg">
   <link rel="stylesheet" href="/styles.css" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://gkk-napa.com/#organization",
+        "name": "G&KK Stores",
+        "alternateName": "G&KK NAPA Auto Parts",
+        "url": "https://gkk-napa.com",
+        "logo": "https://gkk-napa.com/assets/napa-auto-parts-g+kk-combo.svg",
+        "description": "Independent NAPA Auto Parts store group serving Danville IL, Cayuga IN, Rockville IN, and Covington IN.",
+        "sameAs": [
+          "https://www.facebook.com/danvillenapa"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+1-217-446-9067",
+          "contactType": "customer service",
+          "email": "info@gkk-napa.com"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://gkk-napa.com/#website",
+        "url": "https://gkk-napa.com",
+        "name": "G&KK NAPA Stores",
+        "publisher": { "@id": "https://gkk-napa.com/#organization" }
+      },
+      {
+        "@type": "AutoPartsStore",
+        "@id": "https://gkk-napa.com/locations/danville-il/#store",
+        "name": "G&KK NAPA Auto Parts - Danville",
+        "image": "https://gkk-napa.com/assets/store-front.png",
+        "url": "https://gkk-napa.com/locations/danville-il",
+        "telephone": "+1-217-446-9067",
+        "email": "napa.danville@comcastbiz.net",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "303 N Gilbert St",
+          "addressLocality": "Danville",
+          "addressRegion": "IL",
+          "postalCode": "61832",
+          "addressCountry": "US"
+        },
+        "openingHoursSpecification": [
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "17:30" },
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "08:00", "closes": "17:00" },
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "10:00", "closes": "16:00" }
+        ],
+        "priceRange": "$$",
+        "paymentAccepted": "Cash, Credit Card, Debit Card, ACH Bank Transfer",
+        "parentOrganization": { "@id": "https://gkk-napa.com/#organization" }
+      },
+      {
+        "@type": "AutoPartsStore",
+        "@id": "https://gkk-napa.com/locations/cayuga-in/#store",
+        "name": "G&KK NAPA Auto Parts - Cayuga",
+        "url": "https://gkk-napa.com/locations/cayuga-in",
+        "telephone": "+1-765-487-1324",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "307 N Logan St",
+          "addressLocality": "Cayuga",
+          "addressRegion": "IN",
+          "postalCode": "47928",
+          "addressCountry": "US"
+        },
+        "openingHoursSpecification": [
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:30", "closes": "17:30" },
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "07:30", "closes": "13:00" }
+        ],
+        "priceRange": "$$",
+        "paymentAccepted": "Cash, Credit Card, Debit Card, ACH Bank Transfer",
+        "parentOrganization": { "@id": "https://gkk-napa.com/#organization" }
+      },
+      {
+        "@type": "AutoPartsStore",
+        "@id": "https://gkk-napa.com/locations/rockville-in/#store",
+        "name": "G&KK NAPA Auto Parts - Rockville",
+        "url": "https://gkk-napa.com/locations/rockville-in",
+        "telephone": "+1-765-569-2011",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "115 S Lincoln Rd",
+          "addressLocality": "Rockville",
+          "addressRegion": "IN",
+          "postalCode": "47872",
+          "addressCountry": "US"
+        },
+        "openingHoursSpecification": [
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:30", "closes": "17:30" },
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "08:00", "closes": "14:00" }
+        ],
+        "priceRange": "$$",
+        "paymentAccepted": "Cash, Credit Card, Debit Card, ACH Bank Transfer",
+        "parentOrganization": { "@id": "https://gkk-napa.com/#organization" }
+      },
+      {
+        "@type": "AutoPartsStore",
+        "@id": "https://gkk-napa.com/locations/covington-in/#store",
+        "name": "G&KK NAPA Auto Parts - Covington",
+        "url": "https://gkk-napa.com/locations/covington-in",
+        "telephone": "+1-765-793-2258",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "205 4th St",
+          "addressLocality": "Covington",
+          "addressRegion": "IN",
+          "postalCode": "47932",
+          "addressCountry": "US"
+        },
+        "openingHoursSpecification": [
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "17:00" },
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "08:00", "closes": "12:00" }
+        ],
+        "priceRange": "$$",
+        "paymentAccepted": "Cash, Credit Card, Debit Card, ACH Bank Transfer",
+        "parentOrganization": { "@id": "https://gkk-napa.com/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://gkk-napa.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I pay my G&KK NAPA commercial account bill online?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Visit gkk-napa.com/pay, enter your Account Number from your statement, the amount you want to pay, and your contact info. You can pay by bank transfer (ACH) with no fee, or by credit card with a small convenience fee."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What payment methods does G&KK NAPA accept online?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We accept ACH bank transfers (no fee, up to $50,000) and credit/debit cards (2.9% + $0.30 convenience fee, up to $10,000). All payments are securely processed through Stripe."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Where are G&KK NAPA Auto Parts stores located?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We have four locations: Danville IL (303 N Gilbert St), Cayuga IN (307 N Logan St), Rockville IN (115 S Lincoln Rd), and Covington IN (205 4th St). All stores serve commercial accounts and walk-in customers."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are G&KK NAPA store hours?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Hours vary by location. Danville: Mon-Fri 7am-5:30pm, Sat 8am-5pm, Sun 10am-4pm. Indiana stores (Cayuga, Rockville, Covington): Mon-Fri 7-7:30am to 5-5:30pm, Saturday mornings, closed Sundays. Call your local store for exact hours."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does G&KK NAPA offer early-pay discounts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Commercial accounts may qualify for a 10% early-pay discount when paying within the first 10 days of the month. Check your statement for discount eligibility and use our online bill pay to take advantage of it."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <!-- NAPA Logo Banner -->
@@ -30,6 +219,7 @@
         <a href="#locations">Locations</a>
         <a href="#commercial">Commercial</a>
         <a href="#pay">Pay Your Bill</a>
+        <a href="#faq">FAQ</a>
         <a href="#contact">Contact</a>
       </nav>
 
@@ -98,8 +288,8 @@
 
         <div class="grid">
           <article class="store">
-            <h3>Danville, IL</h3>
-            <p class="meta">303 N Gilbert St, Danville, IL 61832-5659</p>
+            <h3><a href="/locations/danville-il" style="color: inherit; text-decoration: none;">Danville, IL</a></h3>
+            <p class="meta">303 N Gilbert St, Danville, IL 61832</p>
             <div class="actions">
               <a class="link" href="tel:+12174469067">Call (217) 446-9067</a>
               <a class="link" href="https://www.google.com/maps/search/?api=1&query=303%20N%20Gilbert%20St%2C%20Danville%2C%20IL%2061832" target="_blank" rel="noopener">Directions</a>
@@ -109,11 +299,12 @@
               <div><strong>Sat:</strong> 8:00 AM – 5:00 PM</div>
               <div><strong>Sun:</strong> 10:00 AM – 4:00 PM</div>
             </div>
+            <a class="link" href="/locations/danville-il" style="display: block; margin-top: 12px;">Store details →</a>
           </article>
 
           <article class="store">
-            <h3>Cayuga, IN</h3>
-            <p class="meta">307 N Logan St, Cayuga, IN 47928-8095</p>
+            <h3><a href="/locations/cayuga-in" style="color: inherit; text-decoration: none;">Cayuga, IN</a></h3>
+            <p class="meta">307 N Logan St, Cayuga, IN 47928</p>
             <div class="actions">
               <a class="link" href="tel:+17654871324">Call (765) 487-1324</a>
               <a class="link" href="https://www.google.com/maps/search/?api=1&query=307%20N%20Logan%20St%2C%20Cayuga%2C%20IN%2047928" target="_blank" rel="noopener">Directions</a>
@@ -123,11 +314,12 @@
               <div><strong>Sat:</strong> 7:30 AM – 1:00 PM</div>
               <div><strong>Sun:</strong> Closed</div>
             </div>
+            <a class="link" href="/locations/cayuga-in" style="display: block; margin-top: 12px;">Store details →</a>
           </article>
 
           <article class="store">
-            <h3>Rockville, IN</h3>
-            <p class="meta">115 S Lincoln Rd, Rockville, IN 47872-1527</p>
+            <h3><a href="/locations/rockville-in" style="color: inherit; text-decoration: none;">Rockville, IN</a></h3>
+            <p class="meta">115 S Lincoln Rd, Rockville, IN 47872</p>
             <div class="actions">
               <a class="link" href="tel:+17655692011">Call (765) 569-2011</a>
               <a class="link" href="https://www.google.com/maps/search/?api=1&query=115%20S%20Lincoln%20Rd%2C%20Rockville%2C%20IN%2047872" target="_blank" rel="noopener">Directions</a>
@@ -137,11 +329,12 @@
               <div><strong>Sat:</strong> 8:00 AM – 2:00 PM</div>
               <div><strong>Sun:</strong> Closed</div>
             </div>
+            <a class="link" href="/locations/rockville-in" style="display: block; margin-top: 12px;">Store details →</a>
           </article>
 
           <article class="store">
-            <h3>Covington, IN</h3>
-            <p class="meta">205 4th St, Covington, IN 47932-1223</p>
+            <h3><a href="/locations/covington-in" style="color: inherit; text-decoration: none;">Covington, IN</a></h3>
+            <p class="meta">205 4th St, Covington, IN 47932</p>
             <div class="actions">
               <a class="link" href="tel:+17657932258">Call (765) 793-2258</a>
               <a class="link" href="https://www.google.com/maps/search/?api=1&query=205%204th%20St%2C%20Covington%2C%20IN%2047932" target="_blank" rel="noopener">Directions</a>
@@ -151,6 +344,7 @@
               <div><strong>Sat:</strong> 8:00 AM – 12:00 PM</div>
               <div><strong>Sun:</strong> Closed</div>
             </div>
+            <a class="link" href="/locations/covington-in" style="display: block; margin-top: 12px;">Store details →</a>
           </article>
         </div>
       </div>
@@ -219,6 +413,40 @@
           <div class="logo-wrap" aria-hidden="true">
             <img src="/assets/napa-logo.png" alt="" loading="lazy" />
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="section">
+      <div class="container">
+        <h2>Frequently Asked Questions</h2>
+        <p class="lead">Quick answers about our stores and online bill pay.</p>
+
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>How do I pay my G&KK NAPA commercial account bill online?</summary>
+            <p>Visit our <a href="/pay">online bill pay page</a>, enter your Account Number from your statement, the amount you want to pay, and your contact info. You can pay by bank transfer (ACH) with no fee, or by credit card with a small convenience fee.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>What payment methods do you accept online?</summary>
+            <p>We accept ACH bank transfers (no fee, up to $50,000) and credit/debit cards (2.9% + $0.30 convenience fee, up to $10,000). All payments are securely processed through Stripe.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Where are G&KK NAPA Auto Parts stores located?</summary>
+            <p>We have four locations: <strong>Danville IL</strong> (303 N Gilbert St), <strong>Cayuga IN</strong> (307 N Logan St), <strong>Rockville IN</strong> (115 S Lincoln Rd), and <strong>Covington IN</strong> (205 4th St). All stores serve commercial accounts and walk-in customers.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>What are your store hours?</summary>
+            <p>Hours vary by location. <strong>Danville:</strong> Mon-Fri 7am-5:30pm, Sat 8am-5pm, Sun 10am-4pm. <strong>Indiana stores</strong> (Cayuga, Rockville, Covington): Mon-Fri 7-7:30am to 5-5:30pm, Saturday mornings, closed Sundays. See the <a href="#locations">Locations section</a> for exact hours.</p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Do you offer early-pay discounts?</summary>
+            <p>Yes! Commercial accounts may qualify for a 10% early-pay discount when paying within the first 10 days of the month. Check your statement for discount eligibility and use our <a href="/pay">online bill pay</a> to take advantage of it.</p>
+          </details>
         </div>
       </div>
     </section>

@@ -293,6 +293,55 @@ h2 {
 .footer a { color: var(--stainless-gray) }
 .footer a:hover { color: var(--white); text-decoration: underline }
 
+/* FAQ Accordion */
+.faq-list { max-width: 800px }
+
+.faq-item {
+  border: 1px solid var(--gunmetal-gray);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 10px;
+}
+
+.faq-item summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.faq-item summary::-webkit-details-marker { display: none }
+
+.faq-item summary::after {
+  content: "+";
+  font-size: 20px;
+  color: var(--napa-yellow);
+  font-weight: 700;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.faq-item[open] summary::after { content: "−" }
+
+.faq-item[open] summary {
+  border-bottom: 1px solid var(--gunmetal-gray);
+}
+
+.faq-item p {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--stainless-gray);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.faq-item a { color: var(--napa-yellow) }
+.faq-item a:hover { text-decoration: underline }
+
 /* Responsive */
 @media (max-width: 900px) {
   .hero-inner, .split { grid-template-columns: 1fr }

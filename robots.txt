@@ -1,0 +1,10 @@
+# G&KK NAPA Stores - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://gkk-napa.com/sitemap.xml
+
+# Disallow success/cancel pages (transactional, not useful for search)
+Disallow: /pay/success/
+Disallow: /pay/cancel/

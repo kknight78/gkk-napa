@@ -3,10 +3,97 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pay Your Bill | NAPA Auto Parts | G&KK</title>
-  <meta name="robots" content="noindex" />
+  <title>Pay Your Bill Online | G&KK NAPA Auto Parts</title>
+  <meta name="description" content="Pay your G&KK NAPA commercial account bill online. ACH bank transfer (no fee) or credit card. Secure payments via Stripe for Danville, Cayuga, Rockville, and Covington stores." />
+  <link rel="canonical" href="https://gkk-napa.com/pay" />
+  <meta name="theme-color" content="#004b8d" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="G&KK NAPA Stores" />
+  <meta property="og:title" content="Pay Your NAPA Bill Online | G&KK Stores" />
+  <meta property="og:description" content="Pay your commercial account bill securely online. ACH (no fee, up to $50k) or credit card. Serving Danville IL, Cayuga, Rockville, Covington IN." />
+  <meta property="og:url" content="https://gkk-napa.com/pay" />
+  <meta property="og:image" content="https://gkk-napa.com/assets/store-front.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Pay Your NAPA Bill Online | G&KK Stores" />
+  <meta name="twitter:description" content="Pay your commercial account bill securely online. ACH (no fee) or credit card." />
+  <meta name="twitter:image" content="https://gkk-napa.com/assets/store-front.png" />
+
   <link rel="icon" href="/assets/favicon-32.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://gkk-napa.com/pay",
+        "url": "https://gkk-napa.com/pay",
+        "name": "Pay Your NAPA Bill Online",
+        "description": "Pay your G&KK NAPA commercial account bill online via ACH bank transfer or credit card.",
+        "isPartOf": { "@id": "https://gkk-napa.com/#website" },
+        "breadcrumb": {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://gkk-napa.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Pay Your Bill" }
+          ]
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I pay my G&KK NAPA bill online?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Enter your Account Number (found on your statement), the payment amount, and your contact info. Choose ACH bank transfer (no fee) or credit card (2.9% + $0.30 fee). You'll be redirected to Stripe to complete the payment securely."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the maximum payment amount?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "ACH bank transfers support payments up to $50,000. Credit card payments are limited to $10,000. For larger amounts, please contact your store directly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is there a fee for online payments?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "ACH bank transfers have no fee. Credit card payments include a convenience fee of 2.9% + $0.30, which is added to your total at checkout."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I qualify for the early-pay discount?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Some commercial accounts qualify for a 10% early-pay discount when paying by the 10th of the month. Check your statement for eligibility. If eligible, check the discount box when paying online."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How long does it take for my payment to post?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Credit card payments typically post within 1-2 business days. ACH bank transfers may take 3-5 business days to clear and post to your account."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <style>
     :root{
       --napa-blue:#0A0094;
@@ -204,6 +291,49 @@
     }
     .next-steps li{margin:4px 0}
 
+    /* FAQ Section */
+    .faq-section{margin-top:24px}
+    .faq-section h2{
+      font-size:18px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+      margin:0 0 14px;
+    }
+    .faq-list{display:grid;gap:8px}
+    .faq-item{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;
+    }
+    .faq-item summary{
+      padding:12px 14px;
+      cursor:pointer;
+      font-weight:600;
+      font-size:14px;
+      list-style:none;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .faq-item summary::-webkit-details-marker{display:none}
+    .faq-item summary::after{
+      content:"+";
+      font-size:18px;
+      color:var(--napa-yellow);
+      font-weight:700;
+      margin-left:10px;
+    }
+    .faq-item[open] summary::after{content:"−"}
+    .faq-item[open] summary{border-bottom:1px solid rgba(255,255,255,.1)}
+    .faq-item p{
+      margin:0;
+      padding:12px 14px;
+      color:rgba(255,255,255,.75);
+      font-size:13px;
+      line-height:1.55;
+    }
+
     @media (max-width:720px){
       .row{grid-template-columns:1fr}
       h1{font-size:24px}
@@ -215,7 +345,7 @@
 <body>
   <header>
     <div class="wrap header-inner">
-      <img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - G&KK" class="header-logo">
+      <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - G&KK - Back to Home" class="header-logo"></a>
       <div>
         <h1>Pay Your Bill</h1>
         <p>Enter the details from your statement, then choose bank (ACH) or card.</p>
@@ -335,6 +465,37 @@
       </div>
 
       <div class="error" id="err" style="display:none;"></div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="faq-section">
+      <h2>Common Questions</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How do I pay my G&KK NAPA bill online?</summary>
+          <p>Enter your Account Number (found on your statement), the payment amount, and your contact info. Choose ACH bank transfer (no fee) or credit card (2.9% + $0.30 fee). You'll be redirected to Stripe to complete the payment securely.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>What is the maximum payment amount?</summary>
+          <p>ACH bank transfers support payments up to $50,000. Credit card payments are limited to $10,000. For larger amounts, please contact your store directly.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Is there a fee for online payments?</summary>
+          <p>ACH bank transfers have no fee. Credit card payments include a convenience fee of 2.9% + $0.30, which is added to your total at checkout.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>How do I qualify for the early-pay discount?</summary>
+          <p>Some commercial accounts qualify for a 10% early-pay discount when paying by the 10th of the month. Check your statement for eligibility. If eligible, check the discount box when paying online.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>How long does it take for my payment to post?</summary>
+          <p>Credit card payments typically post within 1-2 business days. ACH bank transfers may take 3-5 business days to clear and post to your account.</p>
+        </details>
+      </div>
     </div>
   </main>
 
