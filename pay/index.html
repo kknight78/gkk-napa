@@ -22,8 +22,10 @@
   <meta name="twitter:description" content="Pay your commercial account bill securely online. ACH (no fee) or credit card." />
   <meta name="twitter:image" content="https://gkk-napa.com/assets/store-front.png" />
 
-  <link rel="icon" href="/assets/favicon-32.jpg" type="image/jpeg">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg">
+  <link rel="icon" sizes="192x192" href="/assets/favicon-192.jpg" type="image/jpeg">
+  <link rel="shortcut icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="/styles.css" />
 
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -101,19 +103,6 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       color:var(--white);
       background: var(--bg);
-    }
-    header{
-      background:var(--napa-blue);
-      border-bottom: 2px solid rgba(255,255,255,.12);
-    }
-    .header-inner{
-      display:flex;
-      align-items:center;
-      gap:16px;
-    }
-    .header-logo{
-      height:40px;
-      width:auto;
     }
     .wrap{max-width:900px;margin:0 auto;padding:22px 18px}
     h1{
@@ -335,15 +324,37 @@
 </head>
 
 <body>
-  <header>
-    <div class="wrap header-inner">
-      <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - G&KK - Back to Home" class="header-logo"></a>
-      <div>
-        <h1>Pay Your Bill</h1>
-        <p>Enter the details from your statement, then choose bank (ACH) or card.</p>
-      </div>
+  <!-- NAPA Logo Banner -->
+  <div class="logo-banner">
+    <div class="container">
+      <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/">
+        <span class="brand-title">G&KK Stores</span>
+        <span class="brand-subtitle">Danville, Cayuga, Rockville & Covington</span>
+      </a>
+
+      <nav class="nav">
+        <a href="https://www.napaonline.com" target="_blank" rel="noopener">Shop</a>
+        <a href="/#locations">Locations</a>
+        <a href="/#commercial">Commercial</a>
+        <a href="/pay">Pay Your Bill</a>
+        <a href="/#faq">FAQ</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+
+      <a class="cta" href="/pay">Pay Online</a>
     </div>
   </header>
+
+  <div class="wrap" style="padding-top:24px;">
+    <h1>Pay Your Bill</h1>
+    <p>Enter the details from your statement, then choose bank (ACH) or card.</p>
+  </div>
 
   <main class="wrap">
     <div class="card">
@@ -660,34 +671,15 @@
       const paymentAmount = parseAmount(amountEl);
       const paymentCents = Math.round(paymentAmount * 100);
       const feeCents = calculateCardFee(paymentCents);
-      const isDiscountChecked = discountCheckEl.checked && isDiscountAvailable();
 
-      if (isDiscountChecked) {
-        // Discount view: show total before discount, discount amount, then payment
-        // Payment amount = 90% of original, so original = payment / 0.9
-        const totalBeforeDiscount = paymentAmount / 0.9;
-        const discountAmount = totalBeforeDiscount - paymentAmount;
+      // Always hide discount breakdown rows (checkbox still tracked for backend)
+      pvTotalBeforeRow.style.display = "none";
+      pvDiscountRow.style.display = "none";
+      pvSubtotalRow.style.display = "none";
 
-        pvTotalBeforeRow.style.display = "flex";
-        pvTotalBefore.textContent = `$${totalBeforeDiscount.toFixed(2)}`;
-
-        pvDiscountRow.style.display = "flex";
-        pvDiscount.textContent = `-$${discountAmount.toFixed(2)}`;
-
-        pvSubtotalRow.style.display = "flex";
-        pvSubtotal.textContent = `$${paymentAmount.toFixed(2)}`;
-
-        // Hide standard payment line
-        pvAmountRow.style.display = "none";
-      } else {
-        // Standard view: just show payment amount
-        pvTotalBeforeRow.style.display = "none";
-        pvDiscountRow.style.display = "none";
-        pvSubtotalRow.style.display = "none";
-
-        pvAmountRow.style.display = "flex";
-        pvAmount.textContent = `$${paymentAmount.toFixed(2)}`;
-      }
+      // Always show standard payment amount line
+      pvAmountRow.style.display = "flex";
+      pvAmount.textContent = `$${paymentAmount.toFixed(2)}`;
 
       // Always show fee row
       pvFeeRow.style.display = "flex";
