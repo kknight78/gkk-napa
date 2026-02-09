@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Subscribe to SMS | G&KK NAPA Auto Parts</title>
+  <meta name="description" content="Subscribe to text updates from G&KK NAPA Auto Parts. Get order notifications, store hours, and occasional deals." />
+  <link rel="canonical" href="https://gkk-napa.com/sms/subscribe" />
+  <meta name="theme-color" content="#004b8d" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="G&KK NAPA Stores" />
+  <meta property="og:title" content="Subscribe to SMS | G&KK NAPA Auto Parts" />
+  <meta property="og:description" content="Subscribe to text updates from G&KK NAPA Auto Parts." />
+  <meta property="og:url" content="https://gkk-napa.com/sms/subscribe" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Subscribe to SMS | G&KK NAPA Auto Parts" />
+  <meta name="twitter:description" content="Subscribe to text updates from G&KK NAPA Auto Parts." />
+
+  <link rel="icon" sizes="192x192" href="/assets/favicon-192.jpg" type="image/jpeg">
+  <link rel="shortcut icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- NAPA Logo Banner -->
+  <div class="logo-banner">
+    <div class="container">
+      <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/">
+        <span class="brand-title">G&KK Stores</span>
+        <span class="brand-subtitle">Danville, Cayuga, Rockville & Covington</span>
+      </a>
+
+      <nav class="nav">
+        <a href="https://www.napaonline.com" target="_blank" rel="noopener">Shop</a>
+        <a href="/#locations">Locations</a>
+        <a href="/#commercial">Commercial</a>
+        <a href="/#pay">Pay Your Bill</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+
+      <a class="cta" href="/#pay">Pay Online</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h1 style="margin: 0 0 10px; font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Subscribe to SMS</h1>
+        <p class="lead">Get text updates from your local G&KK NAPA Auto Parts store.</p>
+
+        <div class="legal-content">
+          <!-- Subscribe form -->
+          <form id="sms-form" style="max-width: 480px;">
+            <div style="margin-bottom: 16px;">
+              <label for="phone" style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Phone Number</label>
+              <input type="tel" id="phone" name="phone" required autocomplete="tel" placeholder="(555) 555-1234"
+                style="width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--gunmetal-gray); background: rgba(255,255,255,0.08); color: var(--white); font-size: 16px; font-family: inherit;" />
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label for="store" style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Store (optional)</label>
+              <select id="store" name="store"
+                style="width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--gunmetal-gray); background: rgba(255,255,255,0.08); color: var(--white); font-size: 16px; font-family: inherit;">
+                <option value="">— Select a store —</option>
+                <option value="danville">Danville, IL</option>
+                <option value="cayuga">Cayuga, IN</option>
+                <option value="rockville">Rockville, IN</option>
+                <option value="covington">Covington, IN</option>
+              </select>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--stainless-gray); line-height: 1.5;">
+                <input type="checkbox" id="consent" name="consent" required
+                  style="margin-top: 3px; flex-shrink: 0; width: 18px; height: 18px; accent-color: var(--napa-yellow);" />
+                <span>I agree to receive SMS messages from G&KK NAPA Auto Parts about order updates, store hours/closures, and occasional promotions. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. See <a class="link" href="/privacy.html">Privacy Policy</a> and <a class="link" href="/terms.html">Terms</a>.</span>
+              </label>
+            </div>
+
+            <button type="submit" class="button primary" style="width: 100%; font-size: 16px; padding: 14px; cursor: pointer;">Subscribe</button>
+          </form>
+
+          <!-- Success message (hidden by default) -->
+          <div id="sms-success" style="display: none; margin-top: 20px; max-width: 480px;">
+            <div class="notice" style="border-color: var(--napa-yellow);">
+              <strong>Thanks!</strong> If you opted in, you'll receive a confirmation text shortly. Reply STOP to opt out, HELP for help.
+            </div>
+          </div>
+
+          <div style="margin-top: 28px; max-width: 480px;">
+            <h2>Disclosures</h2>
+            <p>Message frequency varies. Msg &amp; data rates may apply.</p>
+            <p>Reply <strong>STOP</strong> to opt out. Reply <strong>HELP</strong> for help.</p>
+            <p><strong>Support:</strong> <a class="link" href="mailto:napa.danville@comcastbiz.net">napa.danville@comcastbiz.net</a> or <a class="link" href="tel:+12174469067">(217) 446-9067</a></p>
+            <p>Carriers are not liable for delayed or undelivered messages.</p>
+            <p>See our <a class="link" href="/privacy.html">Privacy Policy</a> and <a class="link" href="/terms.html">Terms of Service</a>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="small">&copy; <span id="year"></span> G&KK Stores.</div>
+      <div class="small">
+        <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="/sms.html">SMS Program</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    document.getElementById("sms-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      // No backend yet — show success message and hide form
+      this.style.display = "none";
+      document.getElementById("sms-success").style.display = "block";
+    });
+  </script>
+</body>
+</html>
