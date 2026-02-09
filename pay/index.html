@@ -190,8 +190,6 @@
     .kv span{color:rgba(255,255,255,.7)}
     .kv strong{color:var(--white)}
     .kv.subtotal{border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px;margin-bottom:8px}
-    .kv.discount span{color:#8ecf8e}
-    .kv.discount strong{color:#8ecf8e}
     .kv.total{border-top:1px solid rgba(255,255,255,.15);padding-top:8px;margin-top:10px}
     .kv.total strong{color:var(--napa-yellow);font-size:15px}
     .kv.total-ach strong{color:var(--stainless)}
@@ -423,11 +421,7 @@
       <!-- Payment Summary -->
       <div class="preview" id="preview">
         <h2>Payment Summary</h2>
-        <!-- Discount breakdown (shown when discount checked) -->
-        <div class="kv" id="pvTotalBeforeRow" style="display:none"><span>Total (before discount)</span><strong id="pvTotalBefore">$0.00</strong></div>
-        <div class="kv discount" id="pvDiscountRow" style="display:none"><span>10% early-pay discount</span><strong id="pvDiscount">-$0.00</strong></div>
-        <div class="kv subtotal" id="pvSubtotalRow" style="display:none"><span>Payment amount</span><strong id="pvSubtotal">$0.00</strong></div>
-        <!-- Standard payment line (shown when no discount) -->
+        <!-- Standard payment line -->
         <div class="kv" id="pvAmountRow"><span>Payment amount (applied to account)</span><strong id="pvAmount">$0.00</strong></div>
         <!-- Fee line -->
         <div class="kv" id="pvFeeRow" style="display:none"><span>Card convenience fee</span><strong id="pvFee">$0.00</strong></div>
@@ -522,12 +516,6 @@
     const btnCard = document.getElementById("btnCard");
 
     const previewBox = document.getElementById("preview");
-    const pvTotalBeforeRow = document.getElementById("pvTotalBeforeRow");
-    const pvTotalBefore = document.getElementById("pvTotalBefore");
-    const pvDiscountRow = document.getElementById("pvDiscountRow");
-    const pvDiscount = document.getElementById("pvDiscount");
-    const pvSubtotalRow = document.getElementById("pvSubtotalRow");
-    const pvSubtotal = document.getElementById("pvSubtotal");
     const pvAmountRow = document.getElementById("pvAmountRow");
     const pvAmount = document.getElementById("pvAmount");
     const pvFeeRow = document.getElementById("pvFeeRow");
@@ -672,11 +660,6 @@
       const paymentCents = Math.round(paymentAmount * 100);
       const feeCents = calculateCardFee(paymentCents);
 
-      // Always hide discount breakdown rows (checkbox still tracked for backend)
-      pvTotalBeforeRow.style.display = "none";
-      pvDiscountRow.style.display = "none";
-      pvSubtotalRow.style.display = "none";
-
       // Always show standard payment amount line
       pvAmountRow.style.display = "flex";
       pvAmount.textContent = `$${paymentAmount.toFixed(2)}`;
@@ -716,14 +699,8 @@
       const statement_number = statementNumberEl.value.trim();
       const amount = parseAmount(amountEl);
 
-      // Discount info (only if checkbox checked and available)
-      const isDiscountChecked = discountCheckEl.checked && isDiscountAvailable();
-      let discount_amount_usd = undefined;
-      if (isDiscountChecked) {
-        // Calculate the 10% discount amount
-        const totalBeforeDiscount = amount / 0.9;
-        discount_amount_usd = (totalBeforeDiscount - amount).toFixed(2);
-      }
+      // Discount checkbox (just a boolean flag for reconciliation)
+      const discount_checked = discountCheckEl.checked && isDiscountAvailable();
 
       // Validation
       if (!company) return showError("Please enter your Company Name.");
@@ -758,7 +735,7 @@
             store,
             statement_number: statement_number || undefined,
             amount_usd: amount.toFixed(2),
-            discount_amount_usd: discount_amount_usd || undefined,
+            discount_checked: discount_checked || undefined,
             pay_method
           })
         });

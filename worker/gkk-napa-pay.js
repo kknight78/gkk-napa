@@ -175,10 +175,9 @@ export default {
 
       // Amount fields
       const paymentAmountCents = parseInt(obj.metadata?.payment_amount_cents || "0", 10);
-      const discountAmountCents = parseInt(obj.metadata?.discount_amount_cents || "0", 10);
+      const discountChecked = obj.metadata?.discount_checked === "true";
       const convenienceFeeCents = parseInt(obj.metadata?.convenience_fee_cents || "0", 10);
       const totalChargedCents = parseInt(obj.metadata?.total_charged_cents || "0", 10);
-      // discount_deadline removed - discount now auto-calculated as 10%
 
       const payerEmail = obj.customer_details?.email || obj.metadata?.customer_email;
       const payerPhone = obj.metadata?.customer_phone || obj.customer_details?.phone;
@@ -199,7 +198,7 @@ export default {
         payMethod,
         paymentStatus,
         paymentAmountCents,
-        discountAmountCents,
+        discountChecked,
         convenienceFeeCents,
         totalChargedCents,
         currency: obj.currency,
@@ -218,7 +217,6 @@ export default {
       if (shouldNotify && env.RESEND_API_KEY && env.FROM_EMAIL && env.NOTIFY_EMAILS) {
         try {
           const paymentAmountUsd = (paymentAmountCents / 100).toFixed(2);
-          const discountAmountUsd = (discountAmountCents / 100).toFixed(2);
           const convenienceFeeUsd = (convenienceFeeCents / 100).toFixed(2);
           const totalChargedUsd = (totalChargedCents / 100).toFixed(2);
 
@@ -268,9 +266,9 @@ PAYMENT BREAKDOWN
 ─────────────────────────────
 Payment amount (applied to account):  $${paymentAmountUsd}`;
 
-          if (discountAmountCents > 0) {
+          if (discountChecked) {
             paymentBreakdown += `
-10% early-pay discount claimed:       $${discountAmountUsd}`;
+Discount noted on invoice:            Yes`;
           }
 
           if (payMethod === "card" && convenienceFeeCents > 0) {
@@ -376,7 +374,7 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       store,
       statement_number,
       amount_usd,
-      discount_amount_usd,
+      discount_checked,
       pay_method
     } = body;
 
@@ -468,25 +466,7 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       );
     }
 
-    // Validate discount fields
-    let discountAmountCents = 0;
-    if (discount_amount_usd) {
-      discountAmountCents = Math.round(parseFloat(discount_amount_usd) * 100);
-      if (isNaN(discountAmountCents) || discountAmountCents < 0) {
-        return new Response(
-          JSON.stringify({ error: 'Discount amount must be a positive number' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (discountAmountCents > paymentAmountCents) {
-        return new Response(
-          JSON.stringify({ error: 'Discount amount cannot exceed payment amount' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // discount_deadline removed - discount is now auto-calculated as 10% on frontend
+    // Discount is a simple boolean flag for reconciliation (no amount calculation)
 
     // Validate optional contact fields
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -566,7 +546,7 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
 
     // Add optional fields to payment_intent metadata
     if (statement_number) sessionParams.payment_intent_data.metadata.statement_number = statement_number;
-    if (discountAmountCents > 0) sessionParams.payment_intent_data.metadata.discount_amount_cents = discountAmountCents.toString();
+    if (discount_checked) sessionParams.payment_intent_data.metadata.discount_checked = "true";
     if (email) sessionParams.payment_intent_data.metadata.customer_email = email;
     if (phone) sessionParams.payment_intent_data.metadata.customer_phone = phone;
 
@@ -581,7 +561,7 @@ async function handleCreateCheckoutSession(request, env, corsHeaders) {
       total_charged_cents: totalChargedCents.toString(),
     };
     if (statement_number) sessionParams.metadata.statement_number = statement_number;
-    if (discountAmountCents > 0) sessionParams.metadata.discount_amount_cents = discountAmountCents.toString();
+    if (discount_checked) sessionParams.metadata.discount_checked = "true";
     if (email) sessionParams.metadata.customer_email = email;
     if (phone) sessionParams.metadata.customer_phone = phone;
 
