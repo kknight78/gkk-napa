@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Careers - Apply Now | G&KK NAPA Auto Parts</title>
+  <meta name="description" content="Join the G&KK NAPA Auto Parts team. Apply online for positions at our Danville IL, Cayuga IN, Rockville IN, and Covington IN stores." />
+  <link rel="canonical" href="https://gkk-napa.com/careers" />
+  <meta name="theme-color" content="#004b8d" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="G&KK NAPA Stores" />
+  <meta property="og:title" content="Careers - Apply Now | G&KK NAPA Auto Parts" />
+  <meta property="og:description" content="Join our team at G&KK NAPA Auto Parts. Positions available at 4 locations in IL and IN." />
+  <meta property="og:url" content="https://gkk-napa.com/careers" />
+  <meta property="og:image" content="https://gkk-napa.com/assets/store-front.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Careers - Apply Now | G&KK NAPA Auto Parts" />
+  <meta name="twitter:description" content="Join our team at G&KK NAPA Auto Parts. Positions available at 4 locations in IL and IN." />
+  <meta name="twitter:image" content="https://gkk-napa.com/assets/store-front.png" />
+
+  <link rel="icon" sizes="192x192" href="/assets/favicon-192.jpg" type="image/jpeg">
+  <link rel="shortcut icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="/styles.css" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://gkk-napa.com/careers",
+        "url": "https://gkk-napa.com/careers",
+        "name": "Careers - Apply Now",
+        "description": "Apply online for positions at G&KK NAPA Auto Parts stores in Danville IL, Cayuga IN, Rockville IN, and Covington IN.",
+        "isPartOf": { "@id": "https://gkk-napa.com/#website" },
+        "breadcrumb": {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://gkk-napa.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Careers" }
+          ]
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root{
+      --napa-blue:#0A0094;
+      --napa-yellow:#FFC836;
+      --stainless:#DADAD9;
+      --gunmetal:#878786;
+      --bg:#06115a;
+      --white:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--white);
+      background: var(--bg);
+    }
+    .wrap{max-width:900px;margin:0 auto;padding:22px 18px}
+    h1{
+      margin:0;
+      font-weight:900;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      font-size:28px;
+      line-height:1.1;
+    }
+    p{color:rgba(255,255,255,.85);margin:10px 0 0}
+    .card{
+      margin-top:18px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      padding:16px;
+    }
+    .section-title{
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:var(--napa-yellow);
+      margin:20px 0 10px;
+      padding-bottom:6px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+      font-weight:700;
+    }
+    .section-title:first-child{margin-top:0}
+    label{display:block;font-weight:700;margin:14px 0 6px}
+    label .req{color:#ff6b6b;margin-left:2px}
+    label .opt{color:rgba(255,255,255,.5);font-weight:400;font-size:13px;margin-left:6px}
+    input, select, textarea{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.22);
+      background: rgba(0,0,0,.18);
+      color:var(--white);
+      font-size:16px;
+      font-family:inherit;
+    }
+    input::placeholder, textarea::placeholder{color:rgba(255,255,255,.4)}
+    select option{background:#1a1a4a;color:var(--white)}
+    textarea{resize:vertical;min-height:80px}
+    .row{display:grid;grid-template-columns: 1fr 1fr; gap:12px}
+    .hint{font-size:13px;color:rgba(255,255,255,.5);margin-top:6px}
+    button{
+      border:none;
+      border-radius:12px;
+      padding:14px 28px;
+      font-weight:900;
+      cursor:pointer;
+      font-size:16px;
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .btn-submit{
+      background: var(--napa-yellow);
+      color:#111;
+      margin-top:18px;
+      width:100%;
+    }
+    .fine{
+      margin-top:12px;
+      font-size:13px;
+      color:rgba(255,255,255,.5);
+      line-height:1.35;
+    }
+    .error{
+      margin-top:12px;
+      color:#ffd0d0;
+      font-weight:700;
+    }
+    a{color:var(--napa-yellow)}
+
+    /* Checkbox group */
+    .checkbox-group{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+    .checkbox-group label{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:0;
+      font-weight:600;
+      font-size:14px;
+      cursor:pointer;
+    }
+    .checkbox-group input[type="checkbox"]{
+      width:20px;
+      height:20px;
+      min-width:20px;
+      margin:0;
+      cursor:pointer;
+    }
+
+    /* Work entry cards */
+    .work-entry{
+      margin-top:12px;
+      padding:14px;
+      background:rgba(0,0,0,.15);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:12px;
+    }
+    .work-entry h3{
+      margin:0 0 8px;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.3px;
+      color:rgba(255,255,255,.6);
+    }
+    .work-entry label{margin-top:10px}
+    .work-entry label:first-of-type{margin-top:0}
+
+    /* FAQ / Job descriptions */
+    .faq-section{margin-top:24px}
+    .faq-section h2{
+      font-size:18px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+      margin:0 0 14px;
+    }
+    .faq-list{display:grid;gap:8px}
+    .faq-item{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;
+    }
+    .faq-item summary{
+      padding:12px 14px;
+      cursor:pointer;
+      font-weight:600;
+      font-size:14px;
+      list-style:none;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .faq-item summary::-webkit-details-marker{display:none}
+    .faq-item summary::after{
+      content:"+";
+      font-size:18px;
+      color:var(--napa-yellow);
+      font-weight:700;
+      margin-left:10px;
+    }
+    .faq-item[open] summary::after{content:"\2212"}
+    .faq-item[open] summary{border-bottom:1px solid rgba(255,255,255,.1)}
+    .faq-item p{
+      margin:0;
+      padding:12px 14px;
+      color:rgba(255,255,255,.75);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    @media (max-width:720px){
+      .row{grid-template-columns:1fr}
+      h1{font-size:24px}
+      .header-inner{flex-direction:column;align-items:flex-start;gap:10px}
+    }
+  </style>
+</head>
+
+<body>
+  <!-- NAPA Logo Banner -->
+  <div class="logo-banner">
+    <div class="container">
+      <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <nav class="nav">
+        <a href="https://www.napaonline.com" target="_blank" rel="noopener">Shop</a>
+        <a href="/#locations">Locations</a>
+        <a href="/careers">Careers</a>
+        <a href="/#faq">FAQ</a>
+      </nav>
+
+      <a class="cta" href="/pay">Pay Online</a>
+    </div>
+  </header>
+
+  <div class="wrap" style="padding-top:24px;">
+    <h1>Join Our Team</h1>
+    <p>Apply to work at one of our four G&KK NAPA Auto Parts locations. Fill out the form below and we'll be in touch.</p>
+  </div>
+
+  <main class="wrap">
+    <!-- Open Positions (loaded dynamically) -->
+    <div class="faq-section" id="positionsSection" style="display:none;">
+      <h2>Open Positions</h2>
+      <div class="faq-list" id="positionsList"></div>
+    </div>
+
+    <!-- No positions message -->
+    <div id="noPositions" style="display:none;margin-top:18px;padding:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;text-align:center;">
+      <p style="color:rgba(255,255,255,.7);margin:0;font-size:15px;">No positions are currently listed. Check back soon or call any of our stores to inquire about openings.</p>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="positionsLoading" style="margin-top:18px;text-align:center;">
+      <p style="color:rgba(255,255,255,.5);margin:0;">Loading open positions...</p>
+    </div>
+
+    <!-- Application Form -->
+    <div class="card" id="applicationForm" style="display:none;">
+      <!-- Your Information -->
+      <div class="section-title">Your Information</div>
+
+      <div class="row">
+        <div>
+          <label for="fullName">Full Name<span class="req">*</span></label>
+          <input id="fullName" type="text" placeholder="e.g., John Smith" autocomplete="name" />
+        </div>
+        <div>
+          <label for="phone">Phone<span class="req">*</span></label>
+          <input id="phone" type="tel" placeholder="(555) 123-4567" autocomplete="tel" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="email">Email<span class="opt">(optional, recommended)</span></label>
+          <input id="email" type="email" placeholder="name@example.com" autocomplete="email" />
+          <div class="hint">We'll send you a confirmation if provided.</div>
+        </div>
+        <div>
+          <label for="address">Address<span class="req">*</span></label>
+          <input id="address" type="text" placeholder="123 Main St, City, ST 12345" autocomplete="street-address" />
+        </div>
+      </div>
+
+      <!-- Position & Location -->
+      <div class="section-title">Position & Location</div>
+
+      <div class="row">
+        <div>
+          <label for="position">Position<span class="req">*</span></label>
+          <select id="position">
+            <option value="">Select a position...</option>
+          </select>
+        </div>
+        <div>
+          <label>Preferred Location(s)<span class="req">*</span></label>
+          <div class="hint" style="margin-top:0;margin-bottom:6px">Check all that apply.</div>
+          <div class="checkbox-group">
+            <label><input type="checkbox" name="location" value="danville-il" /> Danville, IL</label>
+            <label><input type="checkbox" name="location" value="cayuga-in" /> Cayuga, IN</label>
+            <label><input type="checkbox" name="location" value="rockville-in" /> Rockville, IN</label>
+            <label><input type="checkbox" name="location" value="covington-in" /> Covington, IN</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Availability -->
+      <div class="section-title">Availability</div>
+
+      <div class="row">
+        <div>
+          <label for="availability">Availability Type<span class="req">*</span></label>
+          <select id="availability">
+            <option value="">Select...</option>
+            <option value="Full-Time">Full-Time</option>
+            <option value="Part-Time">Part-Time</option>
+            <option value="Either">Either</option>
+          </select>
+        </div>
+        <div>
+          <label for="schedule">Schedule Details<span class="opt">(optional)</span></label>
+          <input id="schedule" type="text" placeholder="e.g., Available Mon-Fri, mornings only" />
+        </div>
+      </div>
+
+      <!-- Work History -->
+      <div class="section-title">Work History</div>
+
+      <div class="work-entry">
+        <h3>Most Recent Employer (required)</h3>
+        <div class="row">
+          <div>
+            <label for="employer1">Employer<span class="req">*</span></label>
+            <input id="employer1" type="text" placeholder="Company name" />
+          </div>
+          <div>
+            <label for="title1">Job Title<span class="req">*</span></label>
+            <input id="title1" type="text" placeholder="Your role" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="duration1">Duration<span class="req">*</span></label>
+            <input id="duration1" type="text" placeholder="e.g., 2 years, Jan 2022 - Present" />
+          </div>
+          <div>
+            <label for="leaving1">Reason for Leaving<span class="req">*</span></label>
+            <input id="leaving1" type="text" placeholder="e.g., Seeking new opportunity" />
+          </div>
+        </div>
+      </div>
+
+      <div class="work-entry">
+        <h3>Previous Employer (optional)</h3>
+        <div class="row">
+          <div>
+            <label for="employer2">Employer<span class="opt">(optional)</span></label>
+            <input id="employer2" type="text" placeholder="Company name" />
+          </div>
+          <div>
+            <label for="title2">Job Title<span class="opt">(optional)</span></label>
+            <input id="title2" type="text" placeholder="Your role" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="duration2">Duration<span class="opt">(optional)</span></label>
+            <input id="duration2" type="text" placeholder="e.g., 1 year" />
+          </div>
+          <div>
+            <label for="leaving2">Reason for Leaving<span class="opt">(optional)</span></label>
+            <input id="leaving2" type="text" placeholder="e.g., Relocated" />
+          </div>
+        </div>
+      </div>
+
+      <!-- References & Additional Info -->
+      <div class="section-title">References & Additional Info</div>
+
+      <label for="references">References<span class="opt">(optional)</span></label>
+      <textarea id="references" placeholder="Name, relationship, and phone number for each reference."></textarea>
+
+      <label for="additional">Additional Information<span class="opt">(optional)</span></label>
+      <textarea id="additional" placeholder="Anything else you'd like us to know (certifications, skills, etc)."></textarea>
+
+      <!-- Submit -->
+      <button class="btn-submit" id="btnSubmit" disabled>Submit Application</button>
+
+      <div class="fine">
+        By submitting this application you agree to our
+        <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
+      </div>
+
+      <div class="error" id="err" style="display:none;"></div>
+    </div>
+  </main>
+
+  <script>
+    const WORKER_BASE = "https://gkk-napa-careers.kellyraeknight78.workers.dev";
+
+    // Load open positions from worker
+    (async function loadPositions() {
+      const positionsSection = document.getElementById("positionsSection");
+      const positionsList = document.getElementById("positionsList");
+      const noPositions = document.getElementById("noPositions");
+      const positionsLoading = document.getElementById("positionsLoading");
+      const applicationForm = document.getElementById("applicationForm");
+      const positionEl = document.getElementById("position");
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/positions`);
+        const positions = await resp.json();
+        positionsLoading.style.display = "none";
+
+        if (positions.length === 0) {
+          noPositions.style.display = "block";
+          return;
+        }
+
+        // Show form and positions
+        applicationForm.style.display = "block";
+
+        // Build accordion
+        if (positions.some(p => p.description)) {
+          positionsList.innerHTML = positions.map(p =>
+            p.description
+              ? `<details class="faq-item"><summary>${esc(p.title)}</summary><p>${esc(p.description)}</p></details>`
+              : ""
+          ).join("");
+          positionsSection.style.display = "block";
+        }
+
+        // Populate dropdown
+        positions.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.title;
+          opt.textContent = p.title;
+          positionEl.appendChild(opt);
+        });
+
+      } catch {
+        positionsLoading.style.display = "none";
+        noPositions.style.display = "block";
+      }
+
+      function esc(str) {
+        const d = document.createElement("div");
+        d.textContent = str;
+        return d.innerHTML;
+      }
+    })();
+
+    // Elements
+    const fullNameEl = document.getElementById("fullName");
+    const phoneEl = document.getElementById("phone");
+    const emailEl = document.getElementById("email");
+    const addressEl = document.getElementById("address");
+    const positionEl = document.getElementById("position");
+    const locationBoxes = document.querySelectorAll('input[name="location"]');
+    const availabilityEl = document.getElementById("availability");
+    const scheduleEl = document.getElementById("schedule");
+    const employer1El = document.getElementById("employer1");
+    const title1El = document.getElementById("title1");
+    const duration1El = document.getElementById("duration1");
+    const leaving1El = document.getElementById("leaving1");
+    const employer2El = document.getElementById("employer2");
+    const title2El = document.getElementById("title2");
+    const duration2El = document.getElementById("duration2");
+    const leaving2El = document.getElementById("leaving2");
+    const referencesEl = document.getElementById("references");
+    const additionalEl = document.getElementById("additional");
+    const btnSubmit = document.getElementById("btnSubmit");
+    const errEl = document.getElementById("err");
+
+    // QR code pre-selection: read ?store= param
+    (function preSelectStore() {
+      const params = new URLSearchParams(window.location.search);
+      const store = params.get("store");
+      if (store) {
+        locationBoxes.forEach(cb => {
+          if (cb.value === store) cb.checked = true;
+        });
+      }
+    })();
+
+    // Get checked locations
+    function getCheckedLocations() {
+      return Array.from(locationBoxes).filter(cb => cb.checked).map(cb => cb.value);
+    }
+
+    // Form validation
+    function isFormValid() {
+      if (!fullNameEl.value.trim()) return false;
+      if (!phoneEl.value.trim()) return false;
+      if (!addressEl.value.trim()) return false;
+      if (!positionEl.value) return false;
+      if (getCheckedLocations().length === 0) return false;
+      if (!availabilityEl.value) return false;
+      if (!employer1El.value.trim()) return false;
+      if (!title1El.value.trim()) return false;
+      if (!duration1El.value.trim()) return false;
+      if (!leaving1El.value.trim()) return false;
+      return true;
+    }
+
+    function updateButtonState() {
+      btnSubmit.disabled = !isFormValid();
+    }
+
+    // Listen on all required fields
+    [fullNameEl, phoneEl, addressEl, employer1El, title1El, duration1El, leaving1El].forEach(el => {
+      el.addEventListener("input", updateButtonState);
+    });
+    [positionEl, availabilityEl].forEach(el => {
+      el.addEventListener("change", updateButtonState);
+    });
+    locationBoxes.forEach(cb => {
+      cb.addEventListener("change", updateButtonState);
+    });
+
+    // Initialize button state
+    updateButtonState();
+
+    function showError(msg) {
+      errEl.style.display = "block";
+      errEl.textContent = msg;
+    }
+    function clearError() {
+      errEl.style.display = "none";
+      errEl.textContent = "";
+    }
+
+    btnSubmit.addEventListener("click", async () => {
+      clearError();
+
+      const fullName = fullNameEl.value.trim();
+      const phone = phoneEl.value.trim();
+      const email = emailEl.value.trim();
+      const address = addressEl.value.trim();
+      const position = positionEl.value;
+      const locations = getCheckedLocations();
+      const availability = availabilityEl.value;
+      const schedule = scheduleEl.value.trim();
+
+      // Work history
+      const work_history_1 = {
+        employer: employer1El.value.trim(),
+        title: title1El.value.trim(),
+        duration: duration1El.value.trim(),
+        reason_for_leaving: leaving1El.value.trim()
+      };
+
+      const emp2 = employer2El.value.trim();
+      const work_history_2 = emp2 ? {
+        employer: emp2,
+        title: title2El.value.trim(),
+        duration: duration2El.value.trim(),
+        reason_for_leaving: leaving2El.value.trim()
+      } : undefined;
+
+      const references = referencesEl.value.trim();
+      const additional = additionalEl.value.trim();
+
+      // Client-side validation
+      if (!fullName) return showError("Please enter your full name.");
+      if (!phone) return showError("Please enter your phone number.");
+      if (!address) return showError("Please enter your address.");
+      if (!position) return showError("Please select a position.");
+      if (locations.length === 0) return showError("Please select at least one location.");
+      if (!availability) return showError("Please select your availability type.");
+      if (!work_history_1.employer || !work_history_1.title || !work_history_1.duration || !work_history_1.reason_for_leaving) {
+        return showError("Please complete all fields for your most recent employer.");
+      }
+
+      // If employer2 is filled, require all fields
+      if (work_history_2 && (!work_history_2.title || !work_history_2.duration || !work_history_2.reason_for_leaving)) {
+        return showError("Please complete all fields for your previous employer, or leave it blank.");
+      }
+
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "Submitting...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/submit-application`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: fullName,
+            phone,
+            email: email || undefined,
+            address,
+            position,
+            locations,
+            availability,
+            schedule: schedule || undefined,
+            work_history_1,
+            work_history_2,
+            references: references || undefined,
+            additional: additional || undefined
+          })
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data?.error || "Could not submit application.");
+        }
+
+        // Build location display names
+        const locationNames = {
+          "danville-il": "Danville, IL",
+          "cayuga-in": "Cayuga, IN",
+          "rockville-in": "Rockville, IN",
+          "covington-in": "Covington, IN"
+        };
+        const locationDisplay = locations.map(s => locationNames[s] || s).join(", ");
+
+        // Redirect to success page
+        window.location.href = `/careers/success/?position=${encodeURIComponent(position)}&locations=${encodeURIComponent(locationDisplay)}`;
+
+      } catch (e) {
+        showError(e.message || "Unexpected error submitting application.");
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Submit Application";
+      }
+    });
+  </script>
+</body>
+</html>

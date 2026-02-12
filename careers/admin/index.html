@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Careers Admin | G&KK NAPA</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#004b8d" />
+  <link rel="icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <style>
+    :root {
+      --napa-blue: #0A0094;
+      --napa-yellow: #FFC836;
+      --bg: #06115a;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+    }
+    .wrap { max-width: 700px; margin: 0 auto; padding: 26px 18px; }
+    h1 { text-transform: uppercase; letter-spacing: .4px; margin: 0 0 8px; font-size: 24px; }
+    h2 { font-size: 16px; margin: 24px 0 12px; color: var(--napa-yellow); text-transform: uppercase; letter-spacing: .3px; }
+    .logo-banner { background: #0A0094; padding: 20px 0; text-align: center; }
+    .logo-banner a { display: inline-block; }
+    .header-logo { max-width: 280px; height: auto; }
+
+    /* Login */
+    .login-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(0,0,0,.18);
+      color: var(--white);
+      font-size: 16px;
+      font-family: inherit;
+    }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,.4); }
+    textarea { resize: vertical; min-height: 60px; }
+    label { display: block; font-weight: 700; margin: 14px 0 6px; font-size: 14px; }
+    label:first-child { margin-top: 0; }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .btn-primary { background: var(--napa-yellow); color: #111; }
+    .btn-danger { background: #ff6b6b; color: #fff; }
+    .btn-secondary { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: var(--white); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Position list */
+    .position-item {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .position-info { flex: 1; }
+    .position-title { font-weight: 700; font-size: 15px; }
+    .position-desc { font-size: 13px; color: rgba(255,255,255,.7); margin-top: 4px; }
+    .position-meta { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 6px; }
+    .position-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .position-actions button { padding: 8px 12px; font-size: 12px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+    .badge-active { background: rgba(142,207,142,.2); color: #8ecf8e; }
+    .badge-inactive { background: rgba(255,107,107,.15); color: #ffb0b0; }
+
+    .add-form {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .add-form .row { display: flex; gap: 10px; margin-top: 12px; }
+
+    .error { color: #ffd0d0; font-weight: 700; margin-top: 10px; }
+    .success { color: #8ecf8e; font-weight: 700; margin-top: 10px; }
+    .empty { color: rgba(255,255,255,.5); font-style: italic; padding: 20px 0; }
+    a { color: var(--napa-yellow); }
+    .back-link { display: inline-block; margin-top: 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="logo-banner">
+    <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+  </div>
+
+  <div class="wrap">
+    <!-- Login Screen -->
+    <div id="loginScreen">
+      <h1>Careers Admin</h1>
+      <div class="login-card">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Enter admin password" />
+        <div style="margin-top:14px;">
+          <button class="btn-primary" id="btnLogin">Log In</button>
+        </div>
+        <div class="error" id="loginError" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Admin Screen (hidden until login) -->
+    <div id="adminScreen" style="display:none;">
+      <h1>Manage Open Positions</h1>
+      <p style="color:rgba(255,255,255,.7);margin:0 0 16px;">Add, toggle, or remove positions. Active positions appear on the <a href="/careers">careers page</a>.</p>
+
+      <!-- Add new position -->
+      <div class="add-form">
+        <h2 style="margin-top:0;">Add Position</h2>
+        <label for="newTitle">Title</label>
+        <input id="newTitle" type="text" placeholder="e.g., Counter Sales" maxlength="100" />
+        <label for="newDesc">Description (optional)</label>
+        <textarea id="newDesc" placeholder="Short description of the role..." maxlength="500"></textarea>
+        <div class="row">
+          <button class="btn-primary" id="btnAdd">Add Position</button>
+        </div>
+        <div class="error" id="addError" style="display:none;"></div>
+      </div>
+
+      <!-- Current positions list -->
+      <h2>Current Positions</h2>
+      <div id="positionsList"></div>
+
+      <a class="back-link" href="/careers">&larr; View careers page</a>
+    </div>
+  </div>
+
+  <script>
+    const WORKER_BASE = "https://gkk-napa-careers.kellyraeknight78.workers.dev";
+
+    let authToken = "";
+
+    // Elements
+    const loginScreen = document.getElementById("loginScreen");
+    const adminScreen = document.getElementById("adminScreen");
+    const passwordEl = document.getElementById("password");
+    const btnLogin = document.getElementById("btnLogin");
+    const loginError = document.getElementById("loginError");
+    const newTitleEl = document.getElementById("newTitle");
+    const newDescEl = document.getElementById("newDesc");
+    const btnAdd = document.getElementById("btnAdd");
+    const addError = document.getElementById("addError");
+    const positionsList = document.getElementById("positionsList");
+
+    function authHeaders() {
+      return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`,
+      };
+    }
+
+    // Login
+    btnLogin.addEventListener("click", async () => {
+      loginError.style.display = "none";
+      const pw = passwordEl.value.trim();
+      if (!pw) { loginError.textContent = "Please enter a password."; loginError.style.display = "block"; return; }
+
+      authToken = pw;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/login`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+        if (!resp.ok) {
+          authToken = "";
+          loginError.textContent = "Invalid password.";
+          loginError.style.display = "block";
+          return;
+        }
+        loginScreen.style.display = "none";
+        adminScreen.style.display = "block";
+        loadPositions();
+      } catch {
+        authToken = "";
+        loginError.textContent = "Could not connect to server.";
+        loginError.style.display = "block";
+      }
+    });
+
+    passwordEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") btnLogin.click();
+    });
+
+    // Load positions
+    async function loadPositions() {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/positions`, {
+          headers: authHeaders(),
+        });
+        const positions = await resp.json();
+        renderPositions(positions);
+      } catch {
+        positionsList.innerHTML = '<div class="error">Failed to load positions.</div>';
+      }
+    }
+
+    function renderPositions(positions) {
+      if (positions.length === 0) {
+        positionsList.innerHTML = '<div class="empty">No positions yet. Add one above.</div>';
+        return;
+      }
+
+      positionsList.innerHTML = positions.map(p => `
+        <div class="position-item" data-id="${p.id}">
+          <div class="position-info">
+            <div class="position-title">
+              ${esc(p.title)}
+              <span class="badge ${p.active ? 'badge-active' : 'badge-inactive'}">${p.active ? 'Active' : 'Inactive'}</span>
+            </div>
+            ${p.description ? `<div class="position-desc">${esc(p.description)}</div>` : ''}
+            <div class="position-meta">Added ${new Date(p.created).toLocaleDateString()}</div>
+          </div>
+          <div class="position-actions">
+            <button class="btn-secondary" onclick="togglePosition('${p.id}')">${p.active ? 'Deactivate' : 'Activate'}</button>
+            <button class="btn-danger" onclick="deletePosition('${p.id}', '${esc(p.title)}')">Delete</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function esc(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // Add position
+    btnAdd.addEventListener("click", async () => {
+      addError.style.display = "none";
+      const title = newTitleEl.value.trim();
+      if (!title) { addError.textContent = "Title is required."; addError.style.display = "block"; return; }
+
+      btnAdd.disabled = true;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/positions`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ title, description: newDescEl.value.trim() }),
+        });
+        if (!resp.ok) {
+          const data = await resp.json();
+          throw new Error(data.error || "Failed to add.");
+        }
+        newTitleEl.value = "";
+        newDescEl.value = "";
+        loadPositions();
+      } catch (e) {
+        addError.textContent = e.message;
+        addError.style.display = "block";
+      } finally {
+        btnAdd.disabled = false;
+      }
+    });
+
+    // Toggle position
+    window.togglePosition = async function(id) {
+      try {
+        await fetch(`${WORKER_BASE}/admin/positions/${id}/toggle`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+        loadPositions();
+      } catch { /* ignore */ }
+    };
+
+    // Delete position
+    window.deletePosition = async function(id, title) {
+      if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+      try {
+        await fetch(`${WORKER_BASE}/admin/positions/${id}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        loadPositions();
+      } catch { /* ignore */ }
+    };
+  </script>
+</body>
+</html>

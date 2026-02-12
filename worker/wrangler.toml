@@ -1,0 +1,19 @@
+name = "gkk-napa-careers"
+main = "gkk-napa-careers.js"
+compatibility_date = "2026-02-12"
+account_id = "547b0a2a030d0feec9178d22e7bca813"
+preview_urls = false
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[vars]
+FROM_EMAIL = "G&KK NAPA Careers <careers@gkk-napa.com>"
+NOTIFY_EMAILS = "kellyraeknight78@gmail.com,brian@danvillenapa.comcastbiz.net,garyknight@carmackcars.com"
+
+[[kv_namespaces]]
+binding = "POSITIONS_KV"
+id = "c0d84ee4e7b44e008686de7096e98f9d"

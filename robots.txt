@@ -8,3 +8,5 @@ Sitemap: https://gkk-napa.com/sitemap.xml
 # Disallow success/cancel pages (transactional, not useful for search)
 Disallow: /pay/success/
 Disallow: /pay/cancel/
+Disallow: /careers/success/
+Disallow: /careers/admin/

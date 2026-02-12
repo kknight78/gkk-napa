@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Application Submitted | G&KK NAPA Stores</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#004b8d" />
+  <link rel="icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg">
+  <style>
+    .logo-banner{background:#0A0094;padding:20px 0;text-align:center}
+    .logo-banner a{display:inline-block}
+    .header-logo{max-width:280px;height:auto}
+    :root {
+      --napa-blue: #0A0094;
+      --napa-yellow: #FFC836;
+      --stainless: #DADAD9;
+      --gunmetal: #878786;
+      --bg: #06115a;
+      --white: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+    }
+    .wrap { max-width: 700px; margin: 0 auto; padding: 26px 18px; }
+    h1 {
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+    .success-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card p { margin: 8px 0; color: rgba(255,255,255,.9); }
+    .success-message {
+      background: rgba(142,207,142,.1);
+      border: 1px solid rgba(142,207,142,.25);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 14px 0;
+    }
+    .success-message h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      color: #8ecf8e;
+    }
+    .success-message p {
+      margin: 0;
+      font-size: 14px;
+      color: rgba(255,255,255,.85);
+      line-height: 1.5;
+    }
+    .detail-box {
+      background: rgba(255,200,54,.1);
+      border: 1px solid rgba(255,200,54,.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    .detail-box strong { color: var(--napa-yellow); }
+    .next-steps {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+    }
+    .next-steps h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: rgba(255,255,255,.6);
+    }
+    .next-steps ul {
+      margin: 0;
+      padding: 0 0 0 18px;
+      font-size: 13px;
+      color: rgba(255,255,255,.75);
+      line-height: 1.6;
+    }
+    .next-steps li { margin: 4px 0; }
+    .store-card {
+      background: rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .store-card h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: rgba(255,255,255,.6);
+    }
+    .store-card p {
+      color: rgba(255,255,255,.85);
+      font-size: 14px;
+      margin: 4px 0;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--napa-yellow);
+      color: #111;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      color: var(--white);
+    }
+    .btn:hover { opacity: 0.9; }
+    .footer-note {
+      margin-top: 20px;
+      font-size: 13px;
+      color: rgba(255,255,255,.6);
+      text-align: center;
+    }
+    a { color: var(--napa-yellow); }
+  </style>
+</head>
+<body>
+  <div class="logo-banner">
+    <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+  </div>
+  <div class="wrap">
+    <div class="success-icon">&#x2705;</div>
+    <h1>Application Submitted</h1>
+
+    <div class="card">
+      <div class="success-message">
+        <h2>Your application has been received</h2>
+        <p>Thank you for your interest in joining the G&KK NAPA Auto Parts team. We've received your application and will review it shortly.</p>
+      </div>
+
+      <div class="detail-box" id="detailBox">
+        <!-- Filled by JS -->
+      </div>
+
+      <div class="next-steps">
+        <h3>What happens next</h3>
+        <ul>
+          <li>Our management team will review your application within a few business days.</li>
+          <li>If your qualifications match our needs, we'll reach out by phone to schedule an interview.</li>
+          <li>If you provided an email address, you'll receive a confirmation email shortly.</li>
+          <li>Feel free to call any of our stores if you have questions about your application.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="store-card">
+      <h3>Questions? Contact us</h3>
+      <p><strong>Danville, IL:</strong> <a href="tel:+12174469067">(217) 446-9067</a></p>
+      <p><strong>Cayuga, IN:</strong> <a href="tel:+17654871324">(765) 487-1324</a></p>
+      <p><strong>Rockville, IN:</strong> <a href="tel:+17655692011">(765) 569-2011</a></p>
+      <p><strong>Covington, IN:</strong> <a href="tel:+17657932258">(765) 793-2258</a></p>
+      <p style="margin-top:8px;"><strong>Email:</strong> <a href="mailto:info@gkk-napa.com">info@gkk-napa.com</a></p>
+    </div>
+
+    <div class="buttons" style="margin-top: 20px;">
+      <a class="btn btn-primary" href="/">Back to Home</a>
+      <a class="btn btn-secondary" href="/careers">Submit Another Application</a>
+    </div>
+
+    <p class="footer-note">
+      G&KK NAPA Auto Parts is an equal opportunity employer.
+    </p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const position = params.get("position") || "your selected position";
+    const locations = params.get("locations") || "our stores";
+
+    const detailBox = document.getElementById("detailBox");
+    detailBox.innerHTML = `
+      <strong>Position:</strong> ${position}<br>
+      <strong>Location(s):</strong> ${locations}
+    `;
+  </script>
+</body>
+</html>
