@@ -109,6 +109,24 @@
     .empty { color: rgba(255,255,255,.5); font-style: italic; padding: 20px 0; }
     a { color: var(--napa-yellow); }
     .back-link { display: inline-block; margin-top: 20px; font-size: 14px; }
+
+    /* Location checkboxes */
+    .loc-group { display: flex; flex-wrap: wrap; gap: 10px; }
+    .loc-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .loc-label input[type="checkbox"] {
+      width: 18px; height: 18px; min-width: 18px; margin: 0; cursor: pointer;
+    }
+    .hint { font-size: 13px; color: rgba(255,255,255,.5); }
+    .position-locations { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 3px; }
+    select option { background: #1a1a4a; color: var(--white); }
   </style>
 </head>
 <body>
@@ -138,10 +156,28 @@
       <!-- Add new position -->
       <div class="add-form">
         <h2 style="margin-top:0;">Add Position</h2>
+
+        <label for="templateSelect">Use a Previous Template</label>
+        <select id="templateSelect" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.18);color:var(--white);font-size:16px;font-family:inherit;">
+          <option value="">Start from scratch...</option>
+        </select>
+
         <label for="newTitle">Title</label>
         <input id="newTitle" type="text" placeholder="e.g., Counter Sales" maxlength="100" />
-        <label for="newDesc">Description (optional)</label>
-        <textarea id="newDesc" placeholder="Short description of the role..." maxlength="500"></textarea>
+
+        <label for="newDesc">Description (optional) <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:12px;">max 1,000 chars</span></label>
+        <textarea id="newDesc" placeholder="Short description of the role..." maxlength="1000" style="min-height:80px;"></textarea>
+
+        <label>Location(s)</label>
+        <div class="hint" style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px;">Check the stores where this position is open.</div>
+        <div class="loc-group" id="locGroup">
+          <label class="loc-label"><input type="checkbox" id="locAll" value="all" /> All Locations</label>
+          <label class="loc-label"><input type="checkbox" name="loc" value="danville-il" /> Danville, IL</label>
+          <label class="loc-label"><input type="checkbox" name="loc" value="cayuga-in" /> Cayuga, IN</label>
+          <label class="loc-label"><input type="checkbox" name="loc" value="rockville-in" /> Rockville, IN</label>
+          <label class="loc-label"><input type="checkbox" name="loc" value="covington-in" /> Covington, IN</label>
+        </div>
+
         <div class="row">
           <button class="btn-primary" id="btnAdd">Add Position</button>
         </div>
@@ -159,6 +195,13 @@
   <script>
     const WORKER_BASE = "https://gkk-napa-careers.kellyraeknight78.workers.dev";
 
+    const LOCATION_NAMES = {
+      "danville-il": "Danville, IL",
+      "cayuga-in": "Cayuga, IN",
+      "rockville-in": "Rockville, IN",
+      "covington-in": "Covington, IN",
+    };
+
     let authToken = "";
 
     // Elements
@@ -167,8 +210,11 @@
     const passwordEl = document.getElementById("password");
     const btnLogin = document.getElementById("btnLogin");
     const loginError = document.getElementById("loginError");
+    const templateSelect = document.getElementById("templateSelect");
     const newTitleEl = document.getElementById("newTitle");
     const newDescEl = document.getElementById("newDesc");
+    const locAllEl = document.getElementById("locAll");
+    const locBoxes = document.querySelectorAll('input[name="loc"]');
     const btnAdd = document.getElementById("btnAdd");
     const addError = document.getElementById("addError");
     const positionsList = document.getElementById("positionsList");
@@ -180,7 +226,27 @@
       };
     }
 
-    // Login
+    // ── "All Locations" toggle ──
+    locAllEl.addEventListener("change", () => {
+      locBoxes.forEach(cb => { cb.checked = false; cb.disabled = locAllEl.checked; });
+    });
+    locBoxes.forEach(cb => {
+      cb.addEventListener("change", () => { if (cb.checked) locAllEl.checked = false; });
+    });
+
+    function getSelectedLocations() {
+      if (locAllEl.checked) return ["all"];
+      const checked = Array.from(locBoxes).filter(cb => cb.checked).map(cb => cb.value);
+      return checked.length ? checked : [];
+    }
+
+    function formatLocations(locs) {
+      if (!locs || locs.length === 0) return "No location set";
+      if (locs.includes("all")) return "All Locations";
+      return locs.map(s => LOCATION_NAMES[s] || s).join(", ");
+    }
+
+    // ── Login ──
     btnLogin.addEventListener("click", async () => {
       loginError.style.display = "none";
       const pw = passwordEl.value.trim();
@@ -201,6 +267,7 @@
         loginScreen.style.display = "none";
         adminScreen.style.display = "block";
         loadPositions();
+        loadTemplates();
       } catch {
         authToken = "";
         loginError.textContent = "Could not connect to server.";
@@ -212,12 +279,36 @@
       if (e.key === "Enter") btnLogin.click();
     });
 
-    // Load positions
+    // ── Load templates ──
+    async function loadTemplates() {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/templates`, { headers: authHeaders() });
+        const templates = await resp.json();
+        templateSelect.innerHTML = '<option value="">Start from scratch...</option>';
+        templates.forEach((t, i) => {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = t.title;
+          templateSelect.appendChild(opt);
+        });
+        templateSelect._data = templates;
+      } catch { /* templates are optional */ }
+    }
+
+    templateSelect.addEventListener("change", () => {
+      const idx = templateSelect.value;
+      if (idx === "") { newTitleEl.value = ""; newDescEl.value = ""; return; }
+      const t = templateSelect._data[parseInt(idx)];
+      if (t) {
+        newTitleEl.value = t.title;
+        newDescEl.value = t.description || "";
+      }
+    });
+
+    // ── Load positions ──
     async function loadPositions() {
       try {
-        const resp = await fetch(`${WORKER_BASE}/admin/positions`, {
-          headers: authHeaders(),
-        });
+        const resp = await fetch(`${WORKER_BASE}/admin/positions`, { headers: authHeaders() });
         const positions = await resp.json();
         renderPositions(positions);
       } catch {
@@ -239,6 +330,7 @@
               <span class="badge ${p.active ? 'badge-active' : 'badge-inactive'}">${p.active ? 'Active' : 'Inactive'}</span>
             </div>
             ${p.description ? `<div class="position-desc">${esc(p.description)}</div>` : ''}
+            <div class="position-locations">${formatLocations(p.locations)}</div>
             <div class="position-meta">Added ${new Date(p.created).toLocaleDateString()}</div>
           </div>
           <div class="position-actions">
@@ -255,18 +347,21 @@
       return d.innerHTML;
     }
 
-    // Add position
+    // ── Add position ──
     btnAdd.addEventListener("click", async () => {
       addError.style.display = "none";
       const title = newTitleEl.value.trim();
       if (!title) { addError.textContent = "Title is required."; addError.style.display = "block"; return; }
+
+      const locations = getSelectedLocations();
+      if (locations.length === 0) { addError.textContent = "Select at least one location (or All Locations)."; addError.style.display = "block"; return; }
 
       btnAdd.disabled = true;
       try {
         const resp = await fetch(`${WORKER_BASE}/admin/positions`, {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ title, description: newDescEl.value.trim() }),
+          body: JSON.stringify({ title, description: newDescEl.value.trim(), locations }),
         });
         if (!resp.ok) {
           const data = await resp.json();
@@ -274,7 +369,11 @@
         }
         newTitleEl.value = "";
         newDescEl.value = "";
+        templateSelect.value = "";
+        locAllEl.checked = false;
+        locBoxes.forEach(cb => { cb.checked = false; cb.disabled = false; });
         loadPositions();
+        loadTemplates(); // refresh templates (new one may have been saved)
       } catch (e) {
         addError.textContent = e.message;
         addError.style.display = "block";
@@ -283,7 +382,7 @@
       }
     });
 
-    // Toggle position
+    // ── Toggle position ──
     window.togglePosition = async function(id) {
       try {
         await fetch(`${WORKER_BASE}/admin/positions/${id}/toggle`, {
@@ -294,7 +393,7 @@
       } catch { /* ignore */ }
     };
 
-    // Delete position
+    // ── Delete position ──
     window.deletePosition = async function(id, title) {
       if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
       try {

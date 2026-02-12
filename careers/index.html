@@ -429,8 +429,16 @@
 
       try {
         const resp = await fetch(`${WORKER_BASE}/positions`);
-        const positions = await resp.json();
+        let positions = await resp.json();
         positionsLoading.style.display = "none";
+
+        // Filter by store if ?store= param is present
+        const storeParam = new URLSearchParams(window.location.search).get("store");
+        if (storeParam) {
+          positions = positions.filter(p =>
+            !p.locations || p.locations.includes("all") || p.locations.includes(storeParam)
+          );
+        }
 
         if (positions.length === 0) {
           noPositions.style.display = "block";
