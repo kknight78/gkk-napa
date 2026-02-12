@@ -350,7 +350,10 @@ h2 {
 }
 
 @media (max-width: 520px) {
-  .nav { display: none }
+  .header-inner { flex-wrap: wrap; justify-content: center; gap: 8px }
+  .nav { gap: 6px }
+  .nav a { font-size: 13px; padding: 6px 8px }
+  .cta { font-size: 13px; padding: 10px 16px }
   .hero h1 { font-size: 30px }
   .grid { grid-template-columns: 1fr }
   .grid.two { grid-template-columns: 1fr }
