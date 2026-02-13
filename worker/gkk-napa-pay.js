@@ -27,6 +27,16 @@ const MIN_CENTS = 100;           // $1.00
 const ACH_MAX_CENTS = 5000000;   // $50,000.00
 const CARD_MAX_CENTS = 1000000;  // $10,000.00
 
+// Format unix timestamp to readable date (Central Time)
+function formatDate(unixTimestamp) {
+  if (!unixTimestamp) return 'N/A';
+  const date = new Date(unixTimestamp * 1000);
+  return date.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    timeZone: 'America/Chicago'
+  });
+}
+
 // Allowed origins for CORS
 const allowedOrigins = new Set([
   "https://gkk-napa.com",
@@ -236,22 +246,31 @@ export default {
             }
           }
 
+          // Extract dates
+          const paymentDate = formatDate(obj.created);
+          const eventDate = formatDate(event.created);
+
           // Build email subject and body
-          let subject, statusEmoji, statusText;
+          let subject, statusText, statusColor, statusBg, dateRows;
 
           if (type === "checkout.session.completed") {
-            statusEmoji = "✅";
             statusText = "Payment Received";
-            const feeNote = payMethod === "card" && convenienceFeeCents > 0 ? ` (plus $${convenienceFeeUsd} card fee)` : "";
-            subject = `${statusEmoji} Payment Received - ${store} - $${paymentAmountUsd}${feeNote}`;
+            statusColor = "#16a34a"; // green
+            statusBg = "#f0fdf4";
+            subject = `💰 Payment Received - ${store} - $${paymentAmountUsd}`;
+            dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           } else if (type === "checkout.session.async_payment_succeeded") {
-            statusEmoji = "✅";
-            statusText = "ACH Payment Cleared";
-            subject = `${statusEmoji} ACH Cleared - ${store} - $${paymentAmountUsd}`;
+            statusText = "ACH Cleared";
+            statusColor = "#2563eb"; // blue
+            statusBg = "#eff6ff";
+            subject = `✅ ACH Cleared - ${store} - $${paymentAmountUsd}`;
+            dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${paymentDate}</td></tr><tr><td style="padding:6px 12px;color:#555;font-size:14px;">Date Cleared</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           } else if (type === "checkout.session.async_payment_failed") {
-            statusEmoji = "❌";
-            statusText = "ACH Payment Failed";
-            subject = `${statusEmoji} ACH FAILED - ${store} - ACCT# ${accountNumber || 'N/A'} - DO NOT CREDIT`;
+            statusText = "ACH FAILED";
+            statusColor = "#dc2626"; // red
+            statusBg = "#fef2f2";
+            subject = `❌ ACH FAILED - ${store} - ACCT# ${accountNumber || 'N/A'} - DO NOT CREDIT`;
+            dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${paymentDate}</td></tr><tr><td style="padding:6px 12px;color:#555;font-size:14px;">Date Failed</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           }
 
           // Stripe dashboard link
@@ -260,52 +279,101 @@ export default {
             ? `https://dashboard.stripe.com/payments/${paymentIntentId}`
             : `https://dashboard.stripe.com/checkout/sessions/${sessionId}`;
 
-          // Build payment breakdown section
-          let paymentBreakdown = `
-PAYMENT BREAKDOWN
-─────────────────────────────
-Payment amount (applied to account):  $${paymentAmountUsd}`;
+          const methodLabel = payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A";
 
+          // Build payment breakdown rows
+          let breakdownRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Amount</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${paymentAmountUsd}</td></tr>`;
           if (discountChecked) {
-            paymentBreakdown += `
-Discount noted on invoice:            Yes`;
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Discount on Invoice</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">Yes</td></tr>`;
           }
-
           if (payMethod === "card" && convenienceFeeCents > 0) {
-            paymentBreakdown += `
-Card convenience fee:                 $${convenienceFeeUsd}`;
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Card Convenience Fee</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${convenienceFeeUsd}</td></tr>`;
           }
+          breakdownRows += `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 12px;color:#555;font-size:14px;font-weight:600;">Total Charged</td><td style="padding:6px 12px;font-size:14px;font-weight:700;">$${totalChargedUsd}</td></tr>`;
+          breakdownRows += `<tr><td style="padding:6px 12px;color:#888;font-size:13px;">Est. Stripe Fee</td><td style="padding:6px 12px;font-size:13px;color:#888;">${estimatedStripeFee}</td></tr>`;
+          breakdownRows += `<tr><td style="padding:6px 12px;color:#888;font-size:13px;">Est. Net Deposit</td><td style="padding:6px 12px;font-size:13px;color:#888;">${estimatedNetDeposit}</td></tr>`;
 
-          paymentBreakdown += `
-─────────────────────────────
-Total charged to customer:            $${totalChargedUsd}
+          // HTML email template
+          const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:24px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
-Estimated Stripe Processing Fee:      ${estimatedStripeFee}
-Estimated Net Deposit to You:         ${estimatedNetDeposit}`;
+<!-- NAPA Header -->
+<tr><td style="background-color:#2b2f84;padding:16px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td><img src="https://gkk-napa.com/assets/napa-logo.png" alt="NAPA" height="36" style="display:block;height:36px;width:auto;"></td>
+<td style="text-align:right;color:#ffffff;font-size:15px;font-weight:600;">${store || 'NAPA'}</td>
+</tr>
+</table>
+</td></tr>
 
-          const text = `
-${statusText}
+<!-- Status Banner -->
+<tr><td style="background-color:${statusBg};border-left:4px solid ${statusColor};padding:16px 24px;">
+<span style="font-size:22px;font-weight:700;color:${statusColor};">${statusText}</span>
+<span style="display:block;margin-top:4px;font-size:28px;font-weight:700;color:#111;">$${paymentAmountUsd}</span>
+</td></tr>
 
-ACCOUNT DETAILS
-─────────────────────────────
-Company:            ${company || "N/A"}
-Account # (ACCT#):  ${accountNumber || "N/A"}
-Statement # (SM#):  ${statementNumber || "N/A"}
-Store:              ${store || "N/A"}
-Method:             ${payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A"}
-${paymentBreakdown}
+<!-- Account Details -->
+<tr><td style="padding:20px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Account Details</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;">
+<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Company</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${company || "N/A"}</td></tr>
+<tr style="background-color:#f9fafb;"><td style="padding:6px 12px;color:#555;font-size:14px;">Account #</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${accountNumber || "N/A"}</td></tr>
+<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Statement #</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${statementNumber || "N/A"}</td></tr>
+<tr style="background-color:#f9fafb;"><td style="padding:6px 12px;color:#555;font-size:14px;">Store</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${store || "N/A"}</td></tr>
+<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Method</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${methodLabel}</td></tr>
+${dateRows}
+</table>
+</td></tr>
 
-CUSTOMER CONTACT
-─────────────────────────────
-Email: ${payerEmail || "Not provided"}
-Phone: ${payerPhone || "Not provided"}
+<!-- Payment Breakdown -->
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Payment Breakdown</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;">
+${breakdownRows}
+</table>
+</td></tr>
 
-View in Stripe Dashboard:
-${stripeLink}
+<!-- Customer Contact -->
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Customer Contact</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;">
+<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Email</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${payerEmail || "Not provided"}</td></tr>
+<tr style="background-color:#f9fafb;"><td style="padding:6px 12px;color:#555;font-size:14px;">Phone</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${payerPhone || "Not provided"}</td></tr>
+</table>
+</td></tr>
 
----
-This is an automated notification from G&KK NAPA Bill Pay.
-`.trim();
+<!-- Stripe Dashboard Button -->
+<tr><td align="center" style="padding:24px;">
+<a href="${stripeLink}" target="_blank" style="display:inline-block;background-color:#635bff;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:6px;">View in Stripe Dashboard</a>
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="background-color:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb;">
+<p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; Automated notification</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+          // Plain-text fallback
+          const text = `${statusText} - $${paymentAmountUsd}
+
+Company: ${company || "N/A"} | Account #: ${accountNumber || "N/A"} | Statement #: ${statementNumber || "N/A"}
+Store: ${store || "N/A"} | Method: ${methodLabel}
+Payment Amount: $${paymentAmountUsd} | Total Charged: $${totalChargedUsd}
+Est. Stripe Fee: ${estimatedStripeFee} | Est. Net Deposit: ${estimatedNetDeposit}
+Email: ${payerEmail || "Not provided"} | Phone: ${payerPhone || "Not provided"}
+
+Stripe Dashboard: ${stripeLink}
+
+G&KK NAPA Auto Parts - Automated notification`;
 
           const emailResponse = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -318,6 +386,7 @@ This is an automated notification from G&KK NAPA Bill Pay.
               to: env.NOTIFY_EMAILS.split(",").map(s => s.trim()).filter(Boolean),
               reply_to: "payments@gkk-napa.com",
               subject,
+              html,
               text,
             }),
           });

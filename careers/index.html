@@ -223,10 +223,75 @@
       line-height:1.55;
     }
 
+    /* Work history mode toggle */
+    .mode-toggle{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+    }
+    .mode-toggle button{
+      flex:1;
+      padding:14px 16px;
+      border-radius:12px;
+      border:2px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.18);
+      color:rgba(255,255,255,.7);
+      font-size:15px;
+      font-weight:700;
+      cursor:pointer;
+      transition:border-color .15s, color .15s, background .15s;
+      text-transform:none;
+      letter-spacing:0;
+    }
+    .mode-toggle button:hover{
+      border-color:rgba(255,255,255,.35);
+      color:var(--white);
+    }
+    .mode-toggle button.selected{
+      border-color:var(--napa-yellow);
+      color:var(--white);
+      background:rgba(255,200,54,.08);
+    }
+
+    /* Resume upload area */
+    .resume-upload{margin-top:14px}
+    .file-input-wrap{
+      position:relative;
+      margin-top:6px;
+    }
+    .file-input-wrap input[type="file"]{
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:1px dashed rgba(255,255,255,.3);
+      background:rgba(0,0,0,.18);
+      color:var(--white);
+      font-size:15px;
+      cursor:pointer;
+    }
+    .file-input-wrap input[type="file"]::file-selector-button{
+      background:var(--napa-yellow);
+      color:#111;
+      border:none;
+      border-radius:8px;
+      padding:8px 16px;
+      font-weight:700;
+      cursor:pointer;
+      margin-right:12px;
+      font-size:14px;
+    }
+    .file-error{
+      color:#ff6b6b;
+      font-size:13px;
+      margin-top:6px;
+      display:none;
+    }
+
     @media (max-width:720px){
       .row{grid-template-columns:1fr}
       h1{font-size:24px}
       .header-inner{flex-direction:column;align-items:flex-start;gap:10px}
+      .mode-toggle{flex-direction:column}
     }
   </style>
 </head>
@@ -343,8 +408,29 @@
         </div>
       </div>
 
-      <!-- Work History -->
+      <!-- Work History Mode Toggle -->
       <div class="section-title">Work History</div>
+      <p style="margin:0 0 6px;font-size:14px;color:rgba(255,255,255,.7);">How would you like to provide your work history?</p>
+      <div class="mode-toggle">
+        <button type="button" id="modeResume" onclick="setWorkMode('resume')">&#128196; Upload Resume</button>
+        <button type="button" id="modeManual" onclick="setWorkMode('manual')">&#9997;&#65039; Fill Out Manually</button>
+      </div>
+
+      <!-- Resume Upload (hidden by default) -->
+      <div id="resumeSection" style="display:none;" class="resume-upload">
+        <label for="resumeFile">Resume File<span class="req">*</span></label>
+        <div class="file-input-wrap">
+          <input id="resumeFile" type="file" accept=".pdf,.doc,.docx" />
+        </div>
+        <div class="hint">Accepted formats: PDF, DOC, DOCX. Max 5 MB.</div>
+        <div class="file-error" id="fileError"></div>
+
+        <label for="additionalResume">Additional Information<span class="opt">(optional)</span></label>
+        <textarea id="additionalResume" placeholder="Anything else you'd like us to know that isn't on your resume (certifications, skills, etc)."></textarea>
+      </div>
+
+      <!-- Manual Work History (hidden by default) -->
+      <div id="manualSection" style="display:none;">
 
       <div class="work-entry">
         <h3>Most Recent Employer (required)</h3>
@@ -402,6 +488,8 @@
 
       <label for="additional">Additional Information<span class="opt">(optional)</span></label>
       <textarea id="additional" placeholder="Anything else you'd like us to know (certifications, skills, etc)."></textarea>
+
+      </div><!-- /manualSection -->
 
       <!-- Submit -->
       <button class="btn-submit" id="btnSubmit" disabled>Submit Application</button>
@@ -499,6 +587,58 @@
     const additionalEl = document.getElementById("additional");
     const btnSubmit = document.getElementById("btnSubmit");
     const errEl = document.getElementById("err");
+    const resumeFileEl = document.getElementById("resumeFile");
+    const additionalResumeEl = document.getElementById("additionalResume");
+    const fileErrorEl = document.getElementById("fileError");
+
+    // Work history mode: null (not chosen), "resume", or "manual"
+    let workMode = null;
+
+    const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx"];
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+    function setWorkMode(mode) {
+      workMode = mode;
+      document.getElementById("modeResume").classList.toggle("selected", mode === "resume");
+      document.getElementById("modeManual").classList.toggle("selected", mode === "manual");
+      document.getElementById("resumeSection").style.display = mode === "resume" ? "block" : "none";
+      document.getElementById("manualSection").style.display = mode === "manual" ? "block" : "none";
+      clearFileError();
+      updateButtonState();
+    }
+    // Expose to onclick
+    window.setWorkMode = setWorkMode;
+
+    function clearFileError() {
+      fileErrorEl.style.display = "none";
+      fileErrorEl.textContent = "";
+    }
+
+    function showFileError(msg) {
+      fileErrorEl.style.display = "block";
+      fileErrorEl.textContent = msg;
+    }
+
+    function validateResumeFile() {
+      clearFileError();
+      const file = resumeFileEl.files[0];
+      if (!file) return false;
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        showFileError("Invalid file type. Please upload a PDF, DOC, or DOCX file.");
+        return false;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        showFileError("File is too large. Maximum size is 5 MB.");
+        return false;
+      }
+      return true;
+    }
+
+    resumeFileEl.addEventListener("change", () => {
+      validateResumeFile();
+      updateButtonState();
+    });
 
     // QR code pre-selection: read ?store= param
     (function preSelectStore() {
@@ -524,10 +664,17 @@
       if (!positionEl.value) return false;
       if (getCheckedLocations().length === 0) return false;
       if (!availabilityEl.value) return false;
-      if (!employer1El.value.trim()) return false;
-      if (!title1El.value.trim()) return false;
-      if (!duration1El.value.trim()) return false;
-      if (!leaving1El.value.trim()) return false;
+      if (!workMode) return false;
+
+      if (workMode === "resume") {
+        if (!resumeFileEl.files[0]) return false;
+        if (!validateResumeFile()) return false;
+      } else {
+        if (!employer1El.value.trim()) return false;
+        if (!title1El.value.trim()) return false;
+        if (!duration1El.value.trim()) return false;
+        if (!leaving1El.value.trim()) return false;
+      }
       return true;
     }
 
@@ -570,63 +717,92 @@
       const availability = availabilityEl.value;
       const schedule = scheduleEl.value.trim();
 
-      // Work history
-      const work_history_1 = {
-        employer: employer1El.value.trim(),
-        title: title1El.value.trim(),
-        duration: duration1El.value.trim(),
-        reason_for_leaving: leaving1El.value.trim()
-      };
-
-      const emp2 = employer2El.value.trim();
-      const work_history_2 = emp2 ? {
-        employer: emp2,
-        title: title2El.value.trim(),
-        duration: duration2El.value.trim(),
-        reason_for_leaving: leaving2El.value.trim()
-      } : undefined;
-
-      const references = referencesEl.value.trim();
-      const additional = additionalEl.value.trim();
-
-      // Client-side validation
+      // Client-side validation (shared fields)
       if (!fullName) return showError("Please enter your full name.");
       if (!phone) return showError("Please enter your phone number.");
       if (!address) return showError("Please enter your address.");
       if (!position) return showError("Please select a position.");
       if (locations.length === 0) return showError("Please select at least one location.");
       if (!availability) return showError("Please select your availability type.");
-      if (!work_history_1.employer || !work_history_1.title || !work_history_1.duration || !work_history_1.reason_for_leaving) {
-        return showError("Please complete all fields for your most recent employer.");
-      }
-
-      // If employer2 is filled, require all fields
-      if (work_history_2 && (!work_history_2.title || !work_history_2.duration || !work_history_2.reason_for_leaving)) {
-        return showError("Please complete all fields for your previous employer, or leave it blank.");
-      }
+      if (!workMode) return showError("Please choose how to provide your work history.");
 
       btnSubmit.disabled = true;
       btnSubmit.textContent = "Submitting...";
 
       try {
-        const resp = await fetch(`${WORKER_BASE}/submit-application`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            full_name: fullName,
-            phone,
-            email: email || undefined,
-            address,
-            position,
-            locations,
-            availability,
-            schedule: schedule || undefined,
-            work_history_1,
-            work_history_2,
-            references: references || undefined,
-            additional: additional || undefined
-          })
-        });
+        let resp;
+
+        if (workMode === "resume") {
+          // Validate file one more time
+          const file = resumeFileEl.files[0];
+          if (!file) { showError("Please select a resume file."); throw new Error("skip"); }
+          if (!validateResumeFile()) { throw new Error("skip"); }
+
+          const formData = new FormData();
+          formData.append("submission_type", "resume");
+          formData.append("full_name", fullName);
+          formData.append("phone", phone);
+          if (email) formData.append("email", email);
+          formData.append("address", address);
+          formData.append("position", position);
+          formData.append("locations", JSON.stringify(locations));
+          formData.append("availability", availability);
+          if (schedule) formData.append("schedule", schedule);
+          formData.append("resume", file);
+          const additionalResume = additionalResumeEl.value.trim();
+          if (additionalResume) formData.append("additional", additionalResume);
+
+          resp = await fetch(`${WORKER_BASE}/submit-application`, {
+            method: "POST",
+            body: formData
+          });
+        } else {
+          // Manual path — existing JSON behavior
+          const work_history_1 = {
+            employer: employer1El.value.trim(),
+            title: title1El.value.trim(),
+            duration: duration1El.value.trim(),
+            reason_for_leaving: leaving1El.value.trim()
+          };
+
+          const emp2 = employer2El.value.trim();
+          const work_history_2 = emp2 ? {
+            employer: emp2,
+            title: title2El.value.trim(),
+            duration: duration2El.value.trim(),
+            reason_for_leaving: leaving2El.value.trim()
+          } : undefined;
+
+          const references = referencesEl.value.trim();
+          const additional = additionalEl.value.trim();
+
+          if (!work_history_1.employer || !work_history_1.title || !work_history_1.duration || !work_history_1.reason_for_leaving) {
+            return showError("Please complete all fields for your most recent employer.");
+          }
+
+          if (work_history_2 && (!work_history_2.title || !work_history_2.duration || !work_history_2.reason_for_leaving)) {
+            return showError("Please complete all fields for your previous employer, or leave it blank.");
+          }
+
+          resp = await fetch(`${WORKER_BASE}/submit-application`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              full_name: fullName,
+              phone,
+              email: email || undefined,
+              address,
+              position,
+              locations,
+              availability,
+              schedule: schedule || undefined,
+              work_history_1,
+              work_history_2,
+              references: references || undefined,
+              additional: additional || undefined
+            })
+          });
+        }
 
         const data = await resp.json();
 
@@ -647,7 +823,9 @@
         window.location.href = `/careers/success/?position=${encodeURIComponent(position)}&locations=${encodeURIComponent(locationDisplay)}`;
 
       } catch (e) {
-        showError(e.message || "Unexpected error submitting application.");
+        if (e.message !== "skip") {
+          showError(e.message || "Unexpected error submitting application.");
+        }
         btnSubmit.disabled = false;
         btnSubmit.textContent = "Submit Application";
       }

@@ -220,17 +220,83 @@ export default {
   },
 };
 
+const ALLOWED_RESUME_EXTENSIONS = ["pdf", "doc", "docx"];
+const ALLOWED_RESUME_MIMES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const MAX_RESUME_SIZE = 5 * 1024 * 1024; // 5 MB
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 async function handleSubmitApplication(request, env, corsHeaders) {
   try {
-    const body = await request.json();
-    const {
-      full_name, phone, email, address, position,
-      locations, availability, schedule,
-      work_history_1, work_history_2,
-      references, additional,
-    } = body;
+    const contentType = request.headers.get("Content-Type") || "";
+    const isMultipart = contentType.includes("multipart/form-data");
 
-    if (!full_name || !phone || !address || !position || !locations || !availability || !work_history_1) {
+    let full_name, phone, email, address, position, locations, availability, schedule;
+    let work_history_1, work_history_2, references, additional;
+    let isResumePath = false;
+    let resumeFile = null;
+
+    if (isMultipart) {
+      // ── Resume upload path ──
+      const formData = await request.formData();
+      isResumePath = formData.get("submission_type") === "resume";
+
+      full_name = formData.get("full_name");
+      phone = formData.get("phone");
+      email = formData.get("email") || "";
+      address = formData.get("address");
+      position = formData.get("position");
+      availability = formData.get("availability");
+      schedule = formData.get("schedule") || "";
+      additional = formData.get("additional") || "";
+
+      // Locations come as JSON string in FormData
+      try {
+        locations = JSON.parse(formData.get("locations") || "[]");
+      } catch {
+        return jsonError(corsHeaders, "Invalid locations data.", 400);
+      }
+
+      if (isResumePath) {
+        resumeFile = formData.get("resume");
+        if (!resumeFile || !(resumeFile instanceof File) || resumeFile.size === 0) {
+          return jsonError(corsHeaders, "Resume file is required.", 400);
+        }
+      }
+    } else {
+      // ── Manual JSON path (unchanged) ──
+      const body = await request.json();
+      full_name = body.full_name;
+      phone = body.phone;
+      email = body.email || "";
+      address = body.address;
+      position = body.position;
+      locations = body.locations;
+      availability = body.availability;
+      schedule = body.schedule || "";
+      work_history_1 = body.work_history_1;
+      work_history_2 = body.work_history_2;
+      references = body.references || "";
+      additional = body.additional || "";
+    }
+
+    // ── Shared validation ──
+    if (!full_name || !phone || !address || !position || !locations || !availability) {
+      return jsonError(corsHeaders, "Missing required fields.", 400);
+    }
+
+    if (!isResumePath && !work_history_1) {
       return jsonError(corsHeaders, "Missing required fields.", 400);
     }
 
@@ -268,23 +334,48 @@ async function handleSubmitApplication(request, env, corsHeaders) {
     if (trimmedSchedule && trimmedSchedule.length > 200) return jsonError(corsHeaders, "Schedule details must be under 200 characters.", 400);
     if (trimmedSchedule && !SAFE_TEXT_REGEX.test(trimmedSchedule)) return jsonError(corsHeaders, "Schedule details contain invalid characters.", 400);
 
-    if (!work_history_1.employer || !work_history_1.title || !work_history_1.duration || !work_history_1.reason_for_leaving) {
-      return jsonError(corsHeaders, "All fields for most recent employer are required.", 400);
-    }
-    for (const f of [work_history_1.employer, work_history_1.title, work_history_1.duration, work_history_1.reason_for_leaving]) {
-      if (f.trim().length > 150) return jsonError(corsHeaders, "Work history fields must be under 150 characters.", 400);
-      if (!SAFE_TEXT_REGEX.test(f.trim())) return jsonError(corsHeaders, "Work history fields contain invalid characters.", 400);
+    // ── Resume file validation ──
+    let resumeBase64 = null;
+    let resumeFilename = null;
+
+    if (isResumePath && resumeFile) {
+      const ext = (resumeFile.name || "").split(".").pop().toLowerCase();
+      if (!ALLOWED_RESUME_EXTENSIONS.includes(ext)) {
+        return jsonError(corsHeaders, "Invalid file type. Accepted: PDF, DOC, DOCX.", 400);
+      }
+      const mime = resumeFile.type || "";
+      if (mime && !ALLOWED_RESUME_MIMES.includes(mime)) {
+        return jsonError(corsHeaders, "Invalid file type. Accepted: PDF, DOC, DOCX.", 400);
+      }
+      if (resumeFile.size > MAX_RESUME_SIZE) {
+        return jsonError(corsHeaders, "Resume file must be under 5 MB.", 400);
+      }
+
+      const buffer = await resumeFile.arrayBuffer();
+      resumeBase64 = arrayBufferToBase64(buffer);
+      resumeFilename = trimmedName.replace(/\s+/g, "_") + "_Resume." + ext;
     }
 
+    // ── Manual path: work history validation ──
     let hasWH2 = false;
-    if (work_history_2 && work_history_2.employer && work_history_2.employer.trim()) {
-      hasWH2 = true;
-      if (!work_history_2.title?.trim() || !work_history_2.duration?.trim() || !work_history_2.reason_for_leaving?.trim()) {
-        return jsonError(corsHeaders, "If you provide a second employer, all fields are required.", 400);
+    if (!isResumePath) {
+      if (!work_history_1.employer || !work_history_1.title || !work_history_1.duration || !work_history_1.reason_for_leaving) {
+        return jsonError(corsHeaders, "All fields for most recent employer are required.", 400);
       }
-      for (const f of [work_history_2.employer, work_history_2.title, work_history_2.duration, work_history_2.reason_for_leaving]) {
+      for (const f of [work_history_1.employer, work_history_1.title, work_history_1.duration, work_history_1.reason_for_leaving]) {
         if (f.trim().length > 150) return jsonError(corsHeaders, "Work history fields must be under 150 characters.", 400);
         if (!SAFE_TEXT_REGEX.test(f.trim())) return jsonError(corsHeaders, "Work history fields contain invalid characters.", 400);
+      }
+
+      if (work_history_2 && work_history_2.employer && work_history_2.employer.trim()) {
+        hasWH2 = true;
+        if (!work_history_2.title?.trim() || !work_history_2.duration?.trim() || !work_history_2.reason_for_leaving?.trim()) {
+          return jsonError(corsHeaders, "If you provide a second employer, all fields are required.", 400);
+        }
+        for (const f of [work_history_2.employer, work_history_2.title, work_history_2.duration, work_history_2.reason_for_leaving]) {
+          if (f.trim().length > 150) return jsonError(corsHeaders, "Work history fields must be under 150 characters.", 400);
+          if (!SAFE_TEXT_REGEX.test(f.trim())) return jsonError(corsHeaders, "Work history fields contain invalid characters.", 400);
+        }
       }
     }
 
@@ -295,17 +386,36 @@ async function handleSubmitApplication(request, env, corsHeaders) {
 
     const locationDisplay = locations.map(s => LOCATION_DISPLAY[s] || s).join(", ");
 
-    // Send manager notification email
+    // ── Send manager notification email ──
     if (env.RESEND_API_KEY && env.FROM_EMAIL && env.NOTIFY_EMAILS) {
       try {
         const subject = `New Application - ${position} - ${locationDisplay}`;
-        let wh2Section = "";
-        if (hasWH2) {
-          wh2Section = `
+
+        let workHistorySection;
+        if (isResumePath) {
+          workHistorySection = `WORK HISTORY
+─────────────────────────────
+Resume attached (${resumeFilename})`;
+        } else {
+          let wh2Section = "";
+          if (hasWH2) {
+            wh2Section = `
 Previous Employer:      ${work_history_2.employer.trim()}
 Job Title:              ${work_history_2.title.trim()}
 Duration:               ${work_history_2.duration.trim()}
 Reason for Leaving:     ${work_history_2.reason_for_leaving.trim()}`;
+          }
+          workHistorySection = `WORK HISTORY
+─────────────────────────────
+Most Recent Employer:   ${work_history_1.employer.trim()}
+Job Title:              ${work_history_1.title.trim()}
+Duration:               ${work_history_1.duration.trim()}
+Reason for Leaving:     ${work_history_1.reason_for_leaving.trim()}
+${wh2Section}
+
+REFERENCES
+─────────────────────────────
+${trimmedReferences || "Not provided"}`;
         }
 
         const text = `
@@ -325,17 +435,7 @@ Location(s):        ${locationDisplay}
 Availability:       ${availability}
 Schedule Details:   ${trimmedSchedule || "Not provided"}
 
-WORK HISTORY
-─────────────────────────────
-Most Recent Employer:   ${work_history_1.employer.trim()}
-Job Title:              ${work_history_1.title.trim()}
-Duration:               ${work_history_1.duration.trim()}
-Reason for Leaving:     ${work_history_1.reason_for_leaving.trim()}
-${wh2Section}
-
-REFERENCES
-─────────────────────────────
-${trimmedReferences || "Not provided"}
+${workHistorySection}
 
 ADDITIONAL INFORMATION
 ─────────────────────────────
@@ -345,23 +445,34 @@ ${trimmedAdditional || "Not provided"}
 This is an automated notification from G&KK NAPA Careers.
 `.trim();
 
+        const emailPayload = {
+          from: env.FROM_EMAIL,
+          to: env.NOTIFY_EMAILS.split(",").map(s => s.trim()).filter(Boolean),
+          reply_to: trimmedEmail || "careers@gkk-napa.com",
+          subject,
+          text,
+        };
+
+        // Attach resume if present
+        if (resumeBase64 && resumeFilename) {
+          emailPayload.attachments = [{
+            filename: resumeFilename,
+            content: resumeBase64,
+          }];
+        }
+
         const emailResp = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            from: env.FROM_EMAIL,
-            to: env.NOTIFY_EMAILS.split(",").map(s => s.trim()).filter(Boolean),
-            reply_to: trimmedEmail || "careers@gkk-napa.com",
-            subject, text,
-          }),
+          body: JSON.stringify(emailPayload),
         });
         if (!emailResp.ok) console.error(JSON.stringify({ tag: "RESEND_MANAGER_ERROR", status: emailResp.status, error: await emailResp.text() }));
-        else console.log(JSON.stringify({ tag: "RESEND_MANAGER_SENT", subject, applicant: trimmedName }));
+        else console.log(JSON.stringify({ tag: "RESEND_MANAGER_SENT", subject, applicant: trimmedName, resumeAttached: isResumePath }));
       } catch (e) {
         console.error(JSON.stringify({ tag: "RESEND_MANAGER_EXCEPTION", error: e.message }));
       }
 
-      // Send applicant confirmation
+      // Send applicant confirmation (unchanged — no work history included)
       if (trimmedEmail) {
         try {
           const applicantText = `
