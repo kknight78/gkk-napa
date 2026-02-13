@@ -313,6 +313,72 @@
       line-height:1.55;
     }
 
+    /* Deadline info banner */
+    .deadline-banner{
+      margin-top:18px;
+      padding:16px;
+      background:rgba(255,200,54,.08);
+      border:1px solid rgba(255,200,54,.25);
+      border-radius:16px;
+    }
+    .deadline-banner h2{
+      margin:0 0 8px;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:var(--napa-yellow);
+      font-weight:700;
+    }
+    .deadline-online{
+      font-size:15px;
+      font-weight:700;
+      color:var(--white);
+      margin:0 0 12px;
+      line-height:1.4;
+    }
+    .deadline-online .deadline-date{
+      color:var(--napa-yellow);
+    }
+    .deadline-inperson-label{
+      font-size:13px;
+      color:rgba(255,255,255,.6);
+      margin:0 0 6px;
+      font-weight:600;
+    }
+    .deadline-stores{
+      list-style:none;
+      margin:0;
+      padding:0;
+      display:grid;
+      gap:4px;
+    }
+    .deadline-stores li{
+      font-size:14px;
+      color:rgba(255,255,255,.85);
+      display:flex;
+      justify-content:space-between;
+      padding:4px 0;
+    }
+    .deadline-stores .store-name{color:rgba(255,255,255,.7)}
+    .deadline-stores .store-time{font-weight:700;color:var(--white)}
+    .deadline-stores .store-closed{font-weight:600;color:rgba(255,255,255,.4);font-style:italic}
+    .deadline-fee{
+      margin:10px 0 0;
+      font-size:13px;
+      color:rgba(255,255,255,.55);
+      line-height:1.4;
+    }
+    .deadline-passed{
+      margin-top:8px;
+      padding:8px 12px;
+      background:rgba(255,107,107,.12);
+      border:1px solid rgba(255,107,107,.25);
+      border-radius:8px;
+      font-size:13px;
+      color:#ffb0b0;
+      font-weight:600;
+    }
+
     @media (max-width:720px){
       .row{grid-template-columns:1fr}
       h1{font-size:24px}
@@ -348,6 +414,8 @@
   </div>
 
   <main class="wrap">
+    <div class="deadline-banner" id="deadlineBanner"></div>
+
     <div class="card">
       <!-- Account & Contact Section -->
       <div class="section-title">Account & Contact</div>
@@ -486,6 +554,98 @@
   </main>
 
   <script>
+    // ── Payment Deadline Calculator ──
+    (function renderDeadline() {
+      const STORE_HOURS = [
+        { name: "Danville, IL", weekday: "5:30 PM", saturday: "5:00 PM", sunday: "4:00 PM" },
+        { name: "Cayuga, IN",   weekday: "5:30 PM", saturday: "1:00 PM", sunday: null },
+        { name: "Rockville, IN", weekday: "5:30 PM", saturday: "2:00 PM", sunday: null },
+        { name: "Covington, IN", weekday: "5:00 PM", saturday: "12:00 PM", sunday: null },
+      ];
+
+      const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+      function getClosingTime(store, dow) {
+        if (dow === 0) return store.sunday;
+        if (dow === 6) return store.saturday;
+        return store.weekday;
+      }
+
+      // Find the last day a store is open on or before a given date
+      function lastOpenDay(store, fromDate) {
+        const d = new Date(fromDate);
+        for (let i = 0; i < 7; i++) {
+          const closing = getClosingTime(store, d.getDay());
+          if (closing) return { date: new Date(d), time: closing };
+          d.setDate(d.getDate() - 1);
+        }
+        return null;
+      }
+
+      function fmtDate(d) {
+        return DAYS[d.getDay()] + ", " + MONTHS[d.getMonth()] + " " + d.getDate();
+      }
+      function fmtDateShort(d) {
+        return DAYS[d.getDay()].slice(0, 3) + ", " + MONTHS[d.getMonth()].slice(0, 3) + " " + d.getDate();
+      }
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+
+      // Last day of current month
+      const lastDay = new Date(year, month + 1, 0);
+
+      // Last business day (Mon-Fri)
+      const lastBizDay = new Date(lastDay);
+      while (lastBizDay.getDay() === 0 || lastBizDay.getDay() === 6) {
+        lastBizDay.setDate(lastBizDay.getDate() - 1);
+      }
+
+      // Online deadline = day before the last business day, before midnight
+      const onlineDeadline = new Date(lastBizDay);
+      onlineDeadline.setDate(onlineDeadline.getDate() - 1);
+
+      // Check if online deadline has passed
+      const onlinePassed = now >= lastBizDay; // past midnight = past deadline
+
+      // Build in-person deadlines per store
+      const storeDeadlines = STORE_HOURS.map(store => {
+        const info = lastOpenDay(store, lastDay);
+        return { name: store.name, ...info };
+      });
+
+      // Check if ALL in-person deadlines have passed (rough check: past end of last day of month)
+      const pastMonthEnd = now > lastDay && now.getDate() !== lastDay.getDate();
+
+      // Render
+      const banner = document.getElementById("deadlineBanner");
+      let html = `<h2>Payment Deadline</h2>`;
+
+      html += `<p class="deadline-online">Pay online by <span class="deadline-date">${fmtDate(onlineDeadline)} before midnight</span> to avoid late fees.</p>`;
+
+      if (onlinePassed && !pastMonthEnd) {
+        html += `<div class="deadline-passed">The online payment deadline has passed. You can still pay in person at your store before closing.</div>`;
+      }
+
+      html += `<p class="deadline-inperson-label">Or pay in person before your store closes:</p>`;
+      html += `<ul class="deadline-stores">`;
+      for (const s of storeDeadlines) {
+        if (s.date) {
+          const dateStr = s.date.getDate() === lastDay.getDate() ? fmtDateShort(s.date) : fmtDateShort(s.date);
+          html += `<li><span class="store-name">${s.name}</span><span class="store-time">${dateStr} by ${s.time}</span></li>`;
+        } else {
+          html += `<li><span class="store-name">${s.name}</span><span class="store-closed">Closed</span></li>`;
+        }
+      }
+      html += `</ul>`;
+
+      html += `<p class="deadline-fee">Payments received after these deadlines are subject to a <strong>4% late fee</strong> on your next bill.</p>`;
+
+      banner.innerHTML = html;
+    })();
+
     // IMPORTANT: Set this to your Cloudflare Worker base URL
     const WORKER_BASE = "https://gkk-napa-pay.kellyraeknight78.workers.dev";
 
