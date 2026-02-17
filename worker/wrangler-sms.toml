@@ -1,0 +1,26 @@
+name = "gkk-napa-sms"
+main = "gkk-napa-sms.js"
+compatibility_date = "2026-02-16"
+account_id = "547b0a2a030d0feec9178d22e7bca813"
+preview_urls = false
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[vars]
+FROM_EMAIL = "G&KK NAPA <sms@gkk-napa.com>"
+TWILIO_PHONE_NUMBER = "+12174419077"
+
+# Secrets (set via `wrangler secret put`):
+#   ADMIN_PASSWORD
+#   TWILIO_ACCOUNT_SID
+#   TWILIO_AUTH_TOKEN
+#   RESEND_API_KEY
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gkk-napa-sms"
+database_id = "79efe522-8135-491b-967d-86c56c84ee8a"

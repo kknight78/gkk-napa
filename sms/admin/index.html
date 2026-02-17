@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SMS Admin | G&KK NAPA</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#004b8d" />
+  <link rel="icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <style>
+    :root {
+      --napa-blue: #0A0094;
+      --napa-yellow: #FFC836;
+      --bg: #06115a;
+      --white: #ffffff;
+      --green: #8ecf8e;
+      --red: #ff6b6b;
+      --orange: #ffb347;
+      --dim: rgba(255,255,255,.5);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+    }
+    .wrap { max-width: 800px; margin: 0 auto; padding: 20px 18px; }
+    h1 { text-transform: uppercase; letter-spacing: .4px; margin: 0 0 8px; font-size: 24px; }
+    h2 { font-size: 16px; margin: 24px 0 12px; color: var(--napa-yellow); text-transform: uppercase; letter-spacing: .3px; }
+    .logo-banner { background: #0A0094; padding: 20px 16px; text-align: center; }
+    .logo-banner a { display: inline-block; }
+    .header-logo { max-width: 280px; width: 100%; height: auto; }
+
+    /* Login */
+    .login-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(0,0,0,.18);
+      color: var(--white);
+      font-size: 16px;
+      font-family: inherit;
+    }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,.4); }
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: #1a1a4a; color: var(--white); }
+    label { display: block; font-weight: 700; margin: 14px 0 6px; font-size: 14px; }
+    label:first-child { margin-top: 0; }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .btn-primary { background: var(--napa-yellow); color: #111; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-secondary { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: var(--white); }
+    .btn-success { background: var(--green); color: #111; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(255,255,255,.1);
+      padding-bottom: 0;
+    }
+    .tab {
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,.5);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab.active {
+      color: var(--napa-yellow);
+      border-bottom-color: var(--napa-yellow);
+    }
+    .tab:hover:not(.active) { color: rgba(255,255,255,.8); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .kpi-num { font-size: 28px; font-weight: 800; color: var(--napa-yellow); }
+    .kpi-label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .3px; margin-top: 4px; }
+
+    /* Customer cards */
+    .customer-item {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .customer-info { flex: 1; }
+    .customer-name { font-weight: 700; font-size: 15px; }
+    .customer-detail { font-size: 13px; color: rgba(255,255,255,.6); margin-top: 3px; }
+    .customer-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+    .customer-actions button { padding: 8px 12px; font-size: 11px; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+    .badge-subscribed { background: rgba(142,207,142,.2); color: var(--green); }
+    .badge-invited { background: rgba(255,179,71,.2); color: var(--orange); }
+    .badge-stopped { background: rgba(255,107,107,.15); color: #ffb0b0; }
+    .badge-none { background: rgba(255,255,255,.08); color: var(--dim); }
+
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-bar select, .filter-bar input {
+      width: auto;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .form-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .form-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .form-row > * { flex: 1; min-width: 120px; }
+
+    /* Campaign cards */
+    .campaign-item {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .campaign-item:hover { border-color: rgba(255,255,255,.3); }
+    .campaign-name { font-weight: 700; font-size: 15px; }
+    .campaign-meta { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 4px; }
+    .campaign-stats { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; }
+    .campaign-stats span { color: var(--dim); }
+    .stat-label { margin-right: 4px; }
+
+    /* Message char counter */
+    .char-count { font-size: 12px; color: var(--dim); text-align: right; margin-top: 4px; }
+    .char-count.warn { color: var(--orange); }
+    .char-count.over { color: var(--red); }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal h2 { margin-top: 0; }
+
+    .error { color: #ffd0d0; font-weight: 700; margin-top: 10px; }
+    .success { color: var(--green); font-weight: 700; margin-top: 10px; }
+    .empty { color: var(--dim); font-style: italic; padding: 20px 0; }
+    a { color: var(--napa-yellow); }
+    .back-link { display: inline-block; margin-top: 20px; font-size: 14px; }
+
+    .recipient-preview {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    .recipient-preview strong { color: var(--napa-yellow); }
+
+    .store-breakdown {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .store-chip {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .store-chip strong { color: var(--napa-yellow); }
+
+    /* Campaign detail messages */
+    .msg-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 13px;
+    }
+    .msg-status { font-weight: 700; text-transform: uppercase; font-size: 11px; }
+    .msg-delivered { color: var(--green); }
+    .msg-sent, .msg-queued { color: var(--orange); }
+    .msg-failed, .msg-undelivered { color: var(--red); }
+
+    @media (max-width: 600px) {
+      .tabs { overflow-x: auto; }
+      .tab { padding: 10px 12px; font-size: 12px; white-space: nowrap; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .filter-bar { flex-direction: column; }
+      .filter-bar select, .filter-bar input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-banner">
+    <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+  </div>
+
+  <div class="wrap">
+    <!-- ═══ Login Screen ═══ -->
+    <div id="loginScreen">
+      <h1>SMS Admin</h1>
+      <div class="login-card">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Enter admin password" />
+        <div style="margin-top:14px;">
+          <button class="btn-primary" id="btnLogin">Log In</button>
+        </div>
+        <div class="error" id="loginError" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ═══ Admin Screen ═══ -->
+    <div id="adminScreen" style="display:none;">
+      <h1>SMS Marketing</h1>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="customers">Customers</button>
+        <button class="tab" data-tab="send">Send SMS</button>
+        <button class="tab" data-tab="history">History</button>
+      </div>
+
+      <!-- ═══ Tab 1: Dashboard ═══ -->
+      <div class="tab-content active" id="tab-dashboard">
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card"><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-label">Total Customers</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiSubscribed">—</div><div class="kpi-label">Subscribed</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiInvited">—</div><div class="kpi-label">Invited</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiStopped">—</div><div class="kpi-label">Stopped</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiMessages">—</div><div class="kpi-label">Messages (Month)</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiCampaigns">—</div><div class="kpi-label">Campaigns</div></div>
+        </div>
+
+        <h2>Customers by Store</h2>
+        <div class="store-breakdown" id="storeBreakdown"></div>
+      </div>
+
+      <!-- ═══ Tab 2: Customers ═══ -->
+      <div class="tab-content" id="tab-customers">
+        <div class="filter-bar">
+          <select id="filterStore">
+            <option value="">All Stores</option>
+            <option value="danville">Danville, IL</option>
+            <option value="cayuga">Cayuga, IN</option>
+            <option value="rockville">Rockville, IN</option>
+            <option value="covington">Covington, IN</option>
+          </select>
+          <select id="filterStatus">
+            <option value="">All Statuses</option>
+            <option value="none">None</option>
+            <option value="invited">Invited</option>
+            <option value="subscribed">Subscribed</option>
+            <option value="stopped">Stopped</option>
+          </select>
+          <input id="filterSearch" type="text" placeholder="Search name, phone, email..." style="flex:2;" />
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div id="customerCount" style="font-size:13px;color:rgba(255,255,255,.5);"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" id="btnInviteAll" title="Send invite emails to filtered customers with email + status none/invited">Invite Filtered</button>
+            <button class="btn-primary" id="btnAddCustomer">+ Add Customer</button>
+          </div>
+        </div>
+
+        <div id="customerList"></div>
+      </div>
+
+      <!-- ═══ Tab 3: Send SMS ═══ -->
+      <div class="tab-content" id="tab-send">
+        <div class="form-card">
+          <h2 style="margin-top:0;">New SMS Campaign</h2>
+
+          <label for="campaignName">Campaign Name</label>
+          <input id="campaignName" type="text" placeholder="e.g., February Promo" maxlength="100" />
+
+          <label for="campaignBody">Message</label>
+          <textarea id="campaignBody" placeholder="Type your message..." maxlength="1500" style="min-height:120px;"></textarea>
+          <div class="char-count" id="charCount">0 / 1,500</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." will be appended automatically.</div>
+
+          <label for="campaignStore">Send To</label>
+          <select id="campaignStore">
+            <option value="">All Stores</option>
+            <option value="danville">Danville, IL</option>
+            <option value="cayuga">Cayuga, IN</option>
+            <option value="rockville">Rockville, IN</option>
+            <option value="covington">Covington, IN</option>
+          </select>
+
+          <div class="recipient-preview" id="recipientPreview">
+            Loading recipient count...
+          </div>
+
+          <div style="margin-top:16px;">
+            <button class="btn-primary" id="btnSend" style="width:100%;font-size:16px;padding:14px;">Send Campaign</button>
+          </div>
+          <div class="error" id="sendError" style="display:none;"></div>
+          <div class="success" id="sendSuccess" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- ═══ Tab 4: History ═══ -->
+      <div class="tab-content" id="tab-history">
+        <div id="campaignList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Add/Edit Customer Modal ═══ -->
+  <div class="modal-overlay" id="customerModal">
+    <div class="modal">
+      <h2 id="modalTitle">Add Customer</h2>
+      <input type="hidden" id="modalCustomerId" />
+
+      <label for="modalName">Name</label>
+      <input id="modalName" type="text" placeholder="Business or contact name" maxlength="100" />
+
+      <label for="modalPhone">Phone Number</label>
+      <input id="modalPhone" type="tel" placeholder="(555) 555-1234" />
+
+      <label for="modalEmail">Email (optional)</label>
+      <input id="modalEmail" type="email" placeholder="contact@business.com" />
+
+      <label for="modalStore">Store</label>
+      <select id="modalStore">
+        <option value="">— Select —</option>
+        <option value="danville">Danville, IL</option>
+        <option value="cayuga">Cayuga, IN</option>
+        <option value="rockville">Rockville, IN</option>
+        <option value="covington">Covington, IN</option>
+      </select>
+
+      <label for="modalNotes">Notes (optional)</label>
+      <textarea id="modalNotes" placeholder="Account number, special instructions..." maxlength="500" style="min-height:60px;"></textarea>
+
+      <div class="form-row" style="margin-top:16px;">
+        <button class="btn-primary" id="btnModalSave">Save</button>
+        <button class="btn-secondary" id="btnModalCancel">Cancel</button>
+      </div>
+      <div class="error" id="modalError" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Invite Preview Modal ═══ -->
+  <div class="modal-overlay" id="inviteModal">
+    <div class="modal" style="max-width:700px;">
+      <h2 style="margin-top:0;">Email Invitation Preview</h2>
+      <div id="inviteRecipientInfo" style="font-size:13px;color:var(--dim);margin-bottom:16px;"></div>
+
+      <label for="inviteSubject">Subject Line</label>
+      <input id="inviteSubject" type="text" value="Subscribe to text updates from G&KK NAPA" maxlength="200" />
+
+      <label for="inviteIntro">Intro Message</label>
+      <textarea id="inviteIntro" style="min-height:60px;" maxlength="500">We're excited to offer text updates from your local store! Subscribe to get:</textarea>
+
+      <label for="inviteBullets">Benefits (one per line)</label>
+      <textarea id="inviteBullets" style="min-height:80px;" maxlength="500">Order-ready notifications
+Store hours &amp; closure alerts
+Occasional deals &amp; promotions</textarea>
+
+      <label>Preview</label>
+      <div id="invitePreview" style="background:#fff;border-radius:8px;padding:0;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
+
+      <div class="form-row" style="margin-top:16px;">
+        <button class="btn-primary" id="btnInviteSend">Send Invitations</button>
+        <button class="btn-secondary" id="btnInviteCancel">Cancel</button>
+      </div>
+      <div class="error" id="inviteError" style="display:none;"></div>
+      <div class="success" id="inviteSuccess" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Campaign Detail Modal ═══ -->
+  <div class="modal-overlay" id="campaignModal">
+    <div class="modal">
+      <h2 id="campaignDetailTitle">Campaign Details</h2>
+      <div id="campaignDetailBody"></div>
+      <div style="margin-top:16px;">
+        <button class="btn-secondary" id="btnCampaignClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WORKER_BASE = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
+
+    const STORE_NAMES = {
+      danville: "Danville, IL",
+      cayuga: "Cayuga, IN",
+      rockville: "Rockville, IN",
+      covington: "Covington, IN",
+    };
+
+    const STATUS_BADGE = {
+      subscribed: '<span class="badge badge-subscribed">Subscribed</span>',
+      invited: '<span class="badge badge-invited">Invited</span>',
+      stopped: '<span class="badge badge-stopped">Stopped</span>',
+      none: '<span class="badge badge-none">None</span>',
+    };
+
+    let authToken = "";
+    let allCustomers = [];
+
+    // ─── Auth ────────────────────────────────────────────────
+    function authHeaders() {
+      return { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` };
+    }
+
+    const loginScreen = document.getElementById("loginScreen");
+    const adminScreen = document.getElementById("adminScreen");
+    const passwordEl = document.getElementById("password");
+    const btnLogin = document.getElementById("btnLogin");
+    const loginError = document.getElementById("loginError");
+
+    btnLogin.addEventListener("click", async () => {
+      loginError.style.display = "none";
+      const pw = passwordEl.value.trim();
+      if (!pw) { loginError.textContent = "Please enter a password."; loginError.style.display = "block"; return; }
+
+      authToken = pw;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/login`, { method: "POST", headers: authHeaders() });
+        if (!resp.ok) {
+          authToken = "";
+          loginError.textContent = "Invalid password.";
+          loginError.style.display = "block";
+          return;
+        }
+        loginScreen.style.display = "none";
+        adminScreen.style.display = "block";
+        loadDashboard();
+        loadCustomers();
+      } catch {
+        authToken = "";
+        loginError.textContent = "Could not connect to server.";
+        loginError.style.display = "block";
+      }
+    });
+
+    passwordEl.addEventListener("keydown", (e) => { if (e.key === "Enter") btnLogin.click(); });
+
+    // ─── Tabs ────────────────────────────────────────────────
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(`tab-${tab.dataset.tab}`).classList.add("active");
+
+        // Refresh data when switching tabs
+        if (tab.dataset.tab === "dashboard") loadDashboard();
+        if (tab.dataset.tab === "customers") loadCustomers();
+        if (tab.dataset.tab === "send") updateRecipientPreview();
+        if (tab.dataset.tab === "history") loadCampaigns();
+      });
+    });
+
+    // ─── Dashboard ───────────────────────────────────────────
+    async function loadDashboard() {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/stats`, { headers: authHeaders() });
+        const stats = await resp.json();
+        document.getElementById("kpiTotal").textContent = stats.total_customers;
+        document.getElementById("kpiSubscribed").textContent = stats.subscribed;
+        document.getElementById("kpiInvited").textContent = stats.invited;
+        document.getElementById("kpiStopped").textContent = stats.stopped;
+        document.getElementById("kpiMessages").textContent = stats.messages_this_month;
+        document.getElementById("kpiCampaigns").textContent = stats.total_campaigns;
+
+        const breakdown = document.getElementById("storeBreakdown");
+        if (stats.store_breakdown && stats.store_breakdown.length > 0) {
+          breakdown.innerHTML = stats.store_breakdown.map(s =>
+            `<div class="store-chip"><strong>${s.count}</strong> ${STORE_NAMES[s.store] || s.store || "No Store"}</div>`
+          ).join("");
+        } else {
+          breakdown.innerHTML = '<div class="empty">No customers yet.</div>';
+        }
+      } catch {
+        document.getElementById("kpiTotal").textContent = "?";
+      }
+    }
+
+    // ─── Customers ───────────────────────────────────────────
+    const filterStore = document.getElementById("filterStore");
+    const filterStatus = document.getElementById("filterStatus");
+    const filterSearch = document.getElementById("filterSearch");
+    const customerList = document.getElementById("customerList");
+    const customerCount = document.getElementById("customerCount");
+
+    [filterStore, filterStatus].forEach(el => el.addEventListener("change", loadCustomers));
+    let searchTimeout;
+    filterSearch.addEventListener("input", () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(loadCustomers, 300);
+    });
+
+    async function loadCustomers() {
+      const params = new URLSearchParams();
+      if (filterStore.value) params.set("store", filterStore.value);
+      if (filterStatus.value) params.set("status", filterStatus.value);
+      if (filterSearch.value.trim()) params.set("q", filterSearch.value.trim());
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers?${params}`, { headers: authHeaders() });
+        allCustomers = await resp.json();
+        renderCustomers(allCustomers);
+      } catch {
+        customerList.innerHTML = '<div class="error">Failed to load customers.</div>';
+      }
+    }
+
+    function renderCustomers(customers) {
+      customerCount.textContent = `${customers.length} customer${customers.length !== 1 ? "s" : ""}`;
+
+      if (customers.length === 0) {
+        customerList.innerHTML = '<div class="empty">No customers match the filters.</div>';
+        return;
+      }
+
+      customerList.innerHTML = customers.map(c => `
+        <div class="customer-item" data-id="${c.id}">
+          <div class="customer-info">
+            <div class="customer-name">
+              ${esc(c.name || "Unnamed")}
+              ${STATUS_BADGE[c.sms_status] || ""}
+            </div>
+            <div class="customer-detail">${esc(c.phone)}${c.store ? " &middot; " + (STORE_NAMES[c.store] || c.store) : ""}</div>
+            ${c.email ? `<div class="customer-detail">${esc(c.email)}</div>` : ""}
+            ${c.notes ? `<div class="customer-detail" style="font-style:italic;">${esc(c.notes)}</div>` : ""}
+          </div>
+          <div class="customer-actions">
+            ${c.sms_status === "none" || c.sms_status === "invited" ? `<button class="btn-success" onclick="inviteOne(${c.id})" ${!c.email ? "disabled title='No email'" : "title='Send invite email'"}>Invite</button>` : ""}
+            <button class="btn-secondary" onclick="editCustomer(${c.id})">Edit</button>
+            <button class="btn-danger" onclick="deleteCustomer(${c.id}, '${esc(c.name || c.phone)}')">Del</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // ─── Add/Edit Customer Modal ─────────────────────────────
+    const customerModal = document.getElementById("customerModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalCustomerId = document.getElementById("modalCustomerId");
+    const modalName = document.getElementById("modalName");
+    const modalPhone = document.getElementById("modalPhone");
+    const modalEmail = document.getElementById("modalEmail");
+    const modalStore = document.getElementById("modalStore");
+    const modalNotes = document.getElementById("modalNotes");
+    const modalError = document.getElementById("modalError");
+
+    document.getElementById("btnAddCustomer").addEventListener("click", () => {
+      modalTitle.textContent = "Add Customer";
+      modalCustomerId.value = "";
+      modalName.value = "";
+      modalPhone.value = "";
+      modalPhone.disabled = false;
+      modalEmail.value = "";
+      modalStore.value = "";
+      modalNotes.value = "";
+      modalError.style.display = "none";
+      customerModal.classList.add("open");
+    });
+
+    window.editCustomer = function(id) {
+      const c = allCustomers.find(x => x.id === id);
+      if (!c) return;
+      modalTitle.textContent = "Edit Customer";
+      modalCustomerId.value = c.id;
+      modalName.value = c.name || "";
+      modalPhone.value = c.phone || "";
+      modalPhone.disabled = true;
+      modalEmail.value = c.email || "";
+      modalStore.value = c.store || "";
+      modalNotes.value = c.notes || "";
+      modalError.style.display = "none";
+      customerModal.classList.add("open");
+    };
+
+    document.getElementById("btnModalCancel").addEventListener("click", () => {
+      customerModal.classList.remove("open");
+    });
+
+    document.getElementById("btnModalSave").addEventListener("click", async () => {
+      modalError.style.display = "none";
+      const id = modalCustomerId.value;
+      const data = {
+        name: modalName.value.trim(),
+        phone: modalPhone.value.trim(),
+        email: modalEmail.value.trim(),
+        store: modalStore.value,
+        notes: modalNotes.value.trim(),
+      };
+
+      if (!data.phone && !data.email) {
+        modalError.textContent = "Phone number or email is required.";
+        modalError.style.display = "block";
+        return;
+      }
+
+      try {
+        const url = id ? `${WORKER_BASE}/admin/customers/${id}` : `${WORKER_BASE}/admin/customers`;
+        const method = id ? "PUT" : "POST";
+        const resp = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(data) });
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.error || "Failed to save.");
+        }
+        customerModal.classList.remove("open");
+        loadCustomers();
+      } catch (e) {
+        modalError.textContent = e.message;
+        modalError.style.display = "block";
+      }
+    });
+
+    // ─── Delete Customer ─────────────────────────────────────
+    window.deleteCustomer = async function(id, name) {
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      try {
+        await fetch(`${WORKER_BASE}/admin/customers/${id}`, { method: "DELETE", headers: authHeaders() });
+        loadCustomers();
+      } catch { /* ignore */ }
+    };
+
+    // ─── Invite (with preview modal) ───────────────────────
+    const inviteModal = document.getElementById("inviteModal");
+    const inviteSubject = document.getElementById("inviteSubject");
+    const inviteIntro = document.getElementById("inviteIntro");
+    const inviteBullets = document.getElementById("inviteBullets");
+    const invitePreview = document.getElementById("invitePreview");
+    const inviteRecipientInfo = document.getElementById("inviteRecipientInfo");
+    const inviteError = document.getElementById("inviteError");
+    const inviteSuccess = document.getElementById("inviteSuccess");
+    let pendingInviteIds = [];
+
+    function buildPreviewHtml(intro, bullets) {
+      const bulletHtml = bullets.split("\n").filter(b => b.trim()).map(b =>
+        `<tr><td style="padding:6px 0;font-size:15px;color:#333;">&#10003;&nbsp;&nbsp;${esc(b.trim())}</td></tr>`
+      ).join("");
+      return `<div style="font-family:Arial,sans-serif;">
+        <div style="background-color:#2b2f84;padding:20px 24px;text-align:center;">
+          <img src="https://gkk-napa.com/assets/napa-logo.png" alt="NAPA" height="40" style="height:40px;">
+        </div>
+        <div style="padding:32px 24px 16px;">
+          <h1 style="margin:0 0 16px;font-size:22px;color:#111;font-weight:700;">Hi [Customer Name],</h1>
+          <p style="margin:0 0 16px;font-size:16px;color:#333;line-height:1.6;">${esc(intro)}</p>
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">${bulletHtml}</table>
+        </div>
+        <div style="text-align:center;padding:0 24px 32px;">
+          <span style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">Subscribe Now</span>
+        </div>
+        <div style="padding:0 24px 24px;">
+          <p style="margin:0;font-size:12px;color:#888;line-height:1.5;">Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. Consent is not a condition of purchase.</p>
+        </div>
+        <div style="background-color:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; gkk-napa.com</p>
+        </div>
+      </div>`;
+    }
+
+    function updateInvitePreview() {
+      invitePreview.innerHTML = buildPreviewHtml(inviteIntro.value, inviteBullets.value);
+    }
+
+    inviteIntro.addEventListener("input", updateInvitePreview);
+    inviteBullets.addEventListener("input", updateInvitePreview);
+
+    function openInviteModal(customerIds, recipientLabel) {
+      pendingInviteIds = customerIds;
+      inviteRecipientInfo.textContent = recipientLabel;
+      inviteError.style.display = "none";
+      inviteSuccess.style.display = "none";
+      document.getElementById("btnInviteSend").disabled = false;
+      document.getElementById("btnInviteSend").textContent = "Send Invitations";
+      updateInvitePreview();
+      inviteModal.classList.add("open");
+    }
+
+    window.inviteOne = function(id) {
+      const c = allCustomers.find(x => x.id === id);
+      if (!c || !c.email) return;
+      openInviteModal([id], `Sending to: ${c.name || c.email} (${c.email})`);
+    };
+
+    document.getElementById("btnInviteAll").addEventListener("click", () => {
+      const eligible = allCustomers.filter(c => c.email && (c.sms_status === "none" || c.sms_status === "invited"));
+      if (eligible.length === 0) {
+        alert("No eligible customers in current filter (need email + status none/invited).");
+        return;
+      }
+      openInviteModal(eligible.map(c => c.id), `Sending to ${eligible.length} customer(s) with email + status none/invited`);
+    });
+
+    document.getElementById("btnInviteCancel").addEventListener("click", () => {
+      inviteModal.classList.remove("open");
+    });
+
+    document.getElementById("btnInviteSend").addEventListener("click", async () => {
+      inviteError.style.display = "none";
+      inviteSuccess.style.display = "none";
+      const btn = document.getElementById("btnInviteSend");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/invite`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            customer_ids: pendingInviteIds,
+            subject: inviteSubject.value.trim(),
+            intro: inviteIntro.value.trim(),
+            bullets: inviteBullets.value.trim().split("\n").filter(b => b.trim()),
+          }),
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          inviteSuccess.textContent = `Done! ${data.sent} sent, ${data.failed} failed out of ${data.total_eligible} eligible.`;
+          inviteSuccess.style.display = "block";
+          btn.textContent = "Sent!";
+          loadCustomers();
+          setTimeout(() => inviteModal.classList.remove("open"), 2000);
+        } else {
+          throw new Error(data.error || "Failed to send.");
+        }
+      } catch (e) {
+        inviteError.textContent = e.message;
+        inviteError.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Send Invitations";
+      }
+    });
+
+    // ─── Send SMS Campaign ───────────────────────────────────
+    const campaignName = document.getElementById("campaignName");
+    const campaignBody = document.getElementById("campaignBody");
+    const campaignStore = document.getElementById("campaignStore");
+    const charCount = document.getElementById("charCount");
+    const recipientPreview = document.getElementById("recipientPreview");
+    const sendError = document.getElementById("sendError");
+    const sendSuccess = document.getElementById("sendSuccess");
+
+    campaignBody.addEventListener("input", () => {
+      const len = campaignBody.value.length;
+      charCount.textContent = `${len.toLocaleString()} / 1,500`;
+      charCount.className = "char-count" + (len > 1500 ? " over" : len > 1400 ? " warn" : "");
+    });
+
+    campaignStore.addEventListener("change", updateRecipientPreview);
+
+    async function updateRecipientPreview() {
+      const params = new URLSearchParams({ status: "subscribed" });
+      if (campaignStore.value) params.set("store", campaignStore.value);
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers?${params}`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
+        recipientPreview.innerHTML = `Will send to <strong>${customers.length}</strong> subscribed customer${customers.length !== 1 ? "s" : ""} at ${storeName}.`;
+      } catch {
+        recipientPreview.innerHTML = "Could not load recipient count.";
+      }
+    }
+
+    document.getElementById("btnSend").addEventListener("click", async () => {
+      sendError.style.display = "none";
+      sendSuccess.style.display = "none";
+
+      const name = campaignName.value.trim();
+      const body = campaignBody.value.trim();
+
+      if (!name) { sendError.textContent = "Campaign name is required."; sendError.style.display = "block"; return; }
+      if (!body) { sendError.textContent = "Message body is required."; sendError.style.display = "block"; return; }
+      if (body.length > 1500) { sendError.textContent = "Message is too long."; sendError.style.display = "block"; return; }
+
+      const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
+      if (!confirm(`Send this SMS campaign to all subscribed customers at ${storeName}?\n\nMessage:\n${body}\n\nReply STOP to opt out.`)) return;
+
+      const btn = document.getElementById("btnSend");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/send`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name,
+            body,
+            store: campaignStore.value || undefined,
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Failed to send.");
+
+        sendSuccess.textContent = `Campaign sent! ${data.sent} delivered, ${data.failed} failed out of ${data.recipient_count} recipients.`;
+        sendSuccess.style.display = "block";
+        campaignName.value = "";
+        campaignBody.value = "";
+        charCount.textContent = "0 / 1,500";
+        charCount.className = "char-count";
+      } catch (e) {
+        sendError.textContent = e.message;
+        sendError.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Campaign";
+      }
+    });
+
+    // ─── Campaign History ────────────────────────────────────
+    const campaignList = document.getElementById("campaignList");
+
+    async function loadCampaigns() {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/campaigns`, { headers: authHeaders() });
+        const campaigns = await resp.json();
+
+        if (campaigns.length === 0) {
+          campaignList.innerHTML = '<div class="empty">No campaigns sent yet.</div>';
+          return;
+        }
+
+        campaignList.innerHTML = campaigns.map(c => `
+          <div class="campaign-item" onclick="viewCampaign(${c.id})">
+            <div class="campaign-name">${esc(c.name)}</div>
+            <div class="campaign-meta">
+              ${new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+              ${c.store_filter ? " &middot; " + (STORE_NAMES[c.store_filter] || c.store_filter) : " &middot; All Stores"}
+            </div>
+            <div class="campaign-stats">
+              <span><span class="stat-label">Recipients:</span> ${c.recipient_count}</span>
+              <span><span class="stat-label">Sent:</span> ${c.sent_count}</span>
+              <span style="color:var(--green);"><span class="stat-label">Delivered:</span> ${c.delivered_count}</span>
+              <span style="color:var(--red);"><span class="stat-label">Failed:</span> ${c.failed_count}</span>
+            </div>
+          </div>
+        `).join("");
+      } catch {
+        campaignList.innerHTML = '<div class="error">Failed to load campaigns.</div>';
+      }
+    }
+
+    // ─── Campaign Detail Modal ───────────────────────────────
+    const campaignModal = document.getElementById("campaignModal");
+    const campaignDetailTitle = document.getElementById("campaignDetailTitle");
+    const campaignDetailBody = document.getElementById("campaignDetailBody");
+
+    window.viewCampaign = async function(id) {
+      campaignDetailTitle.textContent = "Loading...";
+      campaignDetailBody.innerHTML = "";
+      campaignModal.classList.add("open");
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/campaigns/${id}`, { headers: authHeaders() });
+        const data = await resp.json();
+
+        campaignDetailTitle.textContent = data.name;
+        let html = `
+          <div style="font-size:13px;color:var(--dim);margin-bottom:12px;">
+            ${new Date(data.created_at).toLocaleString()} &middot;
+            ${data.store_filter ? (STORE_NAMES[data.store_filter] || data.store_filter) : "All Stores"}
+          </div>
+          <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:14px;white-space:pre-wrap;">${esc(data.body)}</div>
+          <div class="campaign-stats" style="margin-bottom:16px;">
+            <span>Recipients: <strong>${data.recipient_count}</strong></span>
+            <span>Sent: <strong>${data.sent_count}</strong></span>
+            <span style="color:var(--green);">Delivered: <strong>${data.delivered_count}</strong></span>
+            <span style="color:var(--red);">Failed: <strong>${data.failed_count}</strong></span>
+          </div>
+        `;
+
+        if (data.messages && data.messages.length > 0) {
+          html += '<h2 style="font-size:14px;">Message Log</h2>';
+          html += data.messages.map(m => `
+            <div class="msg-row">
+              <div>${esc(m.customer_name || "Unknown")} <span style="color:var(--dim);">${esc(m.customer_phone)}</span></div>
+              <div class="msg-status msg-${m.status}">${m.status}${m.error_code ? ` (${m.error_code})` : ""}</div>
+            </div>
+          `).join("");
+        }
+
+        campaignDetailBody.innerHTML = html;
+      } catch {
+        campaignDetailBody.innerHTML = '<div class="error">Failed to load campaign details.</div>';
+      }
+    };
+
+    document.getElementById("btnCampaignClose").addEventListener("click", () => {
+      campaignModal.classList.remove("open");
+    });
+
+    // Close modals on overlay click
+    [customerModal, campaignModal, inviteModal].forEach(modal => {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.remove("open");
+      });
+    });
+
+    // ─── Utility ─────────────────────────────────────────────
+    function esc(str) {
+      if (!str) return "";
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+  </script>
+</body>
+</html>

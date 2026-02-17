@@ -87,7 +87,14 @@
           <!-- Success message (hidden by default) -->
           <div id="sms-success" style="display: none; margin-top: 20px; max-width: 480px;">
             <div class="notice" style="border-color: var(--napa-yellow);">
-              <strong>Thanks!</strong> If you opted in, you'll receive a confirmation text shortly. Reply STOP to opt out, HELP for help.
+              <strong>Thanks!</strong> You'll receive a confirmation text shortly. Reply STOP to opt out, HELP for help.
+            </div>
+          </div>
+
+          <!-- Error message (hidden by default) -->
+          <div id="sms-error" style="display: none; margin-top: 20px; max-width: 480px;">
+            <div class="notice" style="border-color: #ff6b6b;">
+              <strong>Not found.</strong> This phone number isn't in our system. Please contact your local G&KK NAPA store to sign up for text updates.
             </div>
           </div>
 
@@ -114,13 +121,52 @@
   </footer>
 
   <script>
+    const WORKER_BASE = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
+
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    document.getElementById("sms-form").addEventListener("submit", function (e) {
+    document.getElementById("sms-form").addEventListener("submit", async function (e) {
       e.preventDefault();
-      // No backend yet — show success message and hide form
-      this.style.display = "none";
-      document.getElementById("sms-success").style.display = "block";
+
+      const phone = document.getElementById("phone").value.trim();
+      const store = document.getElementById("store").value;
+      const consent = document.getElementById("consent").checked;
+
+      if (!phone) { alert("Please enter your phone number."); return; }
+      if (!consent) { alert("Please agree to the consent terms."); return; }
+
+      const btn = this.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "Subscribing...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, store: store || undefined }),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          if (resp.status === 404) {
+            this.style.display = "none";
+            document.getElementById("sms-error").style.display = "block";
+          } else {
+            alert(data.error || "Something went wrong. Please try again.");
+            btn.disabled = false;
+            btn.textContent = "Subscribe";
+          }
+          return;
+        }
+
+        this.style.display = "none";
+        document.getElementById("sms-success").style.display = "block";
+      } catch {
+        alert("Could not connect to the server. Please try again later.");
+        btn.disabled = false;
+        btn.textContent = "Subscribe";
+      }
     });
   </script>
 </body>
