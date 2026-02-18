@@ -127,6 +127,62 @@
     .hint { font-size: 13px; color: rgba(255,255,255,.5); }
     .position-locations { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 3px; }
     select option { background: #1a1a4a; color: var(--white); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,.12); }
+    .tab-btn {
+      background: none; border: none; border-bottom: 3px solid transparent;
+      color: rgba(255,255,255,.5); padding: 12px 20px; font-size: 15px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+      cursor: pointer; margin-bottom: -2px; border-radius: 0;
+    }
+    .tab-btn.active { color: var(--napa-yellow); border-bottom-color: var(--napa-yellow); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Status filter */
+    .status-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.6); cursor: pointer;
+    }
+    .filter-btn.active { background: var(--napa-yellow); color: #111; border-color: var(--napa-yellow); }
+
+    /* Application cards */
+    .app-card {
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px; padding: 14px; margin-bottom: 10px; cursor: pointer;
+    }
+    .app-card:hover { border-color: rgba(255,255,255,.28); }
+    .app-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .app-name { font-weight: 700; font-size: 15px; }
+    .app-summary { font-size: 13px; color: rgba(255,255,255,.6); margin-top: 4px; }
+    .app-date { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 4px; }
+    .app-details { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.1); display: none; }
+    .app-details.open { display: block; }
+    .app-details dt { font-weight: 700; font-size: 12px; color: var(--napa-yellow); text-transform: uppercase; margin-top: 10px; }
+    .app-details dt:first-child { margin-top: 0; }
+    .app-details dd { margin: 4px 0 0; font-size: 14px; white-space: pre-wrap; }
+    .app-actions { display: flex; gap: 10px; align-items: flex-end; margin-top: 14px; flex-wrap: wrap; }
+    .app-actions select {
+      width: auto; padding: 8px 12px; font-size: 13px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.18); color: var(--white);
+    }
+    .app-actions textarea { min-height: 50px; font-size: 13px; }
+    .app-actions .btn-save { padding: 8px 16px; font-size: 12px; background: var(--napa-yellow); color: #111; }
+    .app-actions .btn-del { padding: 8px 16px; font-size: 12px; }
+    .notes-wrap { flex: 1; min-width: 200px; }
+    .notes-wrap label { margin: 0 0 4px; font-size: 12px; }
+
+    .badge-new { background: rgba(100,180,255,.2); color: #7ec8ff; }
+    .badge-reviewed { background: rgba(255,200,54,.2); color: #ffc836; }
+    .badge-interview { background: rgba(180,130,255,.2); color: #c9a0ff; }
+    .badge-hired { background: rgba(142,207,142,.2); color: #8ecf8e; }
+    .badge-rejected { background: rgba(255,107,107,.15); color: #ffb0b0; }
+
+    .app-count { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -150,45 +206,66 @@
 
     <!-- Admin Screen (hidden until login) -->
     <div id="adminScreen" style="display:none;">
-      <h1>Manage Open Positions</h1>
-      <p style="color:rgba(255,255,255,.7);margin:0 0 16px;">Add, toggle, or remove positions. Active positions appear on the <a href="/careers">careers page</a>.</p>
+      <h1>Careers Admin</h1>
 
-      <!-- Add new position -->
-      <div class="add-form">
-        <h2 style="margin-top:0;">Add Position</h2>
-
-        <label for="templateSelect">Use a Previous Template</label>
-        <select id="templateSelect" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.18);color:var(--white);font-size:16px;font-family:inherit;">
-          <option value="">Start from scratch...</option>
-        </select>
-
-        <label for="newTitle">Title</label>
-        <input id="newTitle" type="text" placeholder="e.g., Counter Sales" maxlength="100" />
-
-        <label for="newDesc">Description (optional) <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:12px;">max 1,000 chars</span></label>
-        <textarea id="newDesc" placeholder="Short description of the role..." maxlength="1000" style="min-height:80px;"></textarea>
-
-        <label>Location(s)</label>
-        <div class="hint" style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px;">Check the stores where this position is open.</div>
-        <div class="loc-group" id="locGroup">
-          <label class="loc-label"><input type="checkbox" id="locAll" value="all" /> All Locations</label>
-          <label class="loc-label"><input type="checkbox" name="loc" value="danville-il" /> Danville, IL</label>
-          <label class="loc-label"><input type="checkbox" name="loc" value="cayuga-in" /> Cayuga, IN</label>
-          <label class="loc-label"><input type="checkbox" name="loc" value="rockville-in" /> Rockville, IN</label>
-          <label class="loc-label"><input type="checkbox" name="loc" value="covington-in" /> Covington, IN</label>
-        </div>
-
-        <div class="row">
-          <button class="btn-primary" id="btnAdd">Add Position</button>
-        </div>
-        <div class="error" id="addError" style="display:none;"></div>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="positions">Positions</button>
+        <button class="tab-btn" data-tab="applications">Applications</button>
       </div>
 
-      <!-- Current positions list -->
-      <h2>Current Positions</h2>
-      <div id="positionsList"></div>
+      <!-- ════ Positions Tab ════ -->
+      <div class="tab-panel active" id="tab-positions">
+        <p style="color:rgba(255,255,255,.7);margin:0 0 16px;">Add, toggle, or remove positions. Active positions appear on the <a href="/careers">careers page</a>.</p>
 
-      <a class="back-link" href="/careers">&larr; View careers page</a>
+        <div class="add-form">
+          <h2 style="margin-top:0;">Add Position</h2>
+
+          <label for="templateSelect">Use a Previous Template</label>
+          <select id="templateSelect" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.18);color:var(--white);font-size:16px;font-family:inherit;">
+            <option value="">Start from scratch...</option>
+          </select>
+
+          <label for="newTitle">Title</label>
+          <input id="newTitle" type="text" placeholder="e.g., Counter Sales" maxlength="100" />
+
+          <label for="newDesc">Description (optional) <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:12px;">max 1,000 chars</span></label>
+          <textarea id="newDesc" placeholder="Short description of the role..." maxlength="1000" style="min-height:80px;"></textarea>
+
+          <label>Location(s)</label>
+          <div class="hint" style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px;">Check the stores where this position is open.</div>
+          <div class="loc-group" id="locGroup">
+            <label class="loc-label"><input type="checkbox" id="locAll" value="all" /> All Locations</label>
+            <label class="loc-label"><input type="checkbox" name="loc" value="danville-il" /> Danville, IL</label>
+            <label class="loc-label"><input type="checkbox" name="loc" value="cayuga-in" /> Cayuga, IN</label>
+            <label class="loc-label"><input type="checkbox" name="loc" value="rockville-in" /> Rockville, IN</label>
+            <label class="loc-label"><input type="checkbox" name="loc" value="covington-in" /> Covington, IN</label>
+          </div>
+
+          <div class="row">
+            <button class="btn-primary" id="btnAdd">Add Position</button>
+          </div>
+          <div class="error" id="addError" style="display:none;"></div>
+        </div>
+
+        <h2>Current Positions</h2>
+        <div id="positionsList"></div>
+
+        <a class="back-link" href="/careers">&larr; View careers page</a>
+      </div>
+
+      <!-- ════ Applications Tab ════ -->
+      <div class="tab-panel" id="tab-applications">
+        <div class="status-filters">
+          <button class="filter-btn active" data-status="">All</button>
+          <button class="filter-btn" data-status="new">New</button>
+          <button class="filter-btn" data-status="reviewed">Reviewed</button>
+          <button class="filter-btn" data-status="interview">Interview</button>
+          <button class="filter-btn" data-status="hired">Hired</button>
+          <button class="filter-btn" data-status="rejected">Rejected</button>
+        </div>
+        <div class="app-count" id="appCount"></div>
+        <div id="applicationsList"></div>
+      </div>
     </div>
   </div>
 
@@ -218,6 +295,8 @@
     const btnAdd = document.getElementById("btnAdd");
     const addError = document.getElementById("addError");
     const positionsList = document.getElementById("positionsList");
+    const applicationsList = document.getElementById("applicationsList");
+    const appCount = document.getElementById("appCount");
 
     function authHeaders() {
       return {
@@ -225,6 +304,23 @@
         "Authorization": `Bearer ${authToken}`,
       };
     }
+
+    // ══════ Tabs ══════
+    let applicationsLoaded = false;
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+        if (btn.dataset.tab === "applications" && !applicationsLoaded) {
+          applicationsLoaded = true;
+          loadApplications();
+        }
+      });
+    });
+
+    // ══════ Positions (existing) ══════
 
     // ── "All Locations" toggle ──
     locAllEl.addEventListener("change", () => {
@@ -373,7 +469,7 @@
         locAllEl.checked = false;
         locBoxes.forEach(cb => { cb.checked = false; cb.disabled = false; });
         loadPositions();
-        loadTemplates(); // refresh templates (new one may have been saved)
+        loadTemplates();
       } catch (e) {
         addError.textContent = e.message;
         addError.style.display = "block";
@@ -402,6 +498,141 @@
           headers: authHeaders(),
         });
         loadPositions();
+      } catch { /* ignore */ }
+    };
+
+    // ══════ Applications ══════
+
+    let currentFilter = "";
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.status;
+        loadApplications();
+      });
+    });
+
+    async function loadApplications() {
+      try {
+        const qs = currentFilter ? `?status=${currentFilter}` : "";
+        const resp = await fetch(`${WORKER_BASE}/admin/applications${qs}`, { headers: authHeaders() });
+        const apps = await resp.json();
+        renderApplications(apps);
+      } catch {
+        applicationsList.innerHTML = '<div class="error">Failed to load applications.</div>';
+        appCount.textContent = "";
+      }
+    }
+
+    function statusBadge(status) {
+      const s = (status || "new").toLowerCase();
+      const label = s.charAt(0).toUpperCase() + s.slice(1);
+      return `<span class="badge badge-${s}">${label}</span>`;
+    }
+
+    function renderApplications(apps) {
+      if (apps.length === 0) {
+        applicationsList.innerHTML = '<div class="empty">No applications found.</div>';
+        appCount.textContent = "";
+        return;
+      }
+      appCount.textContent = `${apps.length} application${apps.length !== 1 ? "s" : ""}`;
+
+      applicationsList.innerHTML = apps.map(a => {
+        let locs;
+        try { locs = JSON.parse(a.locations); } catch { locs = []; }
+        const locDisplay = formatLocations(locs);
+
+        let workSection = "";
+        if (a.submission_type === "resume") {
+          workSection = `<dt>Resume</dt><dd>${esc(a.resume_filename || "Attached (sent via email)")}</dd>`;
+        } else if (a.work_history) {
+          let wh;
+          try { wh = JSON.parse(a.work_history); } catch { wh = []; }
+          workSection = wh.map((w, i) => `
+            <dt>${i === 0 ? "Most Recent Employer" : "Previous Employer"}</dt>
+            <dd>${esc(w.employer || "")} - ${esc(w.title || "")}
+Duration: ${esc(w.duration || "")}
+Reason for leaving: ${esc(w.reason_for_leaving || "")}</dd>
+          `).join("");
+        }
+
+        return `
+        <div class="app-card" data-id="${a.id}">
+          <div class="app-header" onclick="toggleApp(${a.id})">
+            <div>
+              <div class="app-name">${esc(a.full_name)} ${statusBadge(a.status)}</div>
+              <div class="app-summary">${esc(a.position)} &middot; ${locDisplay}</div>
+              <div class="app-date">${new Date(a.created_at).toLocaleDateString()} ${new Date(a.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</div>
+            </div>
+          </div>
+          <div class="app-details" id="app-detail-${a.id}">
+            <dl>
+              <dt>Phone</dt><dd>${esc(a.phone)}</dd>
+              ${a.email ? `<dt>Email</dt><dd>${esc(a.email)}</dd>` : ""}
+              <dt>Address</dt><dd>${esc(a.address || "")}</dd>
+              <dt>Availability</dt><dd>${esc(a.availability || "")}</dd>
+              ${a.schedule ? `<dt>Schedule</dt><dd>${esc(a.schedule)}</dd>` : ""}
+              ${workSection}
+              ${a.references_text ? `<dt>References</dt><dd>${esc(a.references_text)}</dd>` : ""}
+              ${a.additional ? `<dt>Additional Info</dt><dd>${esc(a.additional)}</dd>` : ""}
+            </dl>
+            <div class="app-actions">
+              <div>
+                <label style="font-size:12px;">Status</label>
+                <select id="status-${a.id}" onchange="updateApp(${a.id})">
+                  ${["new","reviewed","interview","hired","rejected"].map(s =>
+                    `<option value="${s}" ${a.status === s ? "selected" : ""}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
+                  ).join("")}
+                </select>
+              </div>
+              <div class="notes-wrap">
+                <label>Notes</label>
+                <textarea id="notes-${a.id}" placeholder="Add notes...">${esc(a.notes || "")}</textarea>
+              </div>
+              <button class="btn-primary btn-save" onclick="updateApp(${a.id})">Save</button>
+              <button class="btn-danger btn-del" onclick="deleteApp(${a.id}, '${esc(a.full_name)}')">Delete</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    window.toggleApp = function(id) {
+      const el = document.getElementById("app-detail-" + id);
+      if (el) el.classList.toggle("open");
+    };
+
+    window.updateApp = async function(id) {
+      const status = document.getElementById("status-" + id).value;
+      const notes = document.getElementById("notes-" + id).value;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/applications/${id}`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: JSON.stringify({ status, notes }),
+        });
+        if (!resp.ok) {
+          const data = await resp.json();
+          alert(data.error || "Failed to update.");
+          return;
+        }
+        loadApplications();
+      } catch {
+        alert("Failed to update application.");
+      }
+    };
+
+    window.deleteApp = async function(id, name) {
+      if (!confirm(`Delete application from "${name}"? This cannot be undone.`)) return;
+      try {
+        await fetch(`${WORKER_BASE}/admin/applications/${id}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        loadApplications();
       } catch { /* ignore */ }
     };
   </script>

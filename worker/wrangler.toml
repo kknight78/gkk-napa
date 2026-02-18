@@ -17,3 +17,8 @@ NOTIFY_EMAILS = "kellyraeknight78@gmail.com,brian@danvillenapa.comcastbiz.net,ga
 [[kv_namespaces]]
 binding = "POSITIONS_KV"
 id = "c0d84ee4e7b44e008686de7096e98f9d"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gkk-napa-careers"
+database_id = "fd40a9fa-4dfe-4ee1-852d-c519067112af"

@@ -39,7 +39,7 @@ function getCorsHeaders(request) {
   const origin = request.headers.get("Origin");
   return {
     "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : "https://gkk-napa.com",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }
@@ -203,6 +203,62 @@ export default {
       positions = positions.filter(p => p.id !== id);
       if (positions.length === before) return jsonError(corsHeaders, "Position not found.", 404);
       await savePositions(env, positions);
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Admin: GET /admin/applications ───
+    if (request.method === "GET" && path === "/admin/applications") {
+      if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+      const status = url.searchParams.get("status");
+      let result;
+      if (status) {
+        result = await env.DB.prepare(
+          "SELECT * FROM applications WHERE status = ? ORDER BY id DESC"
+        ).bind(status).all();
+      } else {
+        result = await env.DB.prepare(
+          "SELECT * FROM applications ORDER BY id DESC"
+        ).all();
+      }
+      return new Response(JSON.stringify(result.results), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Admin: PATCH /admin/applications/:id ───
+    if (request.method === "PATCH" && path.match(/^\/admin\/applications\/\d+$/)) {
+      if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+      const id = parseInt(path.split("/")[3]);
+      try {
+        const body = await request.json();
+        const updates = [];
+        const values = [];
+        if (body.status !== undefined) { updates.push("status = ?"); values.push(body.status); }
+        if (body.notes !== undefined) { updates.push("notes = ?"); values.push(body.notes); }
+        if (updates.length === 0) return jsonError(corsHeaders, "Nothing to update.", 400);
+        values.push(id);
+        const result = await env.DB.prepare(
+          `UPDATE applications SET ${updates.join(", ")} WHERE id = ?`
+        ).bind(...values).run();
+        if (result.meta.changes === 0) return jsonError(corsHeaders, "Application not found.", 404);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch {
+        return jsonError(corsHeaders, "Invalid request body.", 400);
+      }
+    }
+
+    // ─── Admin: DELETE /admin/applications/:id ───
+    if (request.method === "DELETE" && path.match(/^\/admin\/applications\/\d+$/)) {
+      if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+      const id = parseInt(path.split("/")[3]);
+      const result = await env.DB.prepare(
+        "DELETE FROM applications WHERE id = ?"
+      ).bind(id).run();
+      if (result.meta.changes === 0) return jsonError(corsHeaders, "Application not found.", 404);
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -385,6 +441,28 @@ async function handleSubmitApplication(request, env, corsHeaders) {
     if (trimmedAdditional.length > 1000) return jsonError(corsHeaders, "Additional info must be under 1000 characters.", 400);
 
     const locationDisplay = locations.map(s => LOCATION_DISPLAY[s] || s).join(", ");
+
+    // ── Save to D1 ──
+    try {
+      const workHistory = isResumePath ? null : JSON.stringify(
+        hasWH2 ? [work_history_1, work_history_2] : [work_history_1]
+      );
+      await env.DB.prepare(
+        `INSERT INTO applications
+         (full_name, phone, email, address, position, locations, availability, schedule,
+          submission_type, work_history, references_text, additional, resume_filename, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`
+      ).bind(
+        trimmedName, trimmedPhone, trimmedEmail || null, trimmedAddress,
+        position, JSON.stringify(locations), availability, trimmedSchedule || null,
+        isResumePath ? "resume" : "manual",
+        workHistory, trimmedReferences || null, trimmedAdditional || null,
+        resumeFilename || null,
+        new Date().toISOString()
+      ).run();
+    } catch (e) {
+      console.error(JSON.stringify({ tag: "D1_INSERT_ERROR", error: e.message }));
+    }
 
     // ── Send manager notification email ──
     if (env.RESEND_API_KEY && env.FROM_EMAIL && env.NOTIFY_EMAILS) {
