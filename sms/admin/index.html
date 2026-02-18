@@ -892,7 +892,7 @@ Occasional deals &amp; promotions</textarea>
           const url = 'https://gkk-napa.com/s/' + c.short_code;
           const name = c.name || 'Valued Customer';
           const firstName = name.split(' ')[0];
-          const msg = 'Hey ' + firstName + ', it\\'s Brian at G&KK NAPA! We have a new text updates program for order notifications, store hours & deals. If you\\'re interested, tap here to subscribe: ' + url;
+          const msg = "Hey " + firstName + ", it's Brian at G&KK NAPA! We have a new text updates program for order notifications, store hours & deals. If you're interested, tap here to subscribe: " + url;
           return '<div class="pt-card" id="pt-' + c.id + '">'
             + '<div class="pt-header">'
             + '<strong>' + esc(c.name || 'Unnamed') + '</strong>'
