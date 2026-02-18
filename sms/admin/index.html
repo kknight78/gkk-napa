@@ -856,11 +856,11 @@ Occasional deals &amp; promotions</textarea>
         <div class="qr-grid">${withCodes.map(c => {
           const url = "https://gkk-napa-sms.kellyraeknight78.workers.dev/s/" + c.short_code;
           const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
-          return \`<div class="qr-item">
-            <img src="\${qrApi}" alt="QR">
-            <div class="qr-name">\${esc(c.name || "Unnamed")}</div>
-            <div class="qr-url">\${url}</div>
-          </div>\`;
+          return '<div class="qr-item">'
+            + '<img src="' + qrApi + '" alt="QR">'
+            + '<div class="qr-name">' + esc(c.name || "Unnamed") + '</div>'
+            + '<div class="qr-url">' + url + '</div>'
+            + '</div>';
         }).join("")}</div></body></html>`);
       win.document.close();
     });
