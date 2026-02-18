@@ -1207,7 +1207,7 @@ async function enrichCustomerFromPayment(db, { phone, email, company, accountNum
       'INSERT INTO customers (phone, name, email, store, sms_status, source, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       normalizedPhone,
-      null,                          // name — we only have company, not contact name
+      company || null,               // name — use billing company name
       email ? email.trim() : null,
       normalizedStoreName || null,
       'none',                        // no SMS consent from a payment
