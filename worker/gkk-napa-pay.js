@@ -37,6 +37,22 @@ function formatDate(unixTimestamp) {
   });
 }
 
+// Calculate business days between two unix timestamps (excludes weekends)
+function businessDaysBetween(startUnix, endUnix) {
+  if (!startUnix || !endUnix) return 0;
+  const start = new Date(startUnix * 1000);
+  const end = new Date(endUnix * 1000);
+  let count = 0;
+  const current = new Date(start);
+  current.setDate(current.getDate() + 1);
+  while (current <= end) {
+    const day = current.getDay();
+    if (day !== 0 && day !== 6) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return Math.max(count, 1);
+}
+
 // Allowed origins for CORS
 const allowedOrigins = new Set([
   "https://gkk-napa.com",
@@ -251,25 +267,28 @@ export default {
           const eventDate = formatDate(event.created);
 
           // Build email subject and body
-          let subject, statusText, statusColor, statusBg, dateRows;
+          let subject, statusText, statusColor, statusBg, dateRows, statusSubtext = '';
 
           if (type === "checkout.session.completed") {
+            const emoji = payMethod === "card" ? "\u{1F4B0}\u{1F4B3}" : "\u{1F4B0}\u{1F3E6}";
             statusText = "Payment Received";
             statusColor = "#16a34a"; // green
             statusBg = "#f0fdf4";
-            subject = `💰 Payment Received - ${store} - $${paymentAmountUsd}`;
+            subject = `${emoji} Payment Received - ${store} - $${paymentAmountUsd}`;
             dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           } else if (type === "checkout.session.async_payment_succeeded") {
+            const clearDays = businessDaysBetween(obj.created, event.created);
             statusText = "ACH Cleared";
+            statusSubtext = `in ${clearDays} business day${clearDays !== 1 ? 's' : ''}`;
             statusColor = "#2563eb"; // blue
             statusBg = "#eff6ff";
-            subject = `✅ ACH Cleared - ${store} - $${paymentAmountUsd}`;
+            subject = `\u2705\u{1F3E6} ACH Cleared (${clearDays}d) - ${store} - $${paymentAmountUsd}`;
             dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${paymentDate}</td></tr><tr><td style="padding:6px 12px;color:#555;font-size:14px;">Date Cleared</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           } else if (type === "checkout.session.async_payment_failed") {
             statusText = "ACH FAILED";
             statusColor = "#dc2626"; // red
             statusBg = "#fef2f2";
-            subject = `❌ ACH FAILED - ${store} - ACCT# ${accountNumber || 'N/A'} - DO NOT CREDIT`;
+            subject = `\u274C\u{1F3E6} ACH FAILED - ${store} - ACCT# ${accountNumber || 'N/A'} - DO NOT CREDIT`;
             dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${paymentDate}</td></tr><tr><td style="padding:6px 12px;color:#555;font-size:14px;">Date Failed</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           }
 
@@ -281,17 +300,39 @@ export default {
 
           const methodLabel = payMethod === "ach" ? "Bank (ACH)" : payMethod === "card" ? "Credit Card" : payMethod || "N/A";
 
-          // Build payment breakdown rows
-          let breakdownRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Amount</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${paymentAmountUsd}</td></tr>`;
-          if (discountChecked) {
-            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Discount on Invoice</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">Yes</td></tr>`;
+          // Build payment breakdown rows (different for ACH vs Card vs Failed)
+          let breakdownRows = '';
+
+          if (type === "checkout.session.async_payment_failed") {
+            // Failed ACH — Stripe does NOT charge fees on failed async payments
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Amount</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${paymentAmountUsd}</td></tr>`;
+            if (discountChecked) {
+              breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Discount on Invoice</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">Yes</td></tr>`;
+            }
+            breakdownRows += `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 12px;color:#555;font-size:14px;font-weight:600;">Total Charged</td><td style="padding:6px 12px;font-size:14px;font-weight:700;">$${totalChargedUsd}</td></tr>`;
+            breakdownRows += `<tr><td colspan="2" style="padding:8px 12px;color:#888;font-size:12px;font-style:italic;">No Stripe fee on failed payments</td></tr>`;
+          } else if (payMethod === "card") {
+            // Card — customer pays convenience fee which covers Stripe processing
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Amount</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${paymentAmountUsd}</td></tr>`;
+            if (discountChecked) {
+              breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Discount on Invoice</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">Yes</td></tr>`;
+            }
+            if (convenienceFeeCents > 0) {
+              breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Card Convenience Fee<br><span style="font-size:11px;color:#16a34a;">Paid by customer</span></td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${convenienceFeeUsd}</td></tr>`;
+            }
+            breakdownRows += `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 12px;color:#555;font-size:14px;font-weight:600;">Total Charged to Customer</td><td style="padding:6px 12px;font-size:14px;font-weight:700;">$${totalChargedUsd}</td></tr>`;
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#888;font-size:13px;">Est. Stripe Fee<br><span style="font-size:11px;color:#16a34a;">Covered by convenience fee</span></td><td style="padding:6px 12px;font-size:13px;color:#888;">${estimatedStripeFee}</td></tr>`;
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:13px;font-weight:600;">Net Deposit to Store</td><td style="padding:6px 12px;font-size:13px;font-weight:700;color:#16a34a;">${estimatedNetDeposit}</td></tr>`;
+          } else {
+            // ACH — store absorbs Stripe fee
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Amount</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${paymentAmountUsd}</td></tr>`;
+            if (discountChecked) {
+              breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Discount on Invoice</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">Yes</td></tr>`;
+            }
+            breakdownRows += `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 12px;color:#555;font-size:14px;font-weight:600;">Total Charged</td><td style="padding:6px 12px;font-size:14px;font-weight:700;">$${totalChargedUsd}</td></tr>`;
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#d97706;font-size:13px;">Est. Stripe Fee<br><span style="font-size:11px;">Absorbed by store</span></td><td style="padding:6px 12px;font-size:13px;color:#d97706;">-${estimatedStripeFee}</td></tr>`;
+            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:13px;font-weight:600;">Net Deposit to Store</td><td style="padding:6px 12px;font-size:13px;font-weight:700;">${estimatedNetDeposit}</td></tr>`;
           }
-          if (payMethod === "card" && convenienceFeeCents > 0) {
-            breakdownRows += `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Card Convenience Fee</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">$${convenienceFeeUsd}</td></tr>`;
-          }
-          breakdownRows += `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 12px;color:#555;font-size:14px;font-weight:600;">Total Charged</td><td style="padding:6px 12px;font-size:14px;font-weight:700;">$${totalChargedUsd}</td></tr>`;
-          breakdownRows += `<tr><td style="padding:6px 12px;color:#888;font-size:13px;">Est. Stripe Fee</td><td style="padding:6px 12px;font-size:13px;color:#888;">${estimatedStripeFee}</td></tr>`;
-          breakdownRows += `<tr><td style="padding:6px 12px;color:#888;font-size:13px;">Est. Net Deposit</td><td style="padding:6px 12px;font-size:13px;color:#888;">${estimatedNetDeposit}</td></tr>`;
 
           // HTML email template
           const html = `<!DOCTYPE html>
@@ -302,18 +343,14 @@ export default {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
 <!-- NAPA Header -->
-<tr><td style="background-color:#2b2f84;padding:16px 24px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-<tr>
-<td><img src="https://gkk-napa.com/assets/napa-logo.png" alt="NAPA" height="36" style="display:block;height:36px;width:auto;"></td>
-<td style="text-align:right;color:#ffffff;font-size:15px;font-weight:600;">${store || 'NAPA'}</td>
-</tr>
-</table>
+<tr><td style="background-color:#0A0094;padding:14px 24px 10px;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="48" style="display:block;height:48px;width:auto;">
+<div style="color:#ffffff;font-size:13px;margin-top:6px;">${store ? store.replace('NAPA ', '') : ''} Store Payment</div>
 </td></tr>
 
 <!-- Status Banner -->
 <tr><td style="background-color:${statusBg};border-left:4px solid ${statusColor};padding:16px 24px;">
-<span style="font-size:22px;font-weight:700;color:${statusColor};">${statusText}</span>
+<span style="font-size:22px;font-weight:700;color:${statusColor};">${statusText}</span>${statusSubtext ? `<span style="font-size:15px;font-weight:600;color:${statusColor};opacity:0.75;"> &middot; ${statusSubtext}</span>` : ''}
 <span style="display:block;margin-top:4px;font-size:28px;font-weight:700;color:#111;">$${paymentAmountUsd}</span>
 </td></tr>
 
@@ -425,10 +462,32 @@ G&KK NAPA Auto Parts - Automated notification`;
       });
     }
 
+    // Payment summary endpoint (manual trigger for testing)
+    // Usage: GET /send-summary?period=week|month&key=YOUR_SUMMARY_KEY
+    if (url.pathname === "/send-summary") {
+      if (request.method !== "GET" && request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      const key = url.searchParams.get("key");
+      if (!key || key !== env.SUMMARY_KEY) {
+        return new Response(JSON.stringify({ error: "Unauthorized — set SUMMARY_KEY env var and pass ?key=" }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+      const period = url.searchParams.get("period") || "week";
+      return await handleSendSummary(env, period);
+    }
+
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  },
+
+  // Cron trigger handler — configure in Cloudflare Dashboard > Worker > Triggers > Cron
+  // Recommended: "0 13 * * 1" = every Monday 7am Central (13:00 UTC)
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(handleSendSummary(env, "week"));
   },
 };
 
@@ -719,4 +778,290 @@ function encodeStripeParams(obj, prefix = '') {
   }
 
   return pairs.join('&');
+}
+
+// ============ Weekly/Monthly Payment Summary ============
+
+// Format cents as USD string with commas
+function fmtUsd(cents) {
+  const abs = Math.abs(cents);
+  const dollars = (abs / 100).toFixed(2);
+  const parts = dollars.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (cents < 0 ? '-$' : '$') + parts.join('.');
+}
+
+// Get date range for the requested period
+function getPeriodRange(period) {
+  const now = new Date();
+
+  if (period === "month") {
+    const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'America/Chicago' });
+    return {
+      sinceUnix: Math.floor(since.getTime() / 1000),
+      untilUnix: Math.floor(now.getTime() / 1000),
+      label: monthName,
+      periodType: "Monthly",
+    };
+  }
+
+  // Default: last 7 days
+  const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const startStr = since.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+  const endStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
+  return {
+    sinceUnix: Math.floor(since.getTime() / 1000),
+    untilUnix: Math.floor(now.getTime() / 1000),
+    label: `${startStr} – ${endStr}`,
+    periodType: "Weekly",
+  };
+}
+
+// Fetch all charges from Stripe for a date range (handles pagination)
+async function fetchAllCharges(stripeKey, sinceUnix, untilUnix) {
+  const charges = [];
+  let startingAfter = null;
+
+  for (let page = 0; page < 20; page++) { // safety limit: 2000 charges max
+    let url = `https://api.stripe.com/v1/charges?created[gte]=${sinceUnix}&created[lte]=${untilUnix}&limit=100&expand[]=data.balance_transaction`;
+    if (startingAfter) url += `&starting_after=${startingAfter}`;
+
+    const resp = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${stripeKey}` }
+    });
+    const data = await resp.json();
+
+    if (!data.data || data.data.length === 0) break;
+    charges.push(...data.data);
+
+    if (!data.has_more) break;
+    startingAfter = data.data[data.data.length - 1].id;
+  }
+
+  return charges;
+}
+
+// Build summary email HTML
+function buildSummaryHtml(d) {
+  let failedHtml = '';
+  if (d.failedCount > 0) {
+    let failedRows = '';
+    for (const f of d.failedDetails.slice(0, 10)) {
+      failedRows += `<tr><td style="padding:4px 12px;font-size:13px;color:#dc2626;">${f.company}</td><td style="padding:4px 12px;font-size:13px;color:#dc2626;">ACCT# ${f.account}</td><td style="padding:4px 12px;font-size:13px;color:#dc2626;text-align:right;">${fmtUsd(f.amount)}</td></tr>`;
+    }
+    failedHtml = `
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Failed Payments (${d.failedCount})</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fecaca;border-radius:6px;background-color:#fef2f2;">
+${failedRows}
+</table>
+</td></tr>`;
+  }
+
+  // Store breakdown by location
+  let storeBreakdownHtml = '';
+  if (d.storeBreakdown && Object.keys(d.storeBreakdown).length > 0) {
+    let storeRows = '';
+    const stores = Object.entries(d.storeBreakdown).sort((a, b) => b[1].amount - a[1].amount);
+    let alt = false;
+    for (const [store, info] of stores) {
+      const bg = alt ? ' style="background-color:#f9fafb;"' : '';
+      storeRows += `<tr${bg}><td style="padding:6px 12px;color:#555;font-size:14px;">${store}</td><td style="padding:6px 12px;font-size:14px;text-align:center;">${info.count}</td><td style="padding:6px 12px;font-size:14px;font-weight:600;text-align:right;">${fmtUsd(info.amount)}</td></tr>`;
+      alt = !alt;
+    }
+    storeBreakdownHtml = `
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">By Store</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;">
+<tr style="background-color:#f3f4f6;"><td style="padding:4px 12px;font-size:11px;font-weight:700;color:#888;">STORE</td><td style="padding:4px 12px;font-size:11px;font-weight:700;color:#888;text-align:center;">COUNT</td><td style="padding:4px 12px;font-size:11px;font-weight:700;color:#888;text-align:right;">AMOUNT</td></tr>
+${storeRows}
+</table>
+</td></tr>`;
+  }
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:24px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+<!-- NAPA Header -->
+<tr><td style="background-color:#0A0094;padding:14px 24px 10px;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="48" style="display:block;height:48px;width:auto;">
+<div style="color:#ffffff;font-size:13px;margin-top:6px;">G&amp;KK Store Payments</div>
+</td></tr>
+
+<!-- Title Banner -->
+<tr><td style="background-color:#f8fafc;border-left:4px solid #0A0094;padding:16px 24px;">
+<span style="font-size:20px;font-weight:700;color:#0A0094;">${d.periodType} Payment Summary</span>
+<span style="display:block;margin-top:4px;font-size:14px;color:#555;">${d.label}</span>
+</td></tr>
+
+<!-- Overview -->
+<tr><td style="padding:20px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Overview</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;">
+<tr><td style="padding:10px 12px;color:#111;font-size:15px;font-weight:700;">Total Payments</td><td style="padding:10px 12px;font-size:15px;font-weight:700;text-align:right;">${d.totalCount} &nbsp;&middot;&nbsp; ${fmtUsd(d.totalAmountCents)}</td></tr>
+<tr style="background-color:#f9fafb;"><td style="padding:6px 12px;color:#555;font-size:14px;">\u{1F3E6} ACH Payments</td><td style="padding:6px 12px;font-size:14px;font-weight:600;text-align:right;">${d.achCount} &nbsp;&middot;&nbsp; ${fmtUsd(d.achAmountCents)}</td></tr>
+<tr><td style="padding:6px 12px;color:#555;font-size:14px;">\u{1F4B3} Card Payments</td><td style="padding:6px 12px;font-size:14px;font-weight:600;text-align:right;">${d.cardCount} &nbsp;&middot;&nbsp; ${fmtUsd(d.cardAmountCents)}</td></tr>
+</table>
+</td></tr>
+
+<!-- Store Costs (ACH) -->
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Store Costs (ACH)</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fde68a;border-radius:6px;background-color:#fffbeb;">
+<tr><td style="padding:8px 12px;color:#92400e;font-size:14px;">Stripe Fees Absorbed</td><td style="padding:8px 12px;font-size:14px;font-weight:700;color:#d97706;text-align:right;">-${fmtUsd(d.achFeeCents)}</td></tr>
+<tr><td colspan="2" style="padding:4px 12px 8px;font-size:11px;color:#92400e;">These fees come out of ACH payment deposits</td></tr>
+</table>
+</td></tr>
+
+<!-- Customer Fees (Card) -->
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Customer Fees (Card)</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #bbf7d0;border-radius:6px;background-color:#f0fdf4;">
+<tr><td style="padding:8px 12px;color:#166534;font-size:14px;">Convenience Fees Collected</td><td style="padding:8px 12px;font-size:14px;font-weight:700;color:#16a34a;text-align:right;">${fmtUsd(d.cardConvFeeCents)}</td></tr>
+<tr><td style="padding:4px 12px;color:#166534;font-size:13px;">Stripe Processing Covered</td><td style="padding:4px 12px;font-size:13px;color:#16a34a;text-align:right;">${fmtUsd(d.cardFeeCents)}</td></tr>
+<tr><td colspan="2" style="padding:4px 12px 8px;font-size:11px;color:#166534;">Customers pay these fees — no cost to store</td></tr>
+</table>
+</td></tr>
+
+<!-- Net Deposits -->
+<tr><td style="padding:16px 24px 8px;">
+<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Net Deposits</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;">
+<tr style="background-color:#f0fdf4;"><td style="padding:10px 12px;color:#111;font-size:16px;font-weight:700;">Total Net to Store</td><td style="padding:10px 12px;font-size:16px;font-weight:700;text-align:right;">${fmtUsd(d.totalNetCents)}</td></tr>
+<tr><td style="padding:6px 12px;color:#555;font-size:13px;">ACH Net</td><td style="padding:6px 12px;font-size:13px;text-align:right;">${fmtUsd(d.achNetCents)}</td></tr>
+<tr style="background-color:#f9fafb;"><td style="padding:6px 12px;color:#555;font-size:13px;">Card Net</td><td style="padding:6px 12px;font-size:13px;text-align:right;">${fmtUsd(d.cardNetCents)}</td></tr>
+</table>
+</td></tr>
+
+${storeBreakdownHtml}
+${failedHtml}
+
+<!-- Stripe Dashboard Button -->
+<tr><td align="center" style="padding:24px;">
+<a href="https://dashboard.stripe.com/payments" target="_blank" style="display:inline-block;background-color:#635bff;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:6px;">View All in Stripe Dashboard</a>
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="background-color:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb;">
+<p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; ${d.periodType} summary &middot; Automated notification</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+// Main summary handler — fetches Stripe data and sends summary email
+async function handleSendSummary(env, period) {
+  if (!env.STRIPE_SECRET_KEY || !env.RESEND_API_KEY || !env.FROM_EMAIL || !env.NOTIFY_EMAILS) {
+    return new Response(JSON.stringify({ error: "Missing required env vars (STRIPE_SECRET_KEY, RESEND_API_KEY, FROM_EMAIL, NOTIFY_EMAILS)" }), {
+      status: 500, headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  const { sinceUnix, untilUnix, label, periodType } = getPeriodRange(period);
+
+  // Fetch all charges from Stripe for this period
+  const charges = await fetchAllCharges(env.STRIPE_SECRET_KEY, sinceUnix, untilUnix);
+
+  // Aggregate data
+  let achCount = 0, achAmountCents = 0, achFeeCents = 0, achNetCents = 0;
+  let cardCount = 0, cardAmountCents = 0, cardFeeCents = 0, cardConvFeeCents = 0, cardNetCents = 0;
+  let failedCount = 0, failedAmountCents = 0;
+  const failedDetails = [];
+  const storeBreakdown = {};
+
+  for (const charge of charges) {
+    const payMethod = charge.metadata?.pay_method ||
+      (charge.payment_method_details?.type === "us_bank_account" ? "ach" : "card");
+    const paymentAmountCents = parseInt(charge.metadata?.payment_amount_cents || charge.amount, 10);
+    const fee = charge.balance_transaction?.fee || 0;
+    const convFee = parseInt(charge.metadata?.convenience_fee_cents || "0", 10);
+    const store = charge.metadata?.store || "Unknown";
+
+    // Handle failed or refunded charges
+    if (charge.status === "failed" || charge.refunded) {
+      failedCount++;
+      failedAmountCents += paymentAmountCents;
+      failedDetails.push({
+        account: charge.metadata?.account_number || "N/A",
+        company: charge.metadata?.company || "N/A",
+        amount: paymentAmountCents,
+        store,
+      });
+      continue;
+    }
+
+    if (charge.status !== "succeeded") continue; // skip pending
+
+    // Track by store
+    if (!storeBreakdown[store]) storeBreakdown[store] = { count: 0, amount: 0 };
+    storeBreakdown[store].count++;
+    storeBreakdown[store].amount += paymentAmountCents;
+
+    if (payMethod === "ach") {
+      achCount++;
+      achAmountCents += paymentAmountCents;
+      achFeeCents += fee;
+      achNetCents += (charge.amount - fee);
+    } else {
+      cardCount++;
+      cardAmountCents += paymentAmountCents;
+      cardFeeCents += fee;
+      cardConvFeeCents += convFee;
+      cardNetCents += (charge.amount - fee);
+    }
+  }
+
+  const totalCount = achCount + cardCount;
+  const totalAmountCents = achAmountCents + cardAmountCents;
+  const totalNetCents = achNetCents + cardNetCents;
+
+  // Build and send email
+  const html = buildSummaryHtml({
+    periodType, label,
+    totalCount, totalAmountCents, totalNetCents,
+    achCount, achAmountCents, achFeeCents, achNetCents,
+    cardCount, cardAmountCents, cardFeeCents, cardConvFeeCents, cardNetCents,
+    failedCount, failedAmountCents, failedDetails,
+    storeBreakdown,
+  });
+
+  const subject = `\u{1F4CA} ${periodType} Payment Summary – ${label}`;
+
+  const emailResp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.FROM_EMAIL,
+      to: env.NOTIFY_EMAILS.split(",").map(s => s.trim()).filter(Boolean),
+      reply_to: "payments@gkk-napa.com",
+      subject,
+      html,
+    }),
+  });
+
+  if (!emailResp.ok) {
+    const err = await emailResp.text();
+    console.error(JSON.stringify({ tag: "SUMMARY_EMAIL_ERROR", error: err, period }));
+    return new Response(JSON.stringify({ error: err }), {
+      status: 500, headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  const result = await emailResp.json();
+  console.log(JSON.stringify({ tag: "SUMMARY_EMAIL_SENT", period, label, emailId: result.id }));
+
+  return new Response(JSON.stringify({ ok: true, email_id: result.id, period, label, charges_processed: charges.length }), {
+    headers: { "Content-Type": "application/json" }
+  });
 }
