@@ -165,6 +165,45 @@
     .activity-item:last-child { border-bottom: none; }
     .activity-source { font-size: 11px; color: var(--dim); background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 4px; }
 
+    /* Personal text cards */
+    .pt-card {
+      background: rgba(255,255,255,.06);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .pt-card.done { opacity: .4; }
+    .pt-header { margin-bottom: 10px; font-size: 15px; }
+    .pt-steps { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+    .pt-step { display: flex; align-items: center; gap: 8px; }
+    .pt-phone {
+      color: var(--napa-yellow);
+      font-weight: 700;
+      font-size: 16px;
+      text-decoration: none;
+    }
+    .btn-copy-msg {
+      background: var(--napa-blue);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-copy-msg.copied { background: #388e3c; }
+    .btn-mark-sent {
+      background: #388e3c;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
     /* Customer cards */
     .customer-item {
       background: rgba(255,255,255,.06);
@@ -369,6 +408,16 @@
         <div class="dash-section">
           <h2>Actions</h2>
           <div id="dashActions"></div>
+        </div>
+
+        <!-- Personal Text Panel (hidden by default) -->
+        <div class="dash-section" id="personalTextPanel" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>Personal Text List</h2>
+            <button class="btn-secondary" onclick="document.getElementById('personalTextPanel').style.display='none'" style="padding:4px 12px;font-size:13px;">Close</button>
+          </div>
+          <p style="color:#aaa;font-size:13px;margin:0 0 12px;">Open this page on your phone. Tap the number to open Messages, copy the message, paste &amp; send, then mark it done.</p>
+          <div id="personalTextList"></div>
         </div>
 
         <!-- Source Breakdown + Store Breakdown -->
@@ -699,9 +748,10 @@ Occasional deals &amp; promotions</textarea>
             <button class="btn-primary" onclick="dashAction('invite-ready')">Invite All</button>
           </div>` : ''}
           ${actions.mobile_no_email > 0 ? `<div class="action-card">
-            <div class="action-info"><div class="action-label">Mobile, No Email</div><div class="action-desc">Print QR codes for invoices/mailers</div></div>
+            <div class="action-info"><div class="action-label">Mobile, No Email</div><div class="action-desc">Personal text from your phone, or print QR for invoices</div></div>
             <div class="action-count">${actions.mobile_no_email}</div>
-            <button class="btn-success" onclick="dashAction('print-qr-no-email')">Print QR</button>
+            <button class="btn-success" onclick="dashAction('personal-text')">Text List</button>
+            <button class="btn-secondary" onclick="dashAction('print-qr-no-email')" style="margin-left:6px;">Print QR</button>
           </div>` : ''}
           ${actions.stale_invites > 0 ? `<div class="action-card">
             <div class="action-info"><div class="action-label">Stale Invites (30+ days)</div><div class="action-desc">Invited but never subscribed</div></div>
@@ -763,6 +813,31 @@ Occasional deals &amp; promotions</textarea>
       }
     }
 
+    // ─── Personal Text Helpers ─────────────────────────────────
+    window.copyMsg = function(btn) {
+      const msg = btn.getAttribute("data-msg");
+      navigator.clipboard.writeText(msg).then(() => {
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = "Copy Message"; btn.classList.remove("copied"); }, 2000);
+      });
+    };
+
+    window.markPersonalText = async function(id) {
+      const now = new Date().toISOString();
+      const resp = await fetch(`${WORKER_BASE}/admin/customers/${id}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ sms_status: "invited", invite_sent_at: now, notes_append: "Personal text sent " + now.slice(0, 10) }),
+      });
+      if (resp.ok) {
+        const card = document.getElementById("pt-" + id);
+        card.classList.add("done");
+        card.querySelector(".btn-mark-sent").textContent = "Done!";
+        card.querySelector(".btn-mark-sent").disabled = true;
+      }
+    };
+
     // ─── Dashboard Actions ────────────────────────────────────
     window.dashAction = async function(action) {
       if (action === "invite-ready") {
@@ -804,6 +879,35 @@ Occasional deals &amp; promotions</textarea>
               + '</div>';
           }).join("")}</div></body></html>`);
         win.document.close();
+      } else if (action === "personal-text") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const eligible = customers.filter(c => !c.email && c.line_type === "mobile" && c.short_code && c.sms_status !== "subscribed");
+        if (eligible.length === 0) { alert("No eligible customers."); return; }
+        // Show the personal text panel
+        const panel = document.getElementById("personalTextPanel");
+        const list = document.getElementById("personalTextList");
+        list.innerHTML = eligible.map(c => {
+          const phone = c.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3');
+          const url = 'https://gkk-napa.com/s/' + c.short_code;
+          const name = c.name || 'Valued Customer';
+          const firstName = name.split(' ')[0];
+          const msg = 'Hey ' + firstName + ', it\\'s Brian at G&KK NAPA! We have a new text updates program for order notifications, store hours & deals. If you\\'re interested, tap here to subscribe: ' + url;
+          return '<div class="pt-card" id="pt-' + c.id + '">'
+            + '<div class="pt-header">'
+            + '<strong>' + esc(c.name || 'Unnamed') + '</strong>'
+            + (c.store ? ' <span style="color:#888;font-size:12px;">(' + esc(c.store) + ')</span>' : '')
+            + '</div>'
+            + '<div class="pt-steps">'
+            + '<div class="pt-step">1. <a href="sms:' + c.phone.replace('+1', '') + '" class="pt-phone">' + phone + '</a> <span style="color:#888;font-size:12px;">tap to open Messages</span></div>'
+            + '<div class="pt-step">2. <button class="btn-copy-msg" onclick="copyMsg(this)" data-msg="' + esc(msg).replace(/"/g, '&quot;') + '">Copy Message</button></div>'
+            + '<div class="pt-step">3. Paste into Messages &amp; send</div>'
+            + '<div class="pt-step">4. <button class="btn-mark-sent" onclick="markPersonalText(\'' + c.id + '\')">Mark Sent</button></div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+        panel.style.display = "block";
+        panel.scrollIntoView({ behavior: "smooth" });
       } else if (action === "re-invite") {
         const resp = await fetch(`${WORKER_BASE}/admin/customers?status=invited`, { headers: authHeaders() });
         const customers = await resp.json();

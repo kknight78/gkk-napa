@@ -555,7 +555,7 @@ async function handleAddCustomer(request, env, corsHeaders) {
 async function handleUpdateCustomer(request, path, env, corsHeaders) {
   const id = parseInt(path.split("/").pop());
   const body = await request.json();
-  const { name, email, store, notes, sms_status, line_type } = body;
+  const { name, email, store, notes, notes_append, sms_status, line_type, invite_sent_at } = body;
 
   const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
   if (!existing) return jsonError(corsHeaders, "Customer not found.", 404);
@@ -578,6 +578,12 @@ async function handleUpdateCustomer(request, path, env, corsHeaders) {
   if (email !== undefined) { updates.push("email = ?"); binds.push(email || null); }
   if (store !== undefined) { updates.push("store = ?"); binds.push(store || null); }
   if (notes !== undefined) { updates.push("notes = ?"); binds.push(notes || null); }
+  if (notes_append) {
+    const current = existing.notes || '';
+    updates.push("notes = ?");
+    binds.push(current ? current + '\n' + notes_append : notes_append);
+  }
+  if (invite_sent_at !== undefined) { updates.push("invite_sent_at = ?"); binds.push(invite_sent_at); }
   if (line_type !== undefined) { updates.push("line_type = ?"); binds.push(line_type || null); }
   if (sms_status !== undefined) {
     updates.push("sms_status = ?");
