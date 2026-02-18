@@ -595,7 +595,7 @@ function buildInviteEmail(firstName, storeName, customIntro, customBullets) {
 
 <!-- NAPA Header -->
 <tr><td style="background-color:#2b2f84;padding:20px 24px;text-align:center;">
-<img src="https://gkk-napa.com/assets/napa-logo.png" alt="NAPA Auto Parts" height="40" style="display:inline-block;height:40px;width:auto;">
+<img src="https://gkk-napa.com/assets/sms-logo.png" alt="G&KK NAPA Auto Parts" style="display:inline-block;max-width:280px;width:100%;height:auto;">
 </td></tr>
 
 <!-- Body -->
