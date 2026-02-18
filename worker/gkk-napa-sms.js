@@ -84,7 +84,7 @@ function normalizePhone(raw) {
 }
 
 // ─── Twilio helpers ──────────────────────────────────────────
-async function sendSms(env, to, body) {
+async function sendSms(env, to, body, mediaUrl) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
   const params = new URLSearchParams({
     From: env.TWILIO_PHONE_NUMBER,
@@ -92,6 +92,7 @@ async function sendSms(env, to, body) {
     Body: body,
     StatusCallback: `https://gkk-napa-sms.kellyraeknight78.workers.dev/twilio/status`,
   });
+  if (mediaUrl) params.set("MediaUrl", mediaUrl);
 
   const resp = await fetch(url, {
     method: "POST",
@@ -268,17 +269,19 @@ async function handleSubscribe(request, env, corsHeaders) {
   // Check if customer already exists
   const existing = await env.DB.prepare("SELECT id, sms_status FROM customers WHERE phone = ?").bind(phone).first();
 
-  if (!existing) {
-    return jsonError(corsHeaders, "This number isn't in our system. Please contact your local G&KK NAPA store to sign up.", 404);
+  if (existing) {
+    if (existing.sms_status === "subscribed") {
+      return jsonOk(corsHeaders, { success: true, message: "You're already subscribed!" });
+    }
+    await env.DB.prepare(
+      "UPDATE customers SET sms_status = 'subscribed', sms_consent_at = ?, updated_at = ? WHERE id = ?"
+    ).bind(now, now, existing.id).run();
+  } else {
+    // New subscriber — create customer record
+    await env.DB.prepare(
+      "INSERT INTO customers (phone, store, sms_status, sms_consent_at, created_at, updated_at) VALUES (?, ?, 'subscribed', ?, ?, ?)"
+    ).bind(phone, store || null, now, now).run();
   }
-
-  if (existing.sms_status === "subscribed") {
-    return jsonOk(corsHeaders, { success: true, message: "You're already subscribed!" });
-  }
-
-  await env.DB.prepare(
-    "UPDATE customers SET sms_status = 'subscribed', sms_consent_at = ?, updated_at = ? WHERE id = ?"
-  ).bind(now, now, existing.id).run();
 
   // Send confirmation SMS
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
@@ -641,7 +644,7 @@ ${bulletRows}
 
 async function handleSendCampaign(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, body: messageBody, store } = body;
+  const { name, body: messageBody, store, image_url } = body;
 
   if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
   if (!messageBody || !messageBody.trim()) return jsonError(corsHeaders, "Message body is required.", 400);
@@ -653,6 +656,9 @@ async function handleSendCampaign(request, env, corsHeaders) {
 
   // Append opt-out footer
   const fullMessage = messageBody.trim() + "\n\nReply STOP to opt out.";
+
+  // Use provided image URL (or null for plain SMS — no default)
+  const mediaUrl = image_url || null;
 
   // Query subscribed customers
   let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
@@ -682,7 +688,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
   let failedCount = 0;
 
   for (const customer of customers.results) {
-    const result = await sendSms(env, customer.phone, fullMessage);
+    const result = await sendSms(env, customer.phone, fullMessage, mediaUrl);
 
     await env.DB.prepare(
       "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"

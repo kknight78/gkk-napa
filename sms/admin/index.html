@@ -333,7 +333,10 @@
             <option value="subscribed">Subscribed</option>
             <option value="stopped">Stopped</option>
           </select>
-          <input id="filterSearch" type="text" placeholder="Search name, phone, email..." style="flex:2;" />
+          <div style="flex:2;position:relative;min-width:120px;">
+            <input id="filterSearch" type="text" placeholder="Search name, phone, email..." style="width:100%;padding-right:36px;" />
+            <button id="btnClearSearch" type="button" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;padding:0;">&times;</button>
+          </div>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -359,6 +362,25 @@
           <textarea id="campaignBody" placeholder="Type your message..." maxlength="1500" style="min-height:120px;"></textarea>
           <div class="char-count" id="charCount">0 / 1,500</div>
           <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." will be appended automatically.</div>
+
+          <label for="campaignImage">Image</label>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;">
+            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
+              <input type="radio" name="imageOption" value="logo" checked style="width:auto;accent-color:var(--napa-yellow);" /> Store logo
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
+              <input type="radio" name="imageOption" value="custom" style="width:auto;accent-color:var(--napa-yellow);" /> Custom URL
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
+              <input type="radio" name="imageOption" value="none" style="width:auto;accent-color:var(--napa-yellow);" /> No image (SMS only)
+            </label>
+          </div>
+          <div id="customImageRow" style="display:none;margin-bottom:4px;">
+            <input id="campaignImageUrl" type="url" placeholder="https://example.com/image.png" />
+          </div>
+          <div id="imagePreview" style="margin-bottom:8px;">
+            <img src="https://gkk-napa.com/assets/sms-logo.png" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
+          </div>
 
           <label for="campaignStore">Send To</label>
           <select id="campaignStore">
@@ -569,11 +591,19 @@ Occasional deals &amp; promotions</textarea>
     const customerList = document.getElementById("customerList");
     const customerCount = document.getElementById("customerCount");
 
+    const btnClearSearch = document.getElementById("btnClearSearch");
+
     [filterStore, filterStatus].forEach(el => el.addEventListener("change", loadCustomers));
     let searchTimeout;
     filterSearch.addEventListener("input", () => {
+      btnClearSearch.style.display = filterSearch.value ? "block" : "none";
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(loadCustomers, 300);
+    });
+    btnClearSearch.addEventListener("click", () => {
+      filterSearch.value = "";
+      btnClearSearch.style.display = "none";
+      loadCustomers();
     });
 
     async function loadCustomers() {
@@ -649,8 +679,8 @@ Occasional deals &amp; promotions</textarea>
       modalTitle.textContent = "Edit Customer";
       modalCustomerId.value = c.id;
       modalName.value = c.name || "";
-      modalPhone.value = c.phone || "";
-      modalPhone.disabled = true;
+      modalPhone.value = c.phone ? formatPhone(c.phone) : "";
+      modalPhone.disabled = false;
       modalEmail.value = c.email || "";
       modalStore.value = c.store || "";
       modalNotes.value = c.notes || "";
@@ -828,6 +858,42 @@ Occasional deals &amp; promotions</textarea>
       charCount.className = "char-count" + (len > 1500 ? " over" : len > 1400 ? " warn" : "");
     });
 
+    // Image option handling
+    const imagePreview = document.getElementById("imagePreview");
+    const customImageRow = document.getElementById("customImageRow");
+    const campaignImageUrl = document.getElementById("campaignImageUrl");
+    const LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
+
+    document.querySelectorAll('input[name="imageOption"]').forEach(radio => {
+      radio.addEventListener("change", () => {
+        const val = radio.value;
+        customImageRow.style.display = val === "custom" ? "block" : "none";
+        if (val === "logo") {
+          imagePreview.innerHTML = `<img src="${LOGO_URL}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+        } else if (val === "none") {
+          imagePreview.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:8px 0;">No image — will send as SMS (cheaper)</div>';
+        } else {
+          const url = campaignImageUrl.value.trim();
+          imagePreview.innerHTML = url
+            ? `<img src="${esc(url)}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`
+            : '<div style="font-size:13px;color:var(--dim);padding:8px 0;">Enter an image URL above</div>';
+        }
+      });
+    });
+    campaignImageUrl.addEventListener("input", () => {
+      const url = campaignImageUrl.value.trim();
+      if (url) {
+        imagePreview.innerHTML = `<img src="${esc(url)}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+      }
+    });
+
+    function getImageUrl() {
+      const selected = document.querySelector('input[name="imageOption"]:checked').value;
+      if (selected === "logo") return LOGO_URL;
+      if (selected === "custom") return campaignImageUrl.value.trim() || null;
+      return null; // "none" — no image, plain SMS
+    }
+
     campaignStore.addEventListener("change", updateRecipientPreview);
 
     async function updateRecipientPreview() {
@@ -855,22 +921,23 @@ Occasional deals &amp; promotions</textarea>
       if (!body) { sendError.textContent = "Message body is required."; sendError.style.display = "block"; return; }
       if (body.length > 1500) { sendError.textContent = "Message is too long."; sendError.style.display = "block"; return; }
 
+      const imageUrl = getImageUrl();
+      const msgType = imageUrl ? "MMS (with image)" : "SMS (text only)";
       const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
-      if (!confirm(`Send this SMS campaign to all subscribed customers at ${storeName}?\n\nMessage:\n${body}\n\nReply STOP to opt out.`)) return;
+      if (!confirm(`Send this ${msgType} campaign to all subscribed customers at ${storeName}?\n\nMessage:\n${body}\n\nReply STOP to opt out.`)) return;
 
       const btn = document.getElementById("btnSend");
       btn.disabled = true;
       btn.textContent = "Sending...";
 
       try {
+        const payload = { name, body, store: campaignStore.value || undefined };
+        if (imageUrl) payload.image_url = imageUrl;
+
         const resp = await fetch(`${WORKER_BASE}/admin/send`, {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({
-            name,
-            body,
-            store: campaignStore.value || undefined,
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send.");
@@ -977,6 +1044,23 @@ Occasional deals &amp; promotions</textarea>
       modal.addEventListener("click", (e) => {
         if (e.target === modal) modal.classList.remove("open");
       });
+    });
+
+    // ─── Phone formatting ──────────────────────────────────────
+    function formatPhone(value) {
+      let digits = value.replace(/\D/g, "");
+      if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+      digits = digits.slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+    modalPhone.addEventListener("input", () => {
+      const pos = modalPhone.selectionStart;
+      const before = modalPhone.value.length;
+      modalPhone.value = formatPhone(modalPhone.value);
+      const after = modalPhone.value.length;
+      modalPhone.setSelectionRange(pos + (after - before), pos + (after - before));
     });
 
     // ─── Utility ─────────────────────────────────────────────
