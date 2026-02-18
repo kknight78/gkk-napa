@@ -53,6 +53,21 @@ function businessDaysBetween(startUnix, endUnix) {
   return Math.max(count, 1);
 }
 
+// Normalize phone to E.164 format for DB matching
+function normalizePhone(phone) {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+  if (phone.startsWith('+') && digits.length >= 10) return '+' + digits;
+  return null;
+}
+
+// Map store display name to DB key ("NAPA Danville" → "danville")
+function normalizeStore(store) {
+  return (store || '').replace(/^NAPA\s+/i, '').toLowerCase();
+}
+
 // Allowed origins for CORS
 const allowedOrigins = new Set([
   "https://gkk-napa.com",
@@ -278,8 +293,12 @@ export default {
             dateRows = `<tr><td style="padding:6px 12px;color:#555;font-size:14px;">Payment Date</td><td style="padding:6px 12px;font-size:14px;font-weight:600;">${eventDate}</td></tr>`;
           } else if (type === "checkout.session.async_payment_succeeded") {
             const clearDays = businessDaysBetween(obj.created, event.created);
+            const calendarDays = Math.max(Math.round((event.created - obj.created) / 86400), 1);
+            const hadWeekend = calendarDays > clearDays;
             statusText = "ACH Cleared";
-            statusSubtext = `in ${clearDays} business day${clearDays !== 1 ? 's' : ''}`;
+            statusSubtext = hadWeekend
+              ? `in ${clearDays} business day${clearDays !== 1 ? 's' : ''} (${calendarDays}d with weekend)`
+              : `in ${clearDays} business day${clearDays !== 1 ? 's' : ''}`;
             statusColor = "#2563eb"; // blue
             statusBg = "#eff6ff";
             subject = `\u2705\u{1F3E6} ACH Cleared (${clearDays}d) - ${store} - $${paymentAmountUsd}`;
@@ -343,9 +362,9 @@ export default {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
 <!-- NAPA Header -->
-<tr><td style="background-color:#0A0094;padding:14px 24px 10px;">
-<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="48" style="display:block;height:48px;width:auto;">
-<div style="color:#ffffff;font-size:13px;margin-top:6px;">${store ? store.replace('NAPA ', '') : ''} Store Payment</div>
+<tr><td style="background-color:#0A0094;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
+<div style="color:#ffffff;font-size:13px;padding:0 0 10px 12px;">${store ? store.replace('NAPA ', '') : ''} Store Payment</div>
 </td></tr>
 
 <!-- Status Banner -->
@@ -455,6 +474,24 @@ G&KK NAPA Auto Parts - Automated notification`;
         }
       }
 
+      // Enrich customer DB from payment data (only on initial payment, not cleared/failed)
+      if (type === "checkout.session.completed" && env.DB) {
+        try {
+          const enrichResult = await enrichCustomerFromPayment(env.DB, {
+            phone: payerPhone,
+            email: payerEmail,
+            company,
+            accountNumber,
+            store,
+            amount: (paymentAmountCents / 100).toFixed(2),
+            date: formatDate(event?.created || Math.floor(Date.now() / 1000)),
+          });
+          console.log(JSON.stringify({ tag: "CUSTOMER_ENRICHED", ...enrichResult, sessionId }));
+        } catch (enrichErr) {
+          console.error(JSON.stringify({ tag: "CUSTOMER_ENRICH_ERROR", error: enrichErr.message, sessionId }));
+        }
+      }
+
       // Always return 200 quickly so Stripe doesn't retry
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
@@ -476,6 +513,28 @@ G&KK NAPA Auto Parts - Automated notification`;
       }
       const period = url.searchParams.get("period") || "week";
       return await handleSendSummary(env, period);
+    }
+
+    // One-time backfill: import historical Stripe payments into customer DB
+    // Usage: GET /backfill-from-stripe?key=YOUR_SUMMARY_KEY
+    if (url.pathname === "/backfill-from-stripe") {
+      const key = url.searchParams.get("key");
+      if (!key || key !== env.SUMMARY_KEY) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+      if (!env.DB) {
+        return new Response(JSON.stringify({ error: "DB binding not configured — add D1 binding named 'DB' to this worker" }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+      if (!env.STRIPE_SECRET_KEY) {
+        return new Response(JSON.stringify({ error: "Missing STRIPE_SECRET_KEY" }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+      return await handleBackfillFromStripe(env);
     }
 
     return new Response(JSON.stringify({ error: 'Not found' }), {
@@ -888,9 +947,9 @@ ${storeRows}
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
 <!-- NAPA Header -->
-<tr><td style="background-color:#0A0094;padding:14px 24px 10px;">
-<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="48" style="display:block;height:48px;width:auto;">
-<div style="color:#ffffff;font-size:13px;margin-top:6px;">G&amp;KK Store Payments</div>
+<tr><td style="background-color:#0A0094;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
+<div style="color:#ffffff;font-size:13px;padding:0 0 10px 12px;">G&amp;KK Store Payments</div>
 </td></tr>
 
 <!-- Title Banner -->
@@ -1062,6 +1121,184 @@ async function handleSendSummary(env, period) {
   console.log(JSON.stringify({ tag: "SUMMARY_EMAIL_SENT", period, label, emailId: result.id }));
 
   return new Response(JSON.stringify({ ok: true, email_id: result.id, period, label, charges_processed: charges.length }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+// ============ Customer Enrichment from Payments ============
+
+// Match/create/update a customer record from payment data
+async function enrichCustomerFromPayment(db, { phone, email, company, accountNumber, store, amount, date }) {
+  const normalizedPhone = normalizePhone(phone);
+  const normalizedEmail = email ? email.trim().toLowerCase() : null;
+  const normalizedStoreName = normalizeStore(store);
+  const noteDate = date || formatDate(Math.floor(Date.now() / 1000));
+
+  // Try to find existing customer: phone first, then email
+  let customer = null;
+  if (normalizedPhone) {
+    customer = await db.prepare('SELECT * FROM customers WHERE phone = ?').bind(normalizedPhone).first();
+  }
+  if (!customer && normalizedEmail) {
+    customer = await db.prepare('SELECT * FROM customers WHERE LOWER(email) = ?').bind(normalizedEmail).first();
+  }
+
+  const paymentNote = `[${noteDate}] Payment: $${amount} | ACCT# ${accountNumber || 'N/A'} | ${company || 'N/A'} | ${store || 'N/A'}`;
+
+  if (customer) {
+    // --- Existing customer: enrich missing data, log everything in notes ---
+    let notes = (customer.notes || '').trim();
+    const updates = {};
+
+    // Always log the payment
+    notes += (notes ? '\n' : '') + paymentNote;
+
+    // Email: fill if missing, note if different
+    if (normalizedEmail) {
+      if (!customer.email) {
+        updates.email = email.trim();
+        notes += `\n[${noteDate}] Added email from payment: ${email.trim()}`;
+      } else if (customer.email.toLowerCase() !== normalizedEmail) {
+        notes += `\n[${noteDate}] Alt email from payment: ${email.trim()} (existing: ${customer.email})`;
+      }
+    }
+
+    // Phone: fill if missing, note if different
+    if (normalizedPhone) {
+      if (!customer.phone) {
+        updates.phone = normalizedPhone;
+        notes += `\n[${noteDate}] Added phone from payment: ${normalizedPhone}`;
+      } else if (customer.phone !== normalizedPhone) {
+        notes += `\n[${noteDate}] Alt phone from payment: ${normalizedPhone} (existing: ${customer.phone})`;
+      }
+    }
+
+    // Store: fill if missing
+    if (normalizedStoreName && !customer.store) {
+      updates.store = normalizedStoreName;
+      notes += `\n[${noteDate}] Added store from payment: ${normalizedStoreName}`;
+    }
+
+    // Company: always just note it
+    if (company) {
+      notes += `\n[${noteDate}] Billing company: ${company}`;
+    }
+
+    // Build and run UPDATE
+    const setClauses = ['notes = ?', 'updated_at = ?'];
+    const params = [notes, new Date().toISOString()];
+
+    for (const [field, value] of Object.entries(updates)) {
+      setClauses.push(`${field} = ?`);
+      params.push(value);
+    }
+
+    params.push(customer.id);
+    await db.prepare(`UPDATE customers SET ${setClauses.join(', ')} WHERE id = ?`).bind(...params).run();
+
+    return { action: 'updated', customerId: customer.id, fieldsAdded: Object.keys(updates) };
+  } else {
+    // --- New customer: create from payment info ---
+    const now = new Date().toISOString();
+    let notes = paymentNote;
+    if (company) notes += `\n[${noteDate}] Billing company: ${company}`;
+
+    await db.prepare(
+      'INSERT INTO customers (phone, name, email, store, sms_status, source, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(
+      normalizedPhone,
+      null,                          // name — we only have company, not contact name
+      email ? email.trim() : null,
+      normalizedStoreName || null,
+      'none',                        // no SMS consent from a payment
+      'payment',
+      notes,
+      now,
+      now
+    ).run();
+
+    return { action: 'created', phone: normalizedPhone, email: normalizedEmail };
+  }
+}
+
+// Backfill: import all historical Stripe payments into customer DB
+async function handleBackfillFromStripe(env) {
+  // Fetch ALL charges (no date filter)
+  const charges = [];
+  let startingAfter = null;
+
+  for (let page = 0; page < 50; page++) {
+    let url = `https://api.stripe.com/v1/charges?limit=100`;
+    if (startingAfter) url += `&starting_after=${startingAfter}`;
+
+    const resp = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` }
+    });
+    const data = await resp.json();
+
+    if (!data.data || data.data.length === 0) break;
+    charges.push(...data.data);
+
+    if (!data.has_more) break;
+    startingAfter = data.data[data.data.length - 1].id;
+  }
+
+  // Process oldest first so notes appear in chronological order
+  charges.reverse();
+
+  let created = 0, updated = 0, skipped = 0, errors = 0;
+  const results = [];
+
+  for (const charge of charges) {
+    // Only process succeeded charges (skip failed/pending)
+    if (charge.status !== "succeeded") {
+      skipped++;
+      continue;
+    }
+
+    const payerEmail = charge.metadata?.customer_email || charge.billing_details?.email || charge.receipt_email;
+    const payerPhone = charge.metadata?.customer_phone || charge.billing_details?.phone;
+    const company = charge.metadata?.company;
+    const accountNumber = charge.metadata?.account_number;
+    const store = charge.metadata?.store;
+    const paymentAmountCents = parseInt(charge.metadata?.payment_amount_cents || charge.amount, 10);
+
+    // Skip charges with no contact info
+    if (!payerEmail && !payerPhone) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const result = await enrichCustomerFromPayment(env.DB, {
+        phone: payerPhone,
+        email: payerEmail,
+        company,
+        accountNumber,
+        store,
+        amount: (paymentAmountCents / 100).toFixed(2),
+        date: formatDate(charge.created),
+      });
+
+      if (result.action === 'created') created++;
+      else updated++;
+
+      results.push({ chargeId: charge.id, ...result });
+    } catch (err) {
+      errors++;
+      results.push({ chargeId: charge.id, error: err.message });
+    }
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    total_charges: charges.length,
+    created,
+    updated,
+    skipped,
+    errors,
+    details: results,
+  }, null, 2), {
     headers: { "Content-Type": "application/json" }
   });
 }
