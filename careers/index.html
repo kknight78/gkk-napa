@@ -554,6 +554,55 @@
           positionEl.appendChild(opt);
         });
 
+        // ── Inject JobPosting structured data for Google for Jobs ──
+        const STORE_ADDRESSES = {
+          "danville-il":  { name: "G&KK NAPA - Danville", street: "303 N Gilbert St", city: "Danville", state: "IL", zip: "61832" },
+          "cayuga-in":    { name: "G&KK NAPA - Cayuga", street: "307 N Logan St", city: "Cayuga", state: "IN", zip: "47928" },
+          "rockville-in": { name: "G&KK NAPA - Rockville", street: "115 S Lincoln Rd", city: "Rockville", state: "IN", zip: "47872" },
+          "covington-in": { name: "G&KK NAPA - Covington", street: "205 4th St", city: "Covington", state: "IN", zip: "47932" },
+        };
+        const ALL_LOCATION_KEYS = Object.keys(STORE_ADDRESSES);
+
+        const jobPostings = positions.map(p => {
+          const locs = (!p.locations || p.locations.includes("all")) ? ALL_LOCATION_KEYS : p.locations;
+          return {
+            "@context": "https://schema.org/",
+            "@type": "JobPosting",
+            title: p.title,
+            description: p.description || `${p.title} position at G&KK NAPA Auto Parts.`,
+            datePosted: p.created ? p.created.split("T")[0] : new Date().toISOString().split("T")[0],
+            hiringOrganization: {
+              "@type": "Organization",
+              name: "G&KK NAPA Auto Parts",
+              sameAs: "https://gkk-napa.com",
+              logo: "https://gkk-napa.com/assets/napa-auto-parts-g+kk-combo.svg",
+            },
+            jobLocation: locs.map(loc => {
+              const a = STORE_ADDRESSES[loc];
+              if (!a) return null;
+              return {
+                "@type": "Place",
+                name: a.name,
+                address: {
+                  "@type": "PostalAddress",
+                  streetAddress: a.street,
+                  addressLocality: a.city,
+                  addressRegion: a.state,
+                  postalCode: a.zip,
+                  addressCountry: "US",
+                },
+              };
+            }).filter(Boolean),
+            applicantLocationRequirements: { "@type": "Country", name: "US" },
+            directApply: true,
+          };
+        });
+
+        const ldScript = document.createElement("script");
+        ldScript.type = "application/ld+json";
+        ldScript.textContent = JSON.stringify(jobPostings);
+        document.head.appendChild(ldScript);
+
       } catch {
         positionsLoading.style.display = "none";
         noPositions.style.display = "block";

@@ -469,65 +469,101 @@ async function handleSubmitApplication(request, env, corsHeaders) {
       try {
         const subject = `New Application - ${position} - ${locationDisplay}`;
 
-        let workHistorySection;
+        // Build work history rows for HTML
+        let workHistoryHtml;
         if (isResumePath) {
-          workHistorySection = `WORK HISTORY
-─────────────────────────────
-Resume attached (${resumeFilename})`;
+          workHistoryHtml = `<tr><td style="padding:6px 12px;color:#555;">Resume</td><td style="padding:6px 12px;">Attached (${resumeFilename})</td></tr>`;
         } else {
-          let wh2Section = "";
+          workHistoryHtml = `
+            <tr><td style="padding:6px 12px;color:#555;">Most Recent Employer</td><td style="padding:6px 12px;">${work_history_1.employer.trim()}</td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Job Title</td><td style="padding:6px 12px;">${work_history_1.title.trim()}</td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Duration</td><td style="padding:6px 12px;">${work_history_1.duration.trim()}</td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Reason for Leaving</td><td style="padding:6px 12px;">${work_history_1.reason_for_leaving.trim()}</td></tr>`;
           if (hasWH2) {
-            wh2Section = `
-Previous Employer:      ${work_history_2.employer.trim()}
-Job Title:              ${work_history_2.title.trim()}
-Duration:               ${work_history_2.duration.trim()}
-Reason for Leaving:     ${work_history_2.reason_for_leaving.trim()}`;
+            workHistoryHtml += `
+            <tr><td colspan="2" style="padding:10px 12px 2px;"><hr style="border:none;border-top:1px solid #e0e0e0;"></td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Previous Employer</td><td style="padding:6px 12px;">${work_history_2.employer.trim()}</td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Job Title</td><td style="padding:6px 12px;">${work_history_2.title.trim()}</td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Duration</td><td style="padding:6px 12px;">${work_history_2.duration.trim()}</td></tr>
+            <tr><td style="padding:6px 12px;color:#555;">Reason for Leaving</td><td style="padding:6px 12px;">${work_history_2.reason_for_leaving.trim()}</td></tr>`;
           }
-          workHistorySection = `WORK HISTORY
-─────────────────────────────
-Most Recent Employer:   ${work_history_1.employer.trim()}
-Job Title:              ${work_history_1.title.trim()}
-Duration:               ${work_history_1.duration.trim()}
-Reason for Leaving:     ${work_history_1.reason_for_leaving.trim()}
-${wh2Section}
-
-REFERENCES
-─────────────────────────────
-${trimmedReferences || "Not provided"}`;
+          if (trimmedReferences) {
+            workHistoryHtml += `
+            <tr><td colspan="2" style="padding:10px 12px 2px;"><hr style="border:none;border-top:1px solid #e0e0e0;"></td></tr>
+            <tr><td style="padding:6px 12px;color:#555;vertical-align:top;">References</td><td style="padding:6px 12px;white-space:pre-wrap;">${trimmedReferences}</td></tr>`;
+          }
         }
 
-        const text = `
-New Job Application
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
 
-APPLICANT INFORMATION
-─────────────────────────────
-Full Name:          ${trimmedName}
-Phone:              ${trimmedPhone}
-Email:              ${trimmedEmail || "Not provided"}
-Address:            ${trimmedAddress}
+  <!-- Header -->
+  <tr><td style="background:#0A0094;padding:24px 30px;text-align:center;">
+    <h1 style="margin:0;color:#FFC836;font-size:20px;letter-spacing:.5px;">NEW JOB APPLICATION</h1>
+  </td></tr>
 
-POSITION & LOCATION
-─────────────────────────────
-Position:           ${position}
-Location(s):        ${locationDisplay}
-Availability:       ${availability}
-Schedule Details:   ${trimmedSchedule || "Not provided"}
+  <!-- Position banner -->
+  <tr><td style="background:#FFC836;padding:14px 30px;text-align:center;">
+    <span style="font-size:18px;font-weight:700;color:#111;">${position}</span>
+    <span style="font-size:14px;color:#333;margin-left:8px;">&mdash; ${locationDisplay}</span>
+  </td></tr>
 
-${workHistorySection}
+  <!-- Applicant Info -->
+  <tr><td style="padding:24px 30px 0;">
+    <h2 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#0A0094;border-bottom:2px solid #0A0094;padding-bottom:6px;">Applicant Information</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#333;">
+      <tr><td style="padding:6px 12px;color:#555;width:140px;">Full Name</td><td style="padding:6px 12px;font-weight:600;">${trimmedName}</td></tr>
+      <tr style="background:#f9f9f9;"><td style="padding:6px 12px;color:#555;">Phone</td><td style="padding:6px 12px;"><a href="tel:${trimmedPhone}" style="color:#0A0094;text-decoration:none;">${trimmedPhone}</a></td></tr>
+      <tr><td style="padding:6px 12px;color:#555;">Email</td><td style="padding:6px 12px;">${trimmedEmail ? `<a href="mailto:${trimmedEmail}" style="color:#0A0094;text-decoration:none;">${trimmedEmail}</a>` : "Not provided"}</td></tr>
+      <tr style="background:#f9f9f9;"><td style="padding:6px 12px;color:#555;">Address</td><td style="padding:6px 12px;">${trimmedAddress}</td></tr>
+    </table>
+  </td></tr>
 
-ADDITIONAL INFORMATION
-─────────────────────────────
-${trimmedAdditional || "Not provided"}
+  <!-- Position & Availability -->
+  <tr><td style="padding:24px 30px 0;">
+    <h2 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#0A0094;border-bottom:2px solid #0A0094;padding-bottom:6px;">Position &amp; Availability</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#333;">
+      <tr><td style="padding:6px 12px;color:#555;width:140px;">Position</td><td style="padding:6px 12px;font-weight:600;">${position}</td></tr>
+      <tr style="background:#f9f9f9;"><td style="padding:6px 12px;color:#555;">Location(s)</td><td style="padding:6px 12px;">${locationDisplay}</td></tr>
+      <tr><td style="padding:6px 12px;color:#555;">Availability</td><td style="padding:6px 12px;">${availability}</td></tr>
+      ${trimmedSchedule ? `<tr style="background:#f9f9f9;"><td style="padding:6px 12px;color:#555;">Schedule</td><td style="padding:6px 12px;">${trimmedSchedule}</td></tr>` : ""}
+    </table>
+  </td></tr>
 
----
-This is an automated notification from G&KK NAPA Careers.
-`.trim();
+  <!-- Work History -->
+  <tr><td style="padding:24px 30px 0;">
+    <h2 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#0A0094;border-bottom:2px solid #0A0094;padding-bottom:6px;">Work History</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#333;">
+      ${workHistoryHtml}
+    </table>
+  </td></tr>
+
+  <!-- Additional Info -->
+  ${trimmedAdditional ? `<tr><td style="padding:24px 30px 0;">
+    <h2 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#0A0094;border-bottom:2px solid #0A0094;padding-bottom:6px;">Additional Information</h2>
+    <p style="font-size:14px;color:#333;margin:0;white-space:pre-wrap;">${trimmedAdditional}</p>
+  </td></tr>` : ""}
+
+  <!-- Footer -->
+  <tr><td style="padding:24px 30px;margin-top:20px;">
+    <p style="font-size:12px;color:#999;margin:16px 0 0;border-top:1px solid #eee;padding-top:16px;text-align:center;">
+      Automated notification from G&amp;KK NAPA Careers &middot; <a href="https://gkk-napa.com/careers/admin" style="color:#0A0094;">Open Admin Panel</a>
+    </p>
+  </td></tr>
+
+</table>
+</td></tr></table></body></html>`;
+
+        const text = `New Application: ${trimmedName} for ${position} (${locationDisplay}). Phone: ${trimmedPhone}. View in admin panel: https://gkk-napa.com/careers/admin`;
 
         const emailPayload = {
           from: env.FROM_EMAIL,
           to: env.NOTIFY_EMAILS.split(",").map(s => s.trim()).filter(Boolean),
           reply_to: trimmedEmail || "careers@gkk-napa.com",
           subject,
+          html,
           text,
         };
 
@@ -553,31 +589,65 @@ This is an automated notification from G&KK NAPA Careers.
       // Send applicant confirmation (unchanged — no work history included)
       if (trimmedEmail) {
         try {
-          const applicantText = `
-Hi ${trimmedName},
+          const applicantHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
 
-Thank you for applying to G&KK NAPA Auto Parts! We've received your application and wanted to confirm the details:
+  <!-- Header -->
+  <tr><td style="background:#0A0094;padding:24px 30px;text-align:center;">
+    <h1 style="margin:0;color:#FFC836;font-size:20px;letter-spacing:.5px;">APPLICATION RECEIVED</h1>
+  </td></tr>
 
-Position: ${position}
-Location(s): ${locationDisplay}
-Availability: ${availability}
+  <!-- Greeting -->
+  <tr><td style="padding:30px 30px 0;">
+    <p style="font-size:16px;color:#333;margin:0;">Hi ${trimmedName},</p>
+    <p style="font-size:14px;color:#555;margin:12px 0 0;line-height:1.6;">Thank you for applying to <strong>G&amp;KK NAPA Auto Parts</strong>! We've received your application and wanted to confirm the details:</p>
+  </td></tr>
 
-What happens next:
-- Our management team will review your application within a few business days.
-- If your qualifications match our current needs, we'll reach out by phone to schedule an interview.
-- Feel free to call any of our stores if you have questions.
+  <!-- Application summary -->
+  <tr><td style="padding:20px 30px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:8px;border:1px solid #d8e0f0;">
+      <tr><td style="padding:6px 16px;color:#555;font-size:13px;text-transform:uppercase;letter-spacing:.3px;padding-top:14px;">Position</td><td style="padding:6px 16px;font-size:15px;font-weight:700;color:#0A0094;padding-top:14px;">${position}</td></tr>
+      <tr><td style="padding:6px 16px;color:#555;font-size:13px;text-transform:uppercase;letter-spacing:.3px;">Location(s)</td><td style="padding:6px 16px;font-size:14px;color:#333;">${locationDisplay}</td></tr>
+      <tr><td style="padding:6px 16px;color:#555;font-size:13px;text-transform:uppercase;letter-spacing:.3px;padding-bottom:14px;">Availability</td><td style="padding:6px 16px;font-size:14px;color:#333;padding-bottom:14px;">${availability}</td></tr>
+    </table>
+  </td></tr>
 
-Our Stores:
-- Danville, IL: (217) 446-9067
-- Cayuga, IN: (765) 487-1324
-- Rockville, IN: (765) 569-2011
-- Covington, IN: (765) 793-2258
+  <!-- What happens next -->
+  <tr><td style="padding:0 30px 20px;">
+    <h2 style="margin:0 0 12px;font-size:14px;color:#0A0094;text-transform:uppercase;letter-spacing:.3px;">What Happens Next</h2>
+    <table cellpadding="0" cellspacing="0" style="font-size:14px;color:#555;line-height:1.6;">
+      <tr><td style="padding:4px 0;vertical-align:top;padding-right:10px;color:#FFC836;font-size:18px;">&#10003;</td><td style="padding:4px 0;">Our management team will review your application within a few business days.</td></tr>
+      <tr><td style="padding:4px 0;vertical-align:top;padding-right:10px;color:#FFC836;font-size:18px;">&#10003;</td><td style="padding:4px 0;">If your qualifications match our needs, we'll reach out by phone to schedule an interview.</td></tr>
+      <tr><td style="padding:4px 0;vertical-align:top;padding-right:10px;color:#FFC836;font-size:18px;">&#10003;</td><td style="padding:4px 0;">Feel free to call any of our stores if you have questions.</td></tr>
+    </table>
+  </td></tr>
 
-Thank you for your interest in joining our team!
+  <!-- Store phone numbers -->
+  <tr><td style="padding:0 30px 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;border-radius:8px;font-size:13px;color:#555;">
+      <tr>
+        <td style="padding:12px 16px;text-align:center;"><strong>Danville, IL</strong><br><a href="tel:2174469067" style="color:#0A0094;text-decoration:none;">(217) 446-9067</a></td>
+        <td style="padding:12px 16px;text-align:center;"><strong>Cayuga, IN</strong><br><a href="tel:7654871324" style="color:#0A0094;text-decoration:none;">(765) 487-1324</a></td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;text-align:center;"><strong>Rockville, IN</strong><br><a href="tel:7655692011" style="color:#0A0094;text-decoration:none;">(765) 569-2011</a></td>
+        <td style="padding:12px 16px;text-align:center;"><strong>Covington, IN</strong><br><a href="tel:7657932258" style="color:#0A0094;text-decoration:none;">(765) 793-2258</a></td>
+      </tr>
+    </table>
+  </td></tr>
 
-G&KK NAPA Auto Parts
-https://gkk-napa.com
-`.trim();
+  <!-- Footer -->
+  <tr><td style="padding:20px 30px;background:#0A0094;text-align:center;">
+    <p style="margin:0;font-size:14px;color:#FFC836;font-weight:700;">G&amp;KK NAPA Auto Parts</p>
+    <p style="margin:6px 0 0;"><a href="https://gkk-napa.com" style="color:#ffffff;font-size:13px;text-decoration:none;">gkk-napa.com</a></p>
+  </td></tr>
+
+</table>
+</td></tr></table></body></html>`;
+
+          const applicantText = `Hi ${trimmedName}, Thank you for applying to G&KK NAPA Auto Parts! Position: ${position}, Location(s): ${locationDisplay}, Availability: ${availability}. Our team will review your application within a few business days. Questions? Call any store: Danville (217) 446-9067, Cayuga (765) 487-1324, Rockville (765) 569-2011, Covington (765) 793-2258.`;
 
           const aResp = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -587,6 +657,7 @@ https://gkk-napa.com
               to: [trimmedEmail],
               reply_to: "info@gkk-napa.com",
               subject: "We received your application - G&KK NAPA Auto Parts",
+              html: applicantHtml,
               text: applicantText,
             }),
           });
