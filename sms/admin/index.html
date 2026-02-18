@@ -342,6 +342,11 @@
             <option value="landline">Landline</option>
             <option value="voip">VoIP</option>
           </select>
+          <select id="filterEmail">
+            <option value="">All</option>
+            <option value="has">Has Email</option>
+            <option value="no">No Email</option>
+          </select>
           <div style="flex:2;position:relative;min-width:120px;">
             <input id="filterSearch" type="text" placeholder="Search name, phone, email..." style="width:100%;padding-right:36px;" />
             <button id="btnClearSearch" type="button" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;padding:0;">&times;</button>
@@ -612,7 +617,8 @@ Occasional deals &amp; promotions</textarea>
     const btnClearSearch = document.getElementById("btnClearSearch");
 
     const filterLineType = document.getElementById("filterLineType");
-    [filterStore, filterStatus, filterLineType].forEach(el => el.addEventListener("change", loadCustomers));
+    const filterEmail = document.getElementById("filterEmail");
+    [filterStore, filterStatus, filterLineType, filterEmail].forEach(el => el.addEventListener("change", loadCustomers));
     let searchTimeout;
     filterSearch.addEventListener("input", () => {
       btnClearSearch.style.display = filterSearch.value ? "block" : "none";
@@ -636,7 +642,12 @@ Occasional deals &amp; promotions</textarea>
         allCustomers = await resp.json();
         let filtered = allCustomers;
         if (filterLineType.value) {
-          filtered = allCustomers.filter(c => c.line_type === filterLineType.value);
+          filtered = filtered.filter(c => c.line_type === filterLineType.value);
+        }
+        if (filterEmail.value === "has") {
+          filtered = filtered.filter(c => c.email);
+        } else if (filterEmail.value === "no") {
+          filtered = filtered.filter(c => !c.email);
         }
         renderCustomers(filtered);
       } catch {
