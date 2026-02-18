@@ -854,7 +854,7 @@ Occasional deals &amp; promotions</textarea>
           <span style="margin-left:12px;color:#666;">${withCodes.length} QR codes</span>
         </div>
         <div class="qr-grid">${withCodes.map(c => {
-          const url = "https://gkk-napa-sms.kellyraeknight78.workers.dev/s/" + c.short_code;
+          const url = "https://gkk-napa.com/s/" + c.short_code;
           const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
           return '<div class="qr-item">'
             + '<img src="' + qrApi + '" alt="QR">'
@@ -992,10 +992,14 @@ Occasional deals &amp; promotions</textarea>
       modalNotes.value = c.notes || "";
       modalError.style.display = "none";
 
-      // Generate and show subscribe URL
-      const token = await generateSubscribeToken(c.id);
-      document.getElementById("modalSubscribeUrl").value =
-        `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
+      // Show subscribe URL (prefer short URL if available)
+      if (c.short_code) {
+        document.getElementById("modalSubscribeUrl").value = `https://gkk-napa.com/s/${c.short_code}`;
+      } else {
+        const token = await generateSubscribeToken(c.id);
+        document.getElementById("modalSubscribeUrl").value =
+          `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
+      }
       document.getElementById("subscribeUrlRow").style.display = "block";
 
       customerModal.classList.add("open");

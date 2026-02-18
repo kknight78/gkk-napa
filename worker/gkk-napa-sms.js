@@ -819,7 +819,7 @@ async function handleTextInvite(request, env, corsHeaders) {
 
   for (const customer of customers.results) {
     const shortCode = await ensureShortCode(env.DB, customer.id);
-    const shortUrl = `https://gkk-napa-sms.kellyraeknight78.workers.dev/s/${shortCode}`;
+    const shortUrl = `https://gkk-napa.com/s/${shortCode}`;
     const name = customer.name ? `Hi ${customer.name}! ` : '';
     const msg = `${name}Subscribe to G&KK NAPA text updates for order notifications, store hours & deals: ${shortUrl}\n\nReply STOP to opt out, HELP for help. Msg&data rates apply.`;
 
@@ -865,7 +865,7 @@ async function handleExport(env, corsHeaders) {
 
   let csv = headers.join(',') + '\n';
   for (const c of customers.results) {
-    const subscribeUrl = c.short_code ? `https://gkk-napa-sms.kellyraeknight78.workers.dev/s/${c.short_code}` : '';
+    const subscribeUrl = c.short_code ? `https://gkk-napa.com/s/${c.short_code}` : '';
     csv += [
       c.id, csvEscape(c.name), c.phone, csvEscape(c.email),
       STORE_DISPLAY[c.store] || c.store || '', c.sms_status, c.line_type || '',
@@ -982,9 +982,9 @@ async function handleInvite(request, env, corsHeaders) {
     const storeName = customer.store ? (STORE_DISPLAY[customer.store] || customer.store) : "your local store";
     const greeting = customer.name || "Valued Customer";
 
-    // Generate one-click subscribe token
-    const token = await generateSubscribeToken(customer.id, env);
-    const subscribeUrl = `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
+    // Use short URL if available, otherwise fall back to token-based URL
+    const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
+    const subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
 
     // Format phone for display: +12174419077 → (217) 441-9077
     const displayPhone = customer.phone
