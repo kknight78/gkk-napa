@@ -935,14 +935,20 @@ async function handleInvite(request, env, corsHeaders) {
     const storeName = customer.store ? (STORE_DISPLAY[customer.store] || customer.store) : "your local store";
     const greeting = customer.name || "Valued Customer";
 
-    // Use short URL if available, otherwise fall back to token-based URL
-    const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
-    const subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
-
     // Format phone for display: +12174419077 → (217) 441-9077
-    const displayPhone = customer.phone
+    const hasMobile = customer.phone && customer.line_type === 'mobile';
+    const displayPhone = hasMobile
       ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
       : null;
+
+    // Mobile customers get personalized one-click link; others get the subscribe form
+    let subscribeUrl;
+    if (hasMobile) {
+      const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
+      subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
+    } else {
+      subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
+    }
 
     const html = buildInviteEmail(greeting, storeName, subscribeUrl, displayPhone, emailIntro, emailBullets);
 
@@ -998,6 +1004,8 @@ function buildInviteEmail(firstName, storeName, subscribeUrl, displayPhone, cust
 </td></tr>`
     : '';
 
+  const buttonText = displayPhone ? 'Subscribe with One Click' : 'Subscribe Now';
+
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
@@ -1029,7 +1037,7 @@ ${phoneNote}
 <tr><td align="center" style="padding:0 24px 16px;">
 <a href="${subscribeUrl}" target="_blank"
    style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">
-  Subscribe with One Click
+  ${buttonText}
 </a>
 </td></tr>
 

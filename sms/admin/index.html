@@ -950,7 +950,7 @@ Occasional deals &amp; promotions</textarea>
         const customers = await resp.json();
         const eligible = customers.filter(c => c.email && (!c.phone || c.line_type === "landline") && (c.sms_status === "none" || c.sms_status === "invited"));
         if (eligible.length === 0) { alert("No eligible customers."); return; }
-        openInviteModal(eligible.map(c => c.id), `Sending to ${eligible.length} email-only customer(s) (no mobile)`);
+        openInviteModal(eligible.map(c => c.id), `Sending to ${eligible.length} email-only customer(s) (no mobile)`, false);
       } else if (action === "export-outreach") {
         const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
         const customers = await resp.json();
@@ -1201,10 +1201,18 @@ Occasional deals &amp; promotions</textarea>
     const inviteSuccess = document.getElementById("inviteSuccess");
     let pendingInviteIds = [];
 
+    let previewHasMobile = true; // tracks which version of email preview to show
+
     function buildPreviewHtml(intro, bullets) {
       const bulletHtml = bullets.split("\n").filter(b => b.trim()).map(b =>
         `<tr><td style="padding:6px 0;font-size:15px;color:#333;">&#10003;&nbsp;&nbsp;${esc(b.trim())}</td></tr>`
       ).join("");
+      const phoneSection = previewHasMobile
+        ? `<div style="padding:0 24px 16px;text-align:center;">
+            <p style="margin:0 0 12px;font-size:14px;color:#333;">Texts will be sent to <strong>(555) 555-1234</strong><br><span style="font-size:12px;color:#888;">Not a mobile number? <span style="color:#0A0094;">Subscribe with a different number</span></span></p>
+          </div>`
+        : '';
+      const buttonText = previewHasMobile ? 'Subscribe with One Click' : 'Subscribe Now';
       return `<div style="font-family:Arial,sans-serif;">
         <div style="background-color:#0A0094;">
           <img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
@@ -1215,12 +1223,11 @@ Occasional deals &amp; promotions</textarea>
           <p style="margin:0 0 16px;font-size:16px;color:#333;line-height:1.6;">${esc(intro)}</p>
           <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">${bulletHtml}</table>
         </div>
-        <div style="padding:0 24px 16px;text-align:center;">
-          <p style="margin:0 0 12px;font-size:14px;color:#333;">Texts will be sent to <strong>(555) 555-1234</strong><br><span style="font-size:12px;color:#888;">Not a mobile number? <span style="color:#0A0094;">Subscribe with a different number</span></span></p>
-        </div>
+        ${phoneSection}
         <div style="text-align:center;padding:0 24px 16px;">
-          <span style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">Subscribe with One Click</span>
+          <span style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">${buttonText}</span>
         </div>
+        ${!previewHasMobile ? '<div style="padding:0 24px 8px;text-align:center;"><p style="margin:0;font-size:13px;color:#888;">Button links to <span style="color:#0A0094;">gkk-napa.com/sms/subscribe</span></p></div>' : ''}
         <div style="padding:0 24px 24px;">
           <p style="margin:0;font-size:12px;color:#888;line-height:1.5;text-align:center;">By clicking subscribe, you agree to receive SMS messages from G&amp;KK NAPA Auto Parts about order updates, store hours/closures, and occasional promotions. Message frequency varies. Msg &amp; data rates may apply. Consent is not a condition of purchase. Reply STOP to opt out, HELP for help. See <span style="color:#0A0094;">Privacy Policy</span> and <span style="color:#0A0094;">Terms of Service</span>.</p>
         </div>
@@ -1237,8 +1244,9 @@ Occasional deals &amp; promotions</textarea>
     inviteIntro.addEventListener("input", updateInvitePreview);
     inviteBullets.addEventListener("input", updateInvitePreview);
 
-    function openInviteModal(customerIds, recipientLabel) {
+    function openInviteModal(customerIds, recipientLabel, hasMobile) {
       pendingInviteIds = customerIds;
+      previewHasMobile = hasMobile !== false; // default true
       inviteRecipientInfo.textContent = recipientLabel;
       inviteError.style.display = "none";
       inviteSuccess.style.display = "none";
