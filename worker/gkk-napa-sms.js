@@ -123,6 +123,23 @@ async function verifySubscribeToken(token, env) {
   }
 }
 
+// ─── Short code helpers ──────────────────────────────────────
+const SHORT_CODE_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+function generateShortCode() {
+  const bytes = new Uint8Array(7);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => SHORT_CODE_CHARS[b % 36]).join('');
+}
+
+async function ensureShortCode(db, customerId) {
+  const row = await db.prepare('SELECT short_code FROM customers WHERE id = ?').bind(customerId).first();
+  if (row?.short_code) return row.short_code;
+  const code = generateShortCode();
+  await db.prepare('UPDATE customers SET short_code = ? WHERE id = ?').bind(code, customerId).run();
+  return code;
+}
+
 // ─── Twilio helpers ──────────────────────────────────────────
 async function sendSms(env, to, body, mediaUrl) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -290,6 +307,35 @@ export default {
         return handleQuickSubscribe(url, env);
       }
 
+      // ── Public: GET /s/:code (short URL redirect) ──
+      if (request.method === "GET" && path.match(/^\/s\/[a-z0-9]{7}$/)) {
+        return handleShortUrl(path, env);
+      }
+
+      // ── Admin: GET /admin/dashboard ──
+      if (request.method === "GET" && path === "/admin/dashboard") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleDashboard(env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/text-invite ──
+      if (request.method === "POST" && path === "/admin/text-invite") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleTextInvite(request, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/export ──
+      if (request.method === "GET" && path === "/admin/export") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleExport(env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/generate-short-codes ──
+      if (request.method === "POST" && path === "/admin/generate-short-codes") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleGenerateShortCodes(env, corsHeaders);
+      }
+
       return jsonError(corsHeaders, "Not found", 404);
     } catch (err) {
       console.error(JSON.stringify({ tag: "UNHANDLED_ERROR", error: err.message, stack: err.stack }));
@@ -329,9 +375,10 @@ async function handleSubscribe(request, env, corsHeaders) {
     ).bind(now, now, existing.id).run();
   } else {
     // New subscriber — create customer record
+    const shortCode = generateShortCode();
     await env.DB.prepare(
-      "INSERT INTO customers (phone, store, sms_status, sms_consent_at, created_at, updated_at) VALUES (?, ?, 'subscribed', ?, ?, ?)"
-    ).bind(phone, store || null, now, now).run();
+      "INSERT INTO customers (phone, store, sms_status, sms_consent_at, source, short_code, created_at, updated_at) VALUES (?, ?, 'subscribed', ?, 'web', ?, ?, ?)"
+    ).bind(phone, store || null, now, shortCode, now, now).run();
   }
 
   // Send confirmation SMS
@@ -622,6 +669,239 @@ async function handleCheckLineTypes(env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Short URL redirect
+// ═══════════════════════════════════════════════════════════════
+
+async function handleShortUrl(path, env) {
+  const code = path.split('/').pop();
+  const customer = await env.DB.prepare('SELECT id FROM customers WHERE short_code = ?').bind(code).first();
+  if (!customer) {
+    return Response.redirect('https://gkk-napa.com/sms/subscribe', 302);
+  }
+  const token = await generateSubscribeToken(customer.id, env);
+  return Response.redirect(
+    `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`, 302
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Admin: Dashboard (alerts + actions + KPIs)
+// ═══════════════════════════════════════════════════════════════
+
+async function handleDashboard(env, corsHeaders) {
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+
+  // Run all queries in parallel
+  const [
+    readyToInvite,
+    emailOnlyNoMobile,
+    staleInvites,
+    needsOutreach,
+    mobileNoEmail,
+    newFromStripe,
+    newFromWeb,
+    newFromQuickSubscribe,
+    totalInvited,
+    convertedFromInvite,
+    sourceBreakdown,
+    recentActivity,
+    totalSubscribed,
+    totalCustomers,
+    failedSms,
+  ] = await Promise.all([
+    // Ready to invite: has email + mobile + status none
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE email IS NOT NULL AND email != '' AND line_type = 'mobile' AND sms_status = 'none'"
+    ).first(),
+    // Email only, no mobile
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE email IS NOT NULL AND email != '' AND (phone IS NULL OR phone = '' OR line_type = 'landline') AND sms_status IN ('none', 'invited')"
+    ).first(),
+    // Stale invites (30+ days, not subscribed)
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE sms_status = 'invited' AND invite_sent_at < ?"
+    ).bind(thirtyDaysAgo).first(),
+    // Needs outreach: no email AND (no mobile phone or landline only)
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE (email IS NULL OR email = '') AND (phone IS NULL OR phone = '' OR line_type = 'landline')"
+    ).first(),
+    // Mobile but no email
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE (email IS NULL OR email = '') AND line_type = 'mobile' AND sms_status IN ('none', 'invited')"
+    ).first(),
+    // New from Stripe this week
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE source = 'payment' AND created_at >= ?"
+    ).bind(weekAgo).first(),
+    // New from web form this week
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE source = 'web' AND created_at >= ?"
+    ).bind(weekAgo).first(),
+    // New from quick-subscribe this week
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM customers WHERE source = 'quick-subscribe' AND created_at >= ?"
+    ).bind(weekAgo).first(),
+    // Total ever invited
+    env.DB.prepare("SELECT COUNT(*) as count FROM customers WHERE invite_sent_at IS NOT NULL").first(),
+    // Converted from invite (subscribed + was invited)
+    env.DB.prepare("SELECT COUNT(*) as count FROM customers WHERE sms_status = 'subscribed' AND invite_sent_at IS NOT NULL").first(),
+    // Source breakdown
+    env.DB.prepare("SELECT COALESCE(source, 'unknown') as source, COUNT(*) as count FROM customers GROUP BY source ORDER BY count DESC").all(),
+    // Recent activity (new/changed this week)
+    env.DB.prepare(
+      "SELECT id, name, phone, email, store, sms_status, source, line_type, created_at, updated_at FROM customers WHERE created_at >= ? ORDER BY created_at DESC LIMIT 15"
+    ).bind(weekAgo).all(),
+    // Total subscribed
+    env.DB.prepare("SELECT COUNT(*) as count FROM customers WHERE sms_status = 'subscribed'").first(),
+    // Total customers
+    env.DB.prepare("SELECT COUNT(*) as count FROM customers").first(),
+    // Failed SMS this week
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM messages WHERE direction = 'outbound' AND status IN ('failed', 'undelivered') AND created_at >= ?"
+    ).bind(weekAgo).first(),
+  ]);
+
+  const conversionRate = totalInvited.count > 0
+    ? Math.round((convertedFromInvite.count / totalInvited.count) * 1000) / 10
+    : 0;
+
+  return jsonOk(corsHeaders, {
+    alerts: {
+      failed_sms: failedSms.count,
+      new_from_stripe: newFromStripe.count,
+      new_from_web: newFromWeb.count,
+      new_from_quick_subscribe: newFromQuickSubscribe.count,
+    },
+    actions: {
+      ready_to_invite: readyToInvite.count,
+      email_only_no_mobile: emailOnlyNoMobile.count,
+      stale_invites: staleInvites.count,
+      needs_outreach: needsOutreach.count,
+      mobile_no_email: mobileNoEmail.count,
+    },
+    kpis: {
+      total_customers: totalCustomers.count,
+      total_subscribed: totalSubscribed.count,
+      conversion_rate: conversionRate,
+      total_invited: totalInvited.count,
+      converted_from_invite: convertedFromInvite.count,
+    },
+    source_breakdown: sourceBreakdown.results,
+    recent_activity: recentActivity.results,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Admin: Text Invite (SMS subscribe link to mobile-only customers)
+// ═══════════════════════════════════════════════════════════════
+
+async function handleTextInvite(request, env, corsHeaders) {
+  const body = await request.json();
+  const { customer_ids } = body;
+
+  if (!Array.isArray(customer_ids) || customer_ids.length === 0) {
+    return jsonError(corsHeaders, "Expected an array of customer IDs.", 400);
+  }
+
+  const placeholders = customer_ids.map(() => '?').join(',');
+  const customers = await env.DB.prepare(
+    `SELECT * FROM customers WHERE id IN (${placeholders}) AND phone IS NOT NULL AND phone != '' AND line_type = 'mobile' AND sms_status IN ('none', 'invited')`
+  ).bind(...customer_ids).all();
+
+  if (customers.results.length === 0) {
+    return jsonError(corsHeaders, "No eligible customers found (need mobile phone + status none/invited).", 400);
+  }
+
+  const now = new Date().toISOString();
+  let sent = 0;
+  let failed = 0;
+
+  for (const customer of customers.results) {
+    const shortCode = await ensureShortCode(env.DB, customer.id);
+    const shortUrl = `https://gkk-napa-sms.kellyraeknight78.workers.dev/s/${shortCode}`;
+    const name = customer.name ? `Hi ${customer.name}! ` : '';
+    const msg = `${name}Subscribe to G&KK NAPA text updates for order notifications, store hours & deals: ${shortUrl}\n\nReply STOP to opt out, HELP for help. Msg&data rates apply.`;
+
+    const result = await sendSms(env, customer.phone, msg);
+    if (result.ok) {
+      await env.DB.prepare(
+        "UPDATE customers SET sms_status = 'invited', invite_sent_at = ?, updated_at = ? WHERE id = ?"
+      ).bind(now, now, customer.id).run();
+      await env.DB.prepare(
+        "INSERT INTO messages (twilio_sid, customer_id, direction, body, status, created_at, updated_at) VALUES (?, ?, 'outbound', ?, ?, ?, ?)"
+      ).bind(result.sid, customer.id, msg, result.status || 'queued', now, now).run();
+      sent++;
+    } else {
+      failed++;
+    }
+
+    // Rate limit
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  return jsonOk(corsHeaders, { sent, failed, total_eligible: customers.results.length });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Admin: CSV Export
+// ═══════════════════════════════════════════════════════════════
+
+async function handleExport(env, corsHeaders) {
+  const customers = await env.DB.prepare(
+    "SELECT id, name, phone, email, store, sms_status, line_type, source, short_code, notes, invite_sent_at, sms_consent_at, created_at FROM customers ORDER BY name ASC"
+  ).all();
+
+  const headers = ['ID', 'Name', 'Phone', 'Email', 'Store', 'Status', 'Line Type', 'Source', 'Short Code', 'Subscribe URL', 'Notes', 'Invite Sent', 'Subscribed At', 'Created'];
+
+  const csvEscape = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  };
+
+  let csv = headers.join(',') + '\n';
+  for (const c of customers.results) {
+    const subscribeUrl = c.short_code ? `https://gkk-napa-sms.kellyraeknight78.workers.dev/s/${c.short_code}` : '';
+    csv += [
+      c.id, csvEscape(c.name), c.phone, csvEscape(c.email),
+      STORE_DISPLAY[c.store] || c.store || '', c.sms_status, c.line_type || '',
+      c.source || '', c.short_code || '', subscribeUrl,
+      csvEscape(c.notes), c.invite_sent_at || '', c.sms_consent_at || '', c.created_at
+    ].join(',') + '\n';
+  }
+
+  return new Response(csv, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="gkk-napa-customers-${new Date().toISOString().slice(0,10)}.csv"`,
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Admin: Generate Short Codes (batch)
+// ═══════════════════════════════════════════════════════════════
+
+async function handleGenerateShortCodes(env, corsHeaders) {
+  const customers = await env.DB.prepare(
+    "SELECT id FROM customers WHERE short_code IS NULL"
+  ).all();
+
+  let generated = 0;
+  for (const c of customers.results) {
+    await ensureShortCode(env.DB, c.id);
+    generated++;
+  }
+
+  return jsonOk(corsHeaders, { generated, message: `${generated} short codes created.` });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Admin: Bulk Import
 // ═══════════════════════════════════════════════════════════════
 
@@ -743,6 +1023,9 @@ async function handleInvite(request, env, corsHeaders) {
       console.error(JSON.stringify({ tag: "INVITE_EMAIL_EXCEPTION", customer_id: customer.id, error: e.message }));
       failed++;
     }
+
+    // Rate limit: 600ms between sends (Resend free tier = 2/sec)
+    await new Promise(r => setTimeout(r, 600));
   }
 
   return jsonOk(corsHeaders, { sent, failed, total_eligible: customers.results.length });

@@ -118,6 +118,53 @@
     .kpi-num { font-size: 28px; font-weight: 800; color: var(--napa-yellow); }
     .kpi-label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .3px; margin-top: 4px; }
 
+    /* Dashboard sections */
+    .dash-section { margin-bottom: 24px; }
+    .dash-section h2 { margin: 0 0 12px; }
+
+    .alert-card {
+      background: rgba(255,107,107,.08);
+      border: 1px solid rgba(255,107,107,.25);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .alert-card.info {
+      background: rgba(100,180,255,.08);
+      border-color: rgba(100,180,255,.25);
+    }
+    .alert-card .count { font-weight: 800; font-size: 18px; color: var(--napa-yellow); margin-right: 12px; }
+
+    .action-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .action-card .action-info { flex: 1; }
+    .action-card .action-label { font-weight: 700; font-size: 14px; }
+    .action-card .action-desc { font-size: 12px; color: var(--dim); margin-top: 2px; }
+    .action-card .action-count { font-weight: 800; font-size: 22px; color: var(--napa-yellow); margin: 0 16px; }
+
+    .activity-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 13px;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-source { font-size: 11px; color: var(--dim); background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 4px; }
+
     /* Customer cards */
     .customer-item {
       background: rgba(255,255,255,.06);
@@ -306,17 +353,48 @@
 
       <!-- ═══ Tab 1: Dashboard ═══ -->
       <div class="tab-content active" id="tab-dashboard">
+
+        <!-- Alerts -->
+        <div class="dash-section" id="dashAlerts"></div>
+
+        <!-- KPIs -->
         <div class="kpi-grid" id="kpiGrid">
           <div class="kpi-card"><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-label">Total Customers</div></div>
           <div class="kpi-card"><div class="kpi-num" id="kpiSubscribed">—</div><div class="kpi-label">Subscribed</div></div>
-          <div class="kpi-card"><div class="kpi-num" id="kpiInvited">—</div><div class="kpi-label">Invited</div></div>
-          <div class="kpi-card"><div class="kpi-num" id="kpiStopped">—</div><div class="kpi-label">Stopped</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiConversion">—</div><div class="kpi-label">Invite → Subscribe</div></div>
           <div class="kpi-card"><div class="kpi-num" id="kpiMessages">—</div><div class="kpi-label">Messages (Month)</div></div>
-          <div class="kpi-card"><div class="kpi-num" id="kpiCampaigns">—</div><div class="kpi-label">Campaigns</div></div>
         </div>
 
-        <h2>Customers by Store</h2>
-        <div class="store-breakdown" id="storeBreakdown"></div>
+        <!-- Actions -->
+        <div class="dash-section">
+          <h2>Actions</h2>
+          <div id="dashActions"></div>
+        </div>
+
+        <!-- Source Breakdown + Store Breakdown -->
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <h2>By Source</h2>
+            <div id="sourceBreakdown"></div>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <h2>By Store</h2>
+            <div class="store-breakdown" id="storeBreakdown"></div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="dash-section" style="margin-top:16px;">
+          <h2>Recent Activity (This Week)</h2>
+          <div id="recentActivity"></div>
+        </div>
+
+        <!-- Utilities -->
+        <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-secondary" id="btnExportCsv">Export CSV</button>
+          <button class="btn-secondary" id="btnPrintQr">Print QR Codes</button>
+          <button class="btn-secondary" id="btnGenShortCodes">Generate Short Codes</button>
+        </div>
       </div>
 
       <!-- ═══ Tab 2: Customers ═══ -->
@@ -585,27 +663,219 @@ Occasional deals &amp; promotions</textarea>
     // ─── Dashboard ───────────────────────────────────────────
     async function loadDashboard() {
       try {
-        const resp = await fetch(`${WORKER_BASE}/admin/stats`, { headers: authHeaders() });
-        const stats = await resp.json();
-        document.getElementById("kpiTotal").textContent = stats.total_customers;
-        document.getElementById("kpiSubscribed").textContent = stats.subscribed;
-        document.getElementById("kpiInvited").textContent = stats.invited;
-        document.getElementById("kpiStopped").textContent = stats.stopped;
-        document.getElementById("kpiMessages").textContent = stats.messages_this_month;
-        document.getElementById("kpiCampaigns").textContent = stats.total_campaigns;
+        const [dashResp, statsResp] = await Promise.all([
+          fetch(`${WORKER_BASE}/admin/dashboard`, { headers: authHeaders() }),
+          fetch(`${WORKER_BASE}/admin/stats`, { headers: authHeaders() }),
+        ]);
+        const dash = await dashResp.json();
+        const stats = await statsResp.json();
 
-        const breakdown = document.getElementById("storeBreakdown");
+        // KPIs
+        document.getElementById("kpiTotal").textContent = dash.kpis.total_customers;
+        document.getElementById("kpiSubscribed").textContent = dash.kpis.total_subscribed;
+        document.getElementById("kpiConversion").textContent = dash.kpis.conversion_rate + "%";
+        document.getElementById("kpiMessages").textContent = stats.messages_this_month;
+
+        // Alerts
+        const alertsEl = document.getElementById("dashAlerts");
+        let alertHtml = "";
+        if (dash.alerts.failed_sms > 0)
+          alertHtml += `<div class="alert-card"><div><span class="count">${dash.alerts.failed_sms}</span> failed SMS this week</div></div>`;
+        if (dash.alerts.new_from_stripe > 0)
+          alertHtml += `<div class="alert-card info"><div><span class="count">${dash.alerts.new_from_stripe}</span> new customer${dash.alerts.new_from_stripe !== 1 ? 's' : ''} from Stripe payments this week</div></div>`;
+        if (dash.alerts.new_from_web > 0)
+          alertHtml += `<div class="alert-card info"><div><span class="count">${dash.alerts.new_from_web}</span> new subscriber${dash.alerts.new_from_web !== 1 ? 's' : ''} from web form this week</div></div>`;
+        if (dash.alerts.new_from_quick_subscribe > 0)
+          alertHtml += `<div class="alert-card info"><div><span class="count">${dash.alerts.new_from_quick_subscribe}</span> new one-click subscriber${dash.alerts.new_from_quick_subscribe !== 1 ? 's' : ''} this week</div></div>`;
+        alertsEl.innerHTML = alertHtml || "";
+
+        // Actions
+        const actionsEl = document.getElementById("dashActions");
+        const actions = dash.actions;
+        actionsEl.innerHTML = `
+          ${actions.ready_to_invite > 0 ? `<div class="action-card">
+            <div class="action-info"><div class="action-label">Ready to Invite</div><div class="action-desc">Has email + mobile, never invited</div></div>
+            <div class="action-count">${actions.ready_to_invite}</div>
+            <button class="btn-primary" onclick="dashAction('invite-ready')">Invite All</button>
+          </div>` : ''}
+          ${actions.mobile_no_email > 0 ? `<div class="action-card">
+            <div class="action-info"><div class="action-label">Text Invite (Mobile, No Email)</div><div class="action-desc">Send subscribe link via SMS</div></div>
+            <div class="action-count">${actions.mobile_no_email}</div>
+            <button class="btn-success" onclick="dashAction('text-invite')">Text All</button>
+          </div>` : ''}
+          ${actions.stale_invites > 0 ? `<div class="action-card">
+            <div class="action-info"><div class="action-label">Stale Invites (30+ days)</div><div class="action-desc">Invited but never subscribed</div></div>
+            <div class="action-count">${actions.stale_invites}</div>
+            <button class="btn-secondary" onclick="dashAction('re-invite')">Re-Invite</button>
+          </div>` : ''}
+          ${actions.email_only_no_mobile > 0 ? `<div class="action-card">
+            <div class="action-info"><div class="action-label">Email Only, No Mobile</div><div class="action-desc">Can invite by email, links to web form</div></div>
+            <div class="action-count">${actions.email_only_no_mobile}</div>
+            <button class="btn-secondary" onclick="dashAction('invite-email-only')">Invite All</button>
+          </div>` : ''}
+          ${actions.needs_outreach > 0 ? `<div class="action-card">
+            <div class="action-info"><div class="action-label">Needs Outreach</div><div class="action-desc">No email + no mobile — call or snail mail</div></div>
+            <div class="action-count">${actions.needs_outreach}</div>
+            <button class="btn-secondary" onclick="dashAction('export-outreach')">Export List</button>
+          </div>` : ''}
+          ${actions.ready_to_invite === 0 && actions.mobile_no_email === 0 && actions.stale_invites === 0 && actions.email_only_no_mobile === 0 && actions.needs_outreach === 0 ? '<div class="empty">No actions needed right now!</div>' : ''}
+        `;
+
+        // Source breakdown
+        const sourceEl = document.getElementById("sourceBreakdown");
+        const sourceNames = { admin: "Admin Added", import: "Imported", payment: "Stripe Payment", web: "Web Form", "quick-subscribe": "One-Click", unknown: "Unknown" };
+        sourceEl.innerHTML = dash.source_breakdown.map(s =>
+          `<div class="store-chip"><strong>${s.count}</strong> ${sourceNames[s.source] || s.source}</div>`
+        ).join("");
+
+        // Store breakdown
+        const storeEl = document.getElementById("storeBreakdown");
         if (stats.store_breakdown && stats.store_breakdown.length > 0) {
-          breakdown.innerHTML = stats.store_breakdown.map(s =>
+          storeEl.innerHTML = stats.store_breakdown.map(s =>
             `<div class="store-chip"><strong>${s.count}</strong> ${STORE_NAMES[s.store] || s.store || "No Store"}</div>`
           ).join("");
         } else {
-          breakdown.innerHTML = '<div class="empty">No customers yet.</div>';
+          storeEl.innerHTML = '<div class="empty">No customers yet.</div>';
         }
-      } catch {
+
+        // Recent activity
+        const activityEl = document.getElementById("recentActivity");
+        if (dash.recent_activity.length > 0) {
+          activityEl.innerHTML = dash.recent_activity.map(c => {
+            const sourceLabel = sourceNames[c.source] || c.source || "";
+            const date = new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            return `<div class="activity-item">
+              <div>${esc(c.name || "Unnamed")} ${c.store ? '<span style="color:var(--dim);">· ' + (STORE_NAMES[c.store] || c.store) + '</span>' : ''}</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                ${sourceLabel ? `<span class="activity-source">${sourceLabel}</span>` : ''}
+                ${STATUS_BADGE[c.sms_status] || ''}
+                <span style="color:var(--dim);font-size:12px;">${date}</span>
+              </div>
+            </div>`;
+          }).join("");
+        } else {
+          activityEl.innerHTML = '<div class="empty">No new activity this week.</div>';
+        }
+
+      } catch (e) {
+        console.error("Dashboard error:", e);
         document.getElementById("kpiTotal").textContent = "?";
       }
     }
+
+    // ─── Dashboard Actions ────────────────────────────────────
+    window.dashAction = async function(action) {
+      if (action === "invite-ready") {
+        // Fetch customers with email + mobile + status none
+        const resp = await fetch(`${WORKER_BASE}/admin/customers?status=none`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const eligible = customers.filter(c => c.email && c.line_type === "mobile");
+        if (eligible.length === 0) { alert("No eligible customers."); return; }
+        openInviteModal(eligible.map(c => c.id), `Sending email invites to ${eligible.length} customer(s) with email + mobile`);
+      } else if (action === "text-invite") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers?status=none`, { headers: authHeaders() });
+        let customers = await resp.json();
+        // Also get 'invited' status
+        const resp2 = await fetch(`${WORKER_BASE}/admin/customers?status=invited`, { headers: authHeaders() });
+        const invited = await resp2.json();
+        customers = [...customers, ...invited];
+        const eligible = customers.filter(c => !c.email && c.line_type === "mobile");
+        if (eligible.length === 0) { alert("No eligible customers."); return; }
+        if (!confirm(`Send subscribe link via SMS to ${eligible.length} customer(s)?`)) return;
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+        try {
+          const r = await fetch(`${WORKER_BASE}/admin/text-invite`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ customer_ids: eligible.map(c => c.id) }),
+          });
+          const data = await r.json();
+          btn.textContent = `${data.sent} sent!`;
+          loadDashboard();
+          setTimeout(() => { btn.textContent = "Text All"; btn.disabled = false; }, 2000);
+        } catch { btn.textContent = "Error"; btn.disabled = false; }
+      } else if (action === "re-invite") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers?status=invited`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+        const stale = customers.filter(c => c.email && c.invite_sent_at && c.invite_sent_at < thirtyDaysAgo);
+        if (stale.length === 0) { alert("No stale invites found."); return; }
+        openInviteModal(stale.map(c => c.id), `Re-sending to ${stale.length} customer(s) invited 30+ days ago`);
+      } else if (action === "invite-email-only") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const eligible = customers.filter(c => c.email && (!c.phone || c.line_type === "landline") && (c.sms_status === "none" || c.sms_status === "invited"));
+        if (eligible.length === 0) { alert("No eligible customers."); return; }
+        openInviteModal(eligible.map(c => c.id), `Sending to ${eligible.length} email-only customer(s) (no mobile)`);
+      } else if (action === "export-outreach") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const needs = customers.filter(c => (!c.email || c.email === "") && (!c.phone || c.line_type === "landline"));
+        if (needs.length === 0) { alert("No customers need outreach."); return; }
+        let csv = "Name,Phone,Store,Notes\\n";
+        needs.forEach(c => {
+          csv += `"${(c.name||'').replace(/"/g,'""')}",${c.phone||''},"${STORE_NAMES[c.store]||c.store||''}","${(c.notes||'').replace(/"/g,'""')}"\\n`;
+        });
+        const blob = new Blob([csv], { type: "text/csv" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "needs-outreach.csv";
+        a.click();
+      }
+    };
+
+    // ─── Utility Buttons ──────────────────────────────────────
+    document.getElementById("btnExportCsv").addEventListener("click", async () => {
+      const resp = await fetch(`${WORKER_BASE}/admin/export`, { headers: authHeaders() });
+      const blob = await resp.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `gkk-napa-customers-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    });
+
+    document.getElementById("btnPrintQr").addEventListener("click", async () => {
+      const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+      const customers = await resp.json();
+      const withCodes = customers.filter(c => c.short_code);
+      if (withCodes.length === 0) { alert("No customers with short codes."); return; }
+      const win = window.open("", "_blank");
+      win.document.write(`<html><head><title>QR Codes - G&KK NAPA</title>
+        <style>body{font-family:Arial,sans-serif;margin:20px;}
+        .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+        .qr-item{text-align:center;page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;}
+        .qr-item img{width:150px;height:150px;}
+        .qr-name{font-weight:700;font-size:14px;margin:8px 0 4px;}
+        .qr-url{font-size:10px;color:#666;word-break:break-all;}
+        @media print{.no-print{display:none!important;}}</style></head><body>
+        <div class="no-print" style="margin-bottom:16px;">
+          <button onclick="window.print()" style="padding:10px 20px;font-size:16px;cursor:pointer;">Print</button>
+          <span style="margin-left:12px;color:#666;">${withCodes.length} QR codes</span>
+        </div>
+        <div class="qr-grid">${withCodes.map(c => {
+          const url = "https://gkk-napa-sms.kellyraeknight78.workers.dev/s/" + c.short_code;
+          const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
+          return \`<div class="qr-item">
+            <img src="\${qrApi}" alt="QR">
+            <div class="qr-name">\${esc(c.name || "Unnamed")}</div>
+            <div class="qr-url">\${url}</div>
+          </div>\`;
+        }).join("")}</div></body></html>`);
+      win.document.close();
+    });
+
+    document.getElementById("btnGenShortCodes").addEventListener("click", async () => {
+      const btn = document.getElementById("btnGenShortCodes");
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/generate-short-codes`, { method: "POST", headers: authHeaders() });
+        const data = await resp.json();
+        btn.textContent = data.generated > 0 ? `${data.generated} created!` : "All set!";
+        setTimeout(() => { btn.textContent = "Generate Short Codes"; btn.disabled = false; }, 2000);
+      } catch { btn.textContent = "Error"; btn.disabled = false; }
+    });
 
     // ─── Customers ───────────────────────────────────────────
     const filterStore = document.getElementById("filterStore");
