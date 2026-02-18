@@ -11,7 +11,8 @@ enabled = true
 enabled = true
 
 [vars]
-FROM_EMAIL = "G&KK NAPA <sms@gkk-napa.com>"
+FROM_EMAIL = "G&KK NAPA <parts@gkk-napa.com>"
+REPLY_TO = "brian@danvillenapa.comcastbiz.net"
 TWILIO_PHONE_NUMBER = "+12174419077"
 
 # Secrets (set via `wrangler secret put`):

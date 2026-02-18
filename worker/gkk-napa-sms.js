@@ -962,7 +962,7 @@ async function handleInvite(request, env, corsHeaders) {
         body: JSON.stringify({
           from: env.FROM_EMAIL,
           to: [customer.email],
-          reply_to: "napa.danville@comcastbiz.net",
+          reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
           subject: emailSubject,
           html,
         }),
