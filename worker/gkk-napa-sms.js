@@ -83,6 +83,46 @@ function normalizePhone(raw) {
   return null;
 }
 
+// ─── Subscribe token helpers (HMAC-SHA256) ───────────────────
+// Static per customer — same ID always produces the same token.
+// Safe for QR codes on invoices, email links, etc.
+
+async function generateSubscribeToken(customerId, env) {
+  const payload = `subscribe:${customerId}`;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(env.ADMIN_PASSWORD),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+  const hmac = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(`${customerId}:${hmac}`).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function verifySubscribeToken(token, env) {
+  try {
+    const decoded = atob(token.replace(/-/g, "+").replace(/_/g, "/"));
+    const [customerId, hmac] = decoded.split(":");
+    if (!customerId || !hmac) return null;
+
+    const payload = `subscribe:${customerId}`;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw", enc.encode(env.ADMIN_PASSWORD),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+    const expected = btoa(String.fromCharCode(...new Uint8Array(sig)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    if (hmac !== expected) return null;
+
+    return parseInt(customerId);
+  } catch {
+    return null;
+  }
+}
+
 // ─── Twilio helpers ──────────────────────────────────────────
 async function sendSms(env, to, body, mediaUrl) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -239,6 +279,11 @@ export default {
         return handleTwilioInbound(request, env, corsHeaders);
       }
 
+      // ── Public: GET /quick-subscribe ──
+      if (request.method === "GET" && path === "/quick-subscribe") {
+        return handleQuickSubscribe(url, env);
+      }
+
       return jsonError(corsHeaders, "Not found", 404);
     } catch (err) {
       console.error(JSON.stringify({ tag: "UNHANDLED_ERROR", error: err.message, stack: err.stack }));
@@ -301,6 +346,58 @@ async function handleSubscribe(request, env, corsHeaders) {
   }
 
   return jsonOk(corsHeaders, { success: true, message: "You're subscribed! A confirmation text is on its way." });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Quick Subscribe (one-click from invite email)
+// ═══════════════════════════════════════════════════════════════
+
+async function handleQuickSubscribe(url, env) {
+  const token = url.searchParams.get("token");
+  if (!token) {
+    return Response.redirect("https://gkk-napa.com/sms/subscribe", 302);
+  }
+
+  const customerId = await verifySubscribeToken(token, env);
+  if (!customerId) {
+    return Response.redirect("https://gkk-napa.com/sms/subscribed?status=invalid", 302);
+  }
+
+  const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first();
+  if (!customer) {
+    return Response.redirect("https://gkk-napa.com/sms/subscribed?status=error", 302);
+  }
+
+  // Already subscribed — still show success
+  if (customer.sms_status === "subscribed") {
+    return Response.redirect("https://gkk-napa.com/sms/subscribed?status=already", 302);
+  }
+
+  // No phone number — can't send SMS, redirect to form
+  if (!customer.phone) {
+    return Response.redirect("https://gkk-napa.com/sms/subscribe", 302);
+  }
+
+  const now = new Date().toISOString();
+
+  // Subscribe the customer
+  await env.DB.prepare(
+    "UPDATE customers SET sms_status = 'subscribed', sms_consent_at = ?, source = COALESCE(source, 'quick-subscribe'), updated_at = ? WHERE id = ?"
+  ).bind(now, now, customer.id).run();
+
+  // Send welcome SMS
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+    const welcomeMsg =
+      "Welcome to G&KK NAPA text updates! You'll receive order notifications, store hours, and occasional deals. Reply STOP to opt out, HELP for help. Msg&data rates may apply.";
+    const result = await sendSms(env, customer.phone, welcomeMsg);
+    if (result.ok) {
+      await env.DB.prepare(
+        "INSERT INTO messages (twilio_sid, customer_id, direction, body, status, created_at, updated_at) VALUES (?, ?, 'outbound', ?, ?, ?, ?)"
+      ).bind(result.sid, customer.id, welcomeMsg, result.status || "queued", now, now).run();
+    }
+  }
+
+  return Response.redirect("https://gkk-napa.com/sms/subscribed?status=success", 302);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -544,7 +641,11 @@ async function handleInvite(request, env, corsHeaders) {
     const storeName = customer.store ? (STORE_DISPLAY[customer.store] || customer.store) : "your local store";
     const greeting = customer.name || "Valued Customer";
 
-    const html = buildInviteEmail(greeting, storeName, emailIntro, emailBullets);
+    // Generate one-click subscribe token
+    const token = await generateSubscribeToken(customer.id, env);
+    const subscribeUrl = `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
+
+    const html = buildInviteEmail(greeting, storeName, subscribeUrl, emailIntro, emailBullets);
 
     try {
       const resp = await fetch("https://api.resend.com/emails", {
@@ -581,7 +682,7 @@ async function handleInvite(request, env, corsHeaders) {
   return jsonOk(corsHeaders, { sent, failed, total_eligible: customers.results.length });
 }
 
-function buildInviteEmail(firstName, storeName, customIntro, customBullets) {
+function buildInviteEmail(firstName, storeName, subscribeUrl, customIntro, customBullets) {
   const intro = customIntro || `We're excited to offer text updates from ${storeName}! Subscribe to get:`;
   const bullets = customBullets || ["Order-ready notifications", "Store hours & closure alerts", "Occasional deals & promotions"];
   const bulletRows = bullets.map(b => `  <tr><td style="padding:6px 0;font-size:15px;color:#333;">&#10003;&nbsp;&nbsp;${escHtml(b)}</td></tr>`).join("\n");
@@ -594,8 +695,9 @@ function buildInviteEmail(firstName, storeName, customIntro, customBullets) {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
 <!-- NAPA Header -->
-<tr><td style="background-color:#2b2f84;padding:20px 24px;text-align:center;">
-<img src="https://gkk-napa.com/assets/sms-logo.png" alt="G&KK NAPA Auto Parts" style="display:inline-block;max-width:280px;width:100%;height:auto;">
+<tr><td style="background-color:#0A0094;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
+<div style="color:#ffffff;font-size:13px;padding:0 0 10px 12px;">G&amp;KK Store Updates</div>
 </td></tr>
 
 <!-- Body -->
@@ -609,27 +711,42 @@ ${bulletRows}
 </table>
 </td></tr>
 
-<!-- CTA Button -->
-<tr><td align="center" style="padding:0 24px 32px;">
-<a href="https://gkk-napa.com/sms/subscribe" target="_blank"
+<!-- One-Click Subscribe Button -->
+<tr><td align="center" style="padding:0 24px 16px;">
+<a href="${subscribeUrl}" target="_blank"
    style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">
-  Subscribe Now
+  Subscribe with One Click
 </a>
+</td></tr>
+
+<!-- Consent note -->
+<tr><td style="padding:0 24px 24px;">
+<p style="margin:0;font-size:12px;color:#888;line-height:1.5;text-align:center;">
+  By clicking subscribe, you agree to receive SMS messages from G&amp;KK NAPA Auto Parts
+  about order updates, store hours, and occasional promotions. Msg &amp; data rates may apply.
+  Reply STOP to opt out, HELP for help.
+</p>
+</td></tr>
+
+<!-- Divider + manual fallback -->
+<tr><td style="padding:0 24px 24px;">
+<p style="margin:0;font-size:13px;color:#666;line-height:1.5;text-align:center;">
+  Button not working? <a href="https://gkk-napa.com/sms/subscribe" style="color:#0A0094;font-weight:600;">Subscribe on our website</a> instead.
+</p>
 </td></tr>
 
 <!-- Disclosure -->
 <tr><td style="padding:0 24px 24px;">
 <p style="margin:0;font-size:12px;color:#888;line-height:1.5;">
-  Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.
-  Consent is not a condition of purchase. Carriers are not liable for delayed or undelivered messages.
-  <a href="https://gkk-napa.com/privacy.html" style="color:#2b2f84;">Privacy Policy</a> |
-  <a href="https://gkk-napa.com/terms.html" style="color:#2b2f84;">Terms of Service</a>
+  Message frequency varies. Consent is not a condition of purchase. Carriers are not liable for delayed or undelivered messages.
+  <a href="https://gkk-napa.com/privacy.html" style="color:#0A0094;">Privacy Policy</a> |
+  <a href="https://gkk-napa.com/terms.html" style="color:#0A0094;">Terms of Service</a>
 </p>
 </td></tr>
 
 <!-- Footer -->
 <tr><td style="background-color:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb;">
-<p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; <a href="https://gkk-napa.com" style="color:#2b2f84;">gkk-napa.com</a></p>
+<p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; <a href="https://gkk-napa.com" style="color:#0A0094;">gkk-napa.com</a></p>
 </td></tr>
 
 </table>

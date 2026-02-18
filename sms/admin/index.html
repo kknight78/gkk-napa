@@ -437,6 +437,14 @@
       <label for="modalNotes">Notes (optional)</label>
       <textarea id="modalNotes" placeholder="Account number, special instructions..." maxlength="500" style="min-height:60px;"></textarea>
 
+      <div id="subscribeUrlRow" style="display:none;">
+        <label>Subscribe URL</label>
+        <div style="display:flex;gap:8px;">
+          <input id="modalSubscribeUrl" type="text" readonly style="flex:1;opacity:.7;cursor:text;font-size:13px;" />
+          <button type="button" class="btn-secondary" id="btnCopyUrl" style="flex-shrink:0;padding:12px 16px;">Copy</button>
+        </div>
+      </div>
+
       <div class="form-row" style="margin-top:16px;">
         <button class="btn-primary" id="btnModalSave">Save</button>
         <button class="btn-secondary" id="btnModalCancel">Cancel</button>
@@ -670,10 +678,11 @@ Occasional deals &amp; promotions</textarea>
       modalStore.value = "";
       modalNotes.value = "";
       modalError.style.display = "none";
+      document.getElementById("subscribeUrlRow").style.display = "none";
       customerModal.classList.add("open");
     });
 
-    window.editCustomer = function(id) {
+    window.editCustomer = async function(id) {
       const c = allCustomers.find(x => x.id === id);
       if (!c) return;
       modalTitle.textContent = "Edit Customer";
@@ -685,6 +694,13 @@ Occasional deals &amp; promotions</textarea>
       modalStore.value = c.store || "";
       modalNotes.value = c.notes || "";
       modalError.style.display = "none";
+
+      // Generate and show subscribe URL
+      const token = await generateSubscribeToken(c.id);
+      document.getElementById("modalSubscribeUrl").value =
+        `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
+      document.getElementById("subscribeUrlRow").style.display = "block";
+
       customerModal.classList.add("open");
     };
 
@@ -1061,6 +1077,29 @@ Occasional deals &amp; promotions</textarea>
       modalPhone.value = formatPhone(modalPhone.value);
       const after = modalPhone.value.length;
       modalPhone.setSelectionRange(pos + (after - before), pos + (after - before));
+    });
+
+    // ─── Subscribe URL (HMAC-SHA256, matches worker logic) ──
+    async function generateSubscribeToken(customerId) {
+      const payload = `subscribe:${customerId}`;
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw", enc.encode(authToken),
+        { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+      );
+      const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+      const hmac = btoa(String.fromCharCode(...new Uint8Array(sig)))
+        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      return btoa(`${customerId}:${hmac}`).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    document.getElementById("btnCopyUrl").addEventListener("click", () => {
+      const urlInput = document.getElementById("modalSubscribeUrl");
+      navigator.clipboard.writeText(urlInput.value).then(() => {
+        const btn = document.getElementById("btnCopyUrl");
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+      });
     });
 
     // ─── Utility ─────────────────────────────────────────────

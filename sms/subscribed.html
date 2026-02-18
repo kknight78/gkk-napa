@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Subscribed | G&KK NAPA Auto Parts</title>
+  <meta name="description" content="You're subscribed to text updates from G&KK NAPA Auto Parts." />
+  <meta name="theme-color" content="#004b8d" />
+  <link rel="icon" sizes="192x192" href="/assets/favicon-192.jpg" type="image/jpeg">
+  <link rel="shortcut icon" href="/assets/favicon-32.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- NAPA Logo Banner -->
+  <div class="logo-banner">
+    <div class="container">
+      <a href="/"><img src="/assets/napa-auto-parts-g+kk-combo.svg" alt="NAPA Auto Parts - Back to Home" class="header-logo"></a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <nav class="nav">
+        <a href="https://www.napaonline.com" target="_blank" rel="noopener">Shop</a>
+        <a href="/#locations">Locations</a>
+        <a href="/careers">Careers</a>
+        <a href="/#faq">FAQ</a>
+      </nav>
+      <a class="cta" href="/pay">Pay Online</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <!-- Success -->
+        <div id="msg-success" style="display:none; max-width:480px;">
+          <h1 style="margin:0 0 10px;font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">You're Subscribed!</h1>
+          <p class="lead">A confirmation text is on its way. You'll receive order notifications, store hours, and occasional deals from G&KK NAPA.</p>
+          <div class="notice" style="border-color:var(--napa-yellow);margin-top:20px;">
+            <strong>What to expect:</strong> Message frequency varies. Reply STOP to opt out at any time, or HELP for assistance. Msg & data rates may apply.
+          </div>
+        </div>
+
+        <!-- Already subscribed -->
+        <div id="msg-already" style="display:none; max-width:480px;">
+          <h1 style="margin:0 0 10px;font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Already Subscribed</h1>
+          <p class="lead">You're already receiving text updates from G&KK NAPA. No action needed!</p>
+          <div class="notice" style="border-color:var(--napa-yellow);margin-top:20px;">
+            Reply STOP to opt out at any time, or HELP for assistance.
+          </div>
+        </div>
+
+        <!-- Invalid link -->
+        <div id="msg-invalid" style="display:none; max-width:480px;">
+          <h1 style="margin:0 0 10px;font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Invalid Link</h1>
+          <p class="lead">This subscribe link isn't valid. You can still subscribe using the form below.</p>
+          <a href="/sms/subscribe" class="button primary" style="display:inline-block;margin-top:16px;font-size:16px;padding:14px 32px;text-decoration:none;">Subscribe Now</a>
+        </div>
+
+        <!-- Error -->
+        <div id="msg-error" style="display:none; max-width:480px;">
+          <h1 style="margin:0 0 10px;font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Something Went Wrong</h1>
+          <p class="lead">We couldn't complete your subscription. Please try subscribing using the form instead.</p>
+          <a href="/sms/subscribe" class="button primary" style="display:inline-block;margin-top:16px;font-size:16px;padding:14px 32px;text-decoration:none;">Subscribe Now</a>
+        </div>
+
+        <div style="margin-top:28px;max-width:480px;">
+          <h2>Disclosures</h2>
+          <p>Message frequency varies. Msg & data rates may apply.</p>
+          <p>Reply <strong>STOP</strong> to opt out. Reply <strong>HELP</strong> for help.</p>
+          <p><strong>Support:</strong> <a class="link" href="mailto:napa.danville@comcastbiz.net">napa.danville@comcastbiz.net</a> or <a class="link" href="tel:+12174469067">(217) 446-9067</a></p>
+          <p>See our <a class="link" href="/privacy.html">Privacy Policy</a> and <a class="link" href="/terms.html">Terms of Service</a>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="small">&copy; <span id="year"></span> G&KK Stores.</div>
+      <div class="small">
+        <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="/sms.html">SMS Program</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    const status = new URLSearchParams(window.location.search).get("status") || "success";
+    const msgId = {
+      success: "msg-success",
+      already: "msg-already",
+      invalid: "msg-invalid",
+      error: "msg-error",
+    }[status] || "msg-error";
+
+    document.getElementById(msgId).style.display = "block";
+  </script>
+</body>
+</html>
