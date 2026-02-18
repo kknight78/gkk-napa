@@ -746,6 +746,7 @@ Occasional deals &amp; promotions</textarea>
             <div class="action-info"><div class="action-label">Ready to Invite</div><div class="action-desc">Has email + mobile, never invited</div></div>
             <div class="action-count">${actions.ready_to_invite}</div>
             <button class="btn-primary" onclick="dashAction('invite-ready')">Invite All</button>
+            <button class="btn-secondary" onclick="dashAction('print-qr-ready')" style="margin-left:6px;">Print QR</button>
           </div>` : ''}
           ${actions.mobile_no_email > 0 ? `<div class="action-card">
             <div class="action-info"><div class="action-label">Mobile, No Email</div><div class="action-desc">Personal text from your phone, or print QR for invoices</div></div>
@@ -767,6 +768,7 @@ Occasional deals &amp; promotions</textarea>
             <div class="action-info"><div class="action-label">Needs Outreach</div><div class="action-desc">No email + no mobile — call or snail mail</div></div>
             <div class="action-count">${actions.needs_outreach}</div>
             <button class="btn-secondary" onclick="dashAction('export-outreach')">Export List</button>
+            <button class="btn-secondary" onclick="dashAction('print-qr-generic')" style="margin-left:6px;">Print QR</button>
           </div>` : ''}
           ${actions.ready_to_invite === 0 && actions.mobile_no_email === 0 && actions.stale_invites === 0 && actions.email_only_no_mobile === 0 && actions.needs_outreach === 0 ? '<div class="empty">No actions needed right now!</div>' : ''}
         `;
@@ -838,6 +840,45 @@ Occasional deals &amp; promotions</textarea>
       }
     };
 
+    // ─── QR Print Helper ──────────────────────────────────────
+    function printQrPage(title, subtitle, items) {
+      // items: array of { name, phone, url, short_code } or { generic: true, url }
+      const win = window.open("", "_blank");
+      win.document.write('<html><head><title>' + esc(title) + '</title>'
+        + '<style>body{font-family:Arial,sans-serif;margin:20px;}'
+        + '.qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}'
+        + '.qr-item{text-align:center;page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;}'
+        + '.qr-item img{width:150px;height:150px;}'
+        + '.qr-name{font-weight:700;font-size:14px;margin:8px 0 4px;}'
+        + '.qr-phone{font-size:12px;color:#333;margin:2px 0;}'
+        + '.qr-fallback{font-size:10px;color:#888;margin-top:4px;}'
+        + '.qr-fallback a{color:#004b8d;}'
+        + '@media print{.no-print{display:none!important;}}</style></head><body>'
+        + '<div class="no-print" style="margin-bottom:16px;">'
+        + '<button onclick="window.print()" style="padding:10px 20px;font-size:16px;cursor:pointer;">Print</button>'
+        + '<span style="margin-left:12px;color:#666;">' + esc(subtitle) + '</span>'
+        + '</div>'
+        + '<div class="qr-grid">' + items.map(item => {
+          const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(item.url);
+          if (item.generic) {
+            return '<div class="qr-item">'
+              + '<img src="' + qrApi + '" alt="QR">'
+              + '<div class="qr-name">' + esc(item.name || "G&KK NAPA") + '</div>'
+              + '<div class="qr-phone">Scan to subscribe to text updates</div>'
+              + '<div class="qr-fallback">Or visit: <a href="' + item.url + '">' + item.url.replace('https://', '') + '</a></div>'
+              + '</div>';
+          }
+          const phone = item.phone ? item.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : '';
+          return '<div class="qr-item">'
+            + '<img src="' + qrApi + '" alt="QR">'
+            + '<div class="qr-name">' + esc(item.name || "Unnamed") + '</div>'
+            + (phone ? '<div class="qr-phone">Texts will be sent to ' + phone + '</div>' : '')
+            + '<div class="qr-fallback">Not your number? Subscribe at <a href="https://gkk-napa.com/sms/subscribe">gkk-napa.com/sms/subscribe</a></div>'
+            + '</div>';
+        }).join('') + '</div></body></html>');
+      win.document.close();
+    }
+
     // ─── Dashboard Actions ────────────────────────────────────
     window.dashAction = async function(action) {
       if (action === "invite-ready") {
@@ -852,33 +893,22 @@ Occasional deals &amp; promotions</textarea>
         const customers = await resp.json();
         const eligible = customers.filter(c => !c.email && c.line_type === "mobile" && c.short_code);
         if (eligible.length === 0) { alert("No eligible customers with short codes."); return; }
-        const win = window.open("", "_blank");
-        win.document.write(`<html><head><title>QR Mailers - Mobile, No Email</title>
-          <style>body{font-family:Arial,sans-serif;margin:20px;}
-          .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
-          .qr-item{text-align:center;page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;}
-          .qr-item img{width:150px;height:150px;}
-          .qr-name{font-weight:700;font-size:14px;margin:8px 0 4px;}
-          .qr-phone{font-size:12px;color:#333;margin:2px 0;}
-          .qr-fallback{font-size:10px;color:#888;margin-top:4px;}
-          .qr-fallback a{color:#004b8d;}
-          @media print{.no-print{display:none!important;}}</style></head><body>
-          <div class="no-print" style="margin-bottom:16px;">
-            <button onclick="window.print()" style="padding:10px 20px;font-size:16px;cursor:pointer;">Print</button>
-            <span style="margin-left:12px;color:#666;">${eligible.length} QR codes — mobile customers without email</span>
-          </div>
-          <div class="qr-grid">${eligible.map(c => {
-            const url = "https://gkk-napa.com/s/" + c.short_code;
-            const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
-            const phone = c.phone ? c.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : '';
-            return '<div class="qr-item">'
-              + '<img src="' + qrApi + '" alt="QR">'
-              + '<div class="qr-name">' + esc(c.name || "Unnamed") + '</div>'
-              + (phone ? '<div class="qr-phone">Texts will be sent to ' + phone + '</div>' : '')
-              + '<div class="qr-fallback">Not your number? Subscribe at <a href="https://gkk-napa.com/sms/subscribe">gkk-napa.com/sms/subscribe</a></div>'
-              + '</div>';
-          }).join("")}</div></body></html>`);
-        win.document.close();
+        printQrPage("QR Mailers — Mobile, No Email", eligible.length + " QR codes — mobile customers without email",
+          eligible.map(c => ({ name: c.name, phone: c.phone, url: "https://gkk-napa.com/s/" + c.short_code })));
+      } else if (action === "print-qr-ready") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers?status=none`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const eligible = customers.filter(c => c.email && c.line_type === "mobile" && c.short_code);
+        if (eligible.length === 0) { alert("No eligible customers with short codes."); return; }
+        printQrPage("QR Codes — Ready to Invite", eligible.length + " QR codes — customers with email + mobile",
+          eligible.map(c => ({ name: c.name, phone: c.phone, url: "https://gkk-napa.com/s/" + c.short_code })));
+      } else if (action === "print-qr-generic") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const eligible = customers.filter(c => !c.email && (!c.phone || c.line_type !== "mobile") && c.sms_status !== "subscribed");
+        if (eligible.length === 0) { alert("No eligible customers."); return; }
+        printQrPage("QR Codes — Needs Outreach", eligible.length + " generic QR codes — include with invoice or mail",
+          eligible.map(c => ({ name: c.name, generic: true, url: "https://gkk-napa.com/sms/subscribe" })));
       } else if (action === "personal-text") {
         const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
         const customers = await resp.json();
@@ -953,33 +983,8 @@ Occasional deals &amp; promotions</textarea>
       const customers = await resp.json();
       const mobileWithCodes = customers.filter(c => c.short_code && c.line_type === 'mobile');
       if (mobileWithCodes.length === 0) { alert("No mobile customers with short codes."); return; }
-      const win = window.open("", "_blank");
-      win.document.write(`<html><head><title>QR Codes - G&KK NAPA</title>
-        <style>body{font-family:Arial,sans-serif;margin:20px;}
-        .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
-        .qr-item{text-align:center;page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;}
-        .qr-item img{width:150px;height:150px;}
-        .qr-name{font-weight:700;font-size:14px;margin:8px 0 4px;}
-        .qr-phone{font-size:12px;color:#333;margin:2px 0;}
-        .qr-fallback{font-size:10px;color:#888;margin-top:4px;}
-        .qr-fallback a{color:#004b8d;}
-        @media print{.no-print{display:none!important;}}</style></head><body>
-        <div class="no-print" style="margin-bottom:16px;">
-          <button onclick="window.print()" style="padding:10px 20px;font-size:16px;cursor:pointer;">Print</button>
-          <span style="margin-left:12px;color:#666;">${mobileWithCodes.length} QR codes (mobile only)</span>
-        </div>
-        <div class="qr-grid">${mobileWithCodes.map(c => {
-          const url = "https://gkk-napa.com/s/" + c.short_code;
-          const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
-          const phone = c.phone ? c.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : '';
-          return '<div class="qr-item">'
-            + '<img src="' + qrApi + '" alt="QR">'
-            + '<div class="qr-name">' + esc(c.name || "Unnamed") + '</div>'
-            + (phone ? '<div class="qr-phone">Texts will be sent to ' + phone + '</div>' : '')
-            + '<div class="qr-fallback">Not your number? Subscribe at <a href="https://gkk-napa.com/sms/subscribe">gkk-napa.com/sms/subscribe</a></div>'
-            + '</div>';
-        }).join("")}</div></body></html>`);
-      win.document.close();
+      printQrPage("QR Codes — G&KK NAPA", mobileWithCodes.length + " QR codes (mobile only)",
+        mobileWithCodes.map(c => ({ name: c.name, phone: c.phone, url: "https://gkk-napa.com/s/" + c.short_code })));
     });
 
     document.getElementById("btnGenShortCodes").addEventListener("click", async () => {
