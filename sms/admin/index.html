@@ -149,6 +149,9 @@
     .badge-invited { background: rgba(255,179,71,.2); color: var(--orange); }
     .badge-stopped { background: rgba(255,107,107,.15); color: #ffb0b0; }
     .badge-none { background: rgba(255,255,255,.08); color: var(--dim); }
+    .badge-mobile { background: rgba(142,207,142,.12); color: var(--green); font-size:10px; }
+    .badge-landline { background: rgba(255,107,107,.12); color: #ffb0b0; font-size:10px; }
+    .badge-voip { background: rgba(100,180,255,.15); color: #8cc4ff; font-size:10px; }
 
     .filter-bar {
       display: flex;
@@ -333,6 +336,12 @@
             <option value="subscribed">Subscribed</option>
             <option value="stopped">Stopped</option>
           </select>
+          <select id="filterLineType">
+            <option value="">All Lines</option>
+            <option value="mobile">Mobile</option>
+            <option value="landline">Landline</option>
+            <option value="voip">VoIP</option>
+          </select>
           <div style="flex:2;position:relative;min-width:120px;">
             <input id="filterSearch" type="text" placeholder="Search name, phone, email..." style="width:100%;padding-right:36px;" />
             <button id="btnClearSearch" type="button" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;padding:0;">&times;</button>
@@ -342,6 +351,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div id="customerCount" style="font-size:13px;color:rgba(255,255,255,.5);"></div>
           <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" id="btnCheckLineTypes" title="Check line types for new customers via Twilio Lookup">Check Lines</button>
             <button class="btn-secondary" id="btnInviteAll" title="Send invite emails to filtered customers with email + status none/invited">Invite Filtered</button>
             <button class="btn-primary" id="btnAddCustomer">+ Add Customer</button>
           </div>
@@ -601,7 +611,8 @@ Occasional deals &amp; promotions</textarea>
 
     const btnClearSearch = document.getElementById("btnClearSearch");
 
-    [filterStore, filterStatus].forEach(el => el.addEventListener("change", loadCustomers));
+    const filterLineType = document.getElementById("filterLineType");
+    [filterStore, filterStatus, filterLineType].forEach(el => el.addEventListener("change", loadCustomers));
     let searchTimeout;
     filterSearch.addEventListener("input", () => {
       btnClearSearch.style.display = filterSearch.value ? "block" : "none";
@@ -623,7 +634,11 @@ Occasional deals &amp; promotions</textarea>
       try {
         const resp = await fetch(`${WORKER_BASE}/admin/customers?${params}`, { headers: authHeaders() });
         allCustomers = await resp.json();
-        renderCustomers(allCustomers);
+        let filtered = allCustomers;
+        if (filterLineType.value) {
+          filtered = allCustomers.filter(c => c.line_type === filterLineType.value);
+        }
+        renderCustomers(filtered);
       } catch {
         customerList.innerHTML = '<div class="error">Failed to load customers.</div>';
       }
@@ -643,6 +658,7 @@ Occasional deals &amp; promotions</textarea>
             <div class="customer-name">
               ${esc(c.name || "Unnamed")}
               ${STATUS_BADGE[c.sms_status] || ""}
+              ${c.line_type ? `<span class="badge badge-${c.line_type}">${c.line_type}</span>` : ""}
             </div>
             <div class="customer-detail">${esc(c.phone)}${c.store ? " &middot; " + (STORE_NAMES[c.store] || c.store) : ""}</div>
             ${c.email ? `<div class="customer-detail">${esc(c.email)}</div>` : ""}
@@ -738,6 +754,23 @@ Occasional deals &amp; promotions</textarea>
       } catch (e) {
         modalError.textContent = e.message;
         modalError.style.display = "block";
+      }
+    });
+
+    // ─── Check Line Types ──────────────────────────────────
+    document.getElementById("btnCheckLineTypes").addEventListener("click", async () => {
+      const btn = document.getElementById("btnCheckLineTypes");
+      btn.disabled = true;
+      btn.textContent = "Checking...";
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/check-line-types`, { method: "POST", headers: authHeaders() });
+        const data = await resp.json();
+        btn.textContent = data.checked > 0 ? `${data.checked} checked!` : "All set!";
+        loadCustomers();
+        setTimeout(() => { btn.textContent = "Check Lines"; btn.disabled = false; }, 2000);
+      } catch {
+        btn.textContent = "Error";
+        setTimeout(() => { btn.textContent = "Check Lines"; btn.disabled = false; }, 2000);
       }
     });
 

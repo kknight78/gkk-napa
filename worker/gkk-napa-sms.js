@@ -245,6 +245,12 @@ export default {
         return handleImport(request, env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/check-line-types ──
+      if (request.method === "POST" && path === "/admin/check-line-types") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleCheckLineTypes(env, corsHeaders);
+      }
+
       // ── Admin: POST /admin/invite ──
       if (request.method === "POST" && path === "/admin/invite") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -506,7 +512,7 @@ async function handleAddCustomer(request, env, corsHeaders) {
 async function handleUpdateCustomer(request, path, env, corsHeaders) {
   const id = parseInt(path.split("/").pop());
   const body = await request.json();
-  const { name, email, store, notes, sms_status } = body;
+  const { name, email, store, notes, sms_status, line_type } = body;
 
   const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
   if (!existing) return jsonError(corsHeaders, "Customer not found.", 404);
@@ -517,6 +523,9 @@ async function handleUpdateCustomer(request, path, env, corsHeaders) {
   if (sms_status && !["none", "invited", "subscribed", "stopped"].includes(sms_status)) {
     return jsonError(corsHeaders, "Invalid status.", 400);
   }
+  if (line_type && !["mobile", "landline", "voip"].includes(line_type)) {
+    return jsonError(corsHeaders, "Invalid line type.", 400);
+  }
 
   const now = new Date().toISOString();
   const updates = [];
@@ -526,6 +535,7 @@ async function handleUpdateCustomer(request, path, env, corsHeaders) {
   if (email !== undefined) { updates.push("email = ?"); binds.push(email || null); }
   if (store !== undefined) { updates.push("store = ?"); binds.push(store || null); }
   if (notes !== undefined) { updates.push("notes = ?"); binds.push(notes || null); }
+  if (line_type !== undefined) { updates.push("line_type = ?"); binds.push(line_type || null); }
   if (sms_status !== undefined) {
     updates.push("sms_status = ?");
     binds.push(sms_status);
@@ -558,6 +568,57 @@ async function handleDeleteCustomer(path, env, corsHeaders) {
 
   await env.DB.prepare("DELETE FROM customers WHERE id = ?").bind(id).run();
   return jsonOk(corsHeaders, { success: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Admin: Twilio Lookup — check line types
+// ═══════════════════════════════════════════════════════════════
+
+async function lookupLineType(phone, env) {
+  const resp = await fetch(
+    `https://lookups.twilio.com/v2/PhoneNumbers/${encodeURIComponent(phone)}?Fields=line_type_intelligence`,
+    { headers: { Authorization: "Basic " + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`) } }
+  );
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data.line_type_intelligence?.type || null;
+}
+
+async function handleCheckLineTypes(env, corsHeaders) {
+  // Ensure column exists (safe to run multiple times)
+  await env.DB.prepare(
+    "CREATE TABLE IF NOT EXISTS _migration_check (id INTEGER PRIMARY KEY)"
+  ).run();
+  try {
+    await env.DB.prepare("ALTER TABLE customers ADD COLUMN line_type TEXT").run();
+  } catch { /* column already exists */ }
+
+  // Fetch customers with phone but no line_type
+  const customers = await env.DB.prepare(
+    "SELECT id, phone FROM customers WHERE phone IS NOT NULL AND phone != '' AND line_type IS NULL"
+  ).all();
+
+  if (customers.results.length === 0) {
+    return jsonOk(corsHeaders, { checked: 0, message: "All customers already have line_type set." });
+  }
+
+  const now = new Date().toISOString();
+  let checked = 0;
+  let errors = 0;
+
+  for (const c of customers.results) {
+    const lineType = await lookupLineType(c.phone, env);
+    if (lineType) {
+      await env.DB.prepare(
+        "UPDATE customers SET line_type = ?, updated_at = ? WHERE id = ?"
+      ).bind(lineType, now, c.id).run();
+      checked++;
+    } else {
+      errors++;
+    }
+  }
+
+  return jsonOk(corsHeaders, { checked, errors, total: customers.results.length });
 }
 
 // ═══════════════════════════════════════════════════════════════
