@@ -542,9 +542,9 @@ async function handleInvite(request, env, corsHeaders) {
 
   for (const customer of customers.results) {
     const storeName = customer.store ? (STORE_DISPLAY[customer.store] || customer.store) : "your local store";
-    const firstName = customer.name ? customer.name.split(" ")[0] : "Valued Customer";
+    const greeting = customer.name || "Valued Customer";
 
-    const html = buildInviteEmail(firstName, storeName, emailIntro, emailBullets);
+    const html = buildInviteEmail(greeting, storeName, emailIntro, emailBullets);
 
     try {
       const resp = await fetch("https://api.resend.com/emails", {
