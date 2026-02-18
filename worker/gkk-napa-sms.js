@@ -318,11 +318,7 @@ export default {
         return handleDashboard(env, corsHeaders);
       }
 
-      // ── Admin: POST /admin/text-invite ──
-      if (request.method === "POST" && path === "/admin/text-invite") {
-        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
-        return handleTextInvite(request, env, corsHeaders);
-      }
+      // (text-invite removed — can't SMS customers without opt-in)
 
       // ── Admin: GET /admin/export ──
       if (request.method === "GET" && path === "/admin/export") {
@@ -792,56 +788,7 @@ async function handleDashboard(env, corsHeaders) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Admin: Text Invite (SMS subscribe link to mobile-only customers)
-// ═══════════════════════════════════════════════════════════════
-
-async function handleTextInvite(request, env, corsHeaders) {
-  const body = await request.json();
-  const { customer_ids } = body;
-
-  if (!Array.isArray(customer_ids) || customer_ids.length === 0) {
-    return jsonError(corsHeaders, "Expected an array of customer IDs.", 400);
-  }
-
-  const placeholders = customer_ids.map(() => '?').join(',');
-  const customers = await env.DB.prepare(
-    `SELECT * FROM customers WHERE id IN (${placeholders}) AND phone IS NOT NULL AND phone != '' AND line_type = 'mobile' AND sms_status IN ('none', 'invited')`
-  ).bind(...customer_ids).all();
-
-  if (customers.results.length === 0) {
-    return jsonError(corsHeaders, "No eligible customers found (need mobile phone + status none/invited).", 400);
-  }
-
-  const now = new Date().toISOString();
-  let sent = 0;
-  let failed = 0;
-
-  for (const customer of customers.results) {
-    const shortCode = await ensureShortCode(env.DB, customer.id);
-    const shortUrl = `https://gkk-napa.com/s/${shortCode}`;
-    const name = customer.name ? `Hi ${customer.name}! ` : '';
-    const msg = `${name}Subscribe to G&KK NAPA text updates for order notifications, store hours & deals: ${shortUrl}\n\nReply STOP to opt out, HELP for help. Msg&data rates apply.`;
-
-    const result = await sendSms(env, customer.phone, msg);
-    if (result.ok) {
-      await env.DB.prepare(
-        "UPDATE customers SET sms_status = 'invited', invite_sent_at = ?, updated_at = ? WHERE id = ?"
-      ).bind(now, now, customer.id).run();
-      await env.DB.prepare(
-        "INSERT INTO messages (twilio_sid, customer_id, direction, body, status, created_at, updated_at) VALUES (?, ?, 'outbound', ?, ?, ?, ?)"
-      ).bind(result.sid, customer.id, msg, result.status || 'queued', now, now).run();
-      sent++;
-    } else {
-      failed++;
-    }
-
-    // Rate limit
-    await new Promise(r => setTimeout(r, 200));
-  }
-
-  return jsonOk(corsHeaders, { sent, failed, total_eligible: customers.results.length });
-}
+// (handleTextInvite removed — can't SMS customers without prior opt-in)
 
 // ═══════════════════════════════════════════════════════════════
 // Admin: CSV Export

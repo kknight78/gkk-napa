@@ -699,9 +699,9 @@ Occasional deals &amp; promotions</textarea>
             <button class="btn-primary" onclick="dashAction('invite-ready')">Invite All</button>
           </div>` : ''}
           ${actions.mobile_no_email > 0 ? `<div class="action-card">
-            <div class="action-info"><div class="action-label">Text Invite (Mobile, No Email)</div><div class="action-desc">Send subscribe link via SMS</div></div>
+            <div class="action-info"><div class="action-label">Mobile, No Email</div><div class="action-desc">Print QR codes for invoices/mailers</div></div>
             <div class="action-count">${actions.mobile_no_email}</div>
-            <button class="btn-success" onclick="dashAction('text-invite')">Text All</button>
+            <button class="btn-success" onclick="dashAction('print-qr-no-email')">Print QR</button>
           </div>` : ''}
           ${actions.stale_invites > 0 ? `<div class="action-card">
             <div class="action-info"><div class="action-label">Stale Invites (30+ days)</div><div class="action-desc">Invited but never subscribed</div></div>
@@ -772,29 +772,38 @@ Occasional deals &amp; promotions</textarea>
         const eligible = customers.filter(c => c.email && c.line_type === "mobile");
         if (eligible.length === 0) { alert("No eligible customers."); return; }
         openInviteModal(eligible.map(c => c.id), `Sending email invites to ${eligible.length} customer(s) with email + mobile`);
-      } else if (action === "text-invite") {
-        const resp = await fetch(`${WORKER_BASE}/admin/customers?status=none`, { headers: authHeaders() });
-        let customers = await resp.json();
-        // Also get 'invited' status
-        const resp2 = await fetch(`${WORKER_BASE}/admin/customers?status=invited`, { headers: authHeaders() });
-        const invited = await resp2.json();
-        customers = [...customers, ...invited];
-        const eligible = customers.filter(c => !c.email && c.line_type === "mobile");
-        if (eligible.length === 0) { alert("No eligible customers."); return; }
-        if (!confirm(`Send subscribe link via SMS to ${eligible.length} customer(s)?`)) return;
-        const btn = event.target;
-        btn.disabled = true;
-        btn.textContent = "Sending...";
-        try {
-          const r = await fetch(`${WORKER_BASE}/admin/text-invite`, {
-            method: "POST", headers: authHeaders(),
-            body: JSON.stringify({ customer_ids: eligible.map(c => c.id) }),
-          });
-          const data = await r.json();
-          btn.textContent = `${data.sent} sent!`;
-          loadDashboard();
-          setTimeout(() => { btn.textContent = "Text All"; btn.disabled = false; }, 2000);
-        } catch { btn.textContent = "Error"; btn.disabled = false; }
+      } else if (action === "print-qr-no-email") {
+        const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+        const customers = await resp.json();
+        const eligible = customers.filter(c => !c.email && c.line_type === "mobile" && c.short_code);
+        if (eligible.length === 0) { alert("No eligible customers with short codes."); return; }
+        const win = window.open("", "_blank");
+        win.document.write(`<html><head><title>QR Mailers - Mobile, No Email</title>
+          <style>body{font-family:Arial,sans-serif;margin:20px;}
+          .qr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+          .qr-item{text-align:center;page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;}
+          .qr-item img{width:150px;height:150px;}
+          .qr-name{font-weight:700;font-size:14px;margin:8px 0 4px;}
+          .qr-phone{font-size:12px;color:#333;margin:2px 0;}
+          .qr-fallback{font-size:10px;color:#888;margin-top:4px;}
+          .qr-fallback a{color:#004b8d;}
+          @media print{.no-print{display:none!important;}}</style></head><body>
+          <div class="no-print" style="margin-bottom:16px;">
+            <button onclick="window.print()" style="padding:10px 20px;font-size:16px;cursor:pointer;">Print</button>
+            <span style="margin-left:12px;color:#666;">${eligible.length} QR codes — mobile customers without email</span>
+          </div>
+          <div class="qr-grid">${eligible.map(c => {
+            const url = "https://gkk-napa.com/s/" + c.short_code;
+            const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
+            const phone = c.phone ? c.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : '';
+            return '<div class="qr-item">'
+              + '<img src="' + qrApi + '" alt="QR">'
+              + '<div class="qr-name">' + esc(c.name || "Unnamed") + '</div>'
+              + (phone ? '<div class="qr-phone">Texts will be sent to ' + phone + '</div>' : '')
+              + '<div class="qr-fallback">Not your number? Subscribe at <a href="https://gkk-napa.com/sms/subscribe">gkk-napa.com/sms/subscribe</a></div>'
+              + '</div>';
+          }).join("")}</div></body></html>`);
+        win.document.close();
       } else if (action === "re-invite") {
         const resp = await fetch(`${WORKER_BASE}/admin/customers?status=invited`, { headers: authHeaders() });
         const customers = await resp.json();
@@ -838,8 +847,8 @@ Occasional deals &amp; promotions</textarea>
     document.getElementById("btnPrintQr").addEventListener("click", async () => {
       const resp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
       const customers = await resp.json();
-      const withCodes = customers.filter(c => c.short_code);
-      if (withCodes.length === 0) { alert("No customers with short codes."); return; }
+      const mobileWithCodes = customers.filter(c => c.short_code && c.line_type === 'mobile');
+      if (mobileWithCodes.length === 0) { alert("No mobile customers with short codes."); return; }
       const win = window.open("", "_blank");
       win.document.write(`<html><head><title>QR Codes - G&KK NAPA</title>
         <style>body{font-family:Arial,sans-serif;margin:20px;}
@@ -847,19 +856,23 @@ Occasional deals &amp; promotions</textarea>
         .qr-item{text-align:center;page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;}
         .qr-item img{width:150px;height:150px;}
         .qr-name{font-weight:700;font-size:14px;margin:8px 0 4px;}
-        .qr-url{font-size:10px;color:#666;word-break:break-all;}
+        .qr-phone{font-size:12px;color:#333;margin:2px 0;}
+        .qr-fallback{font-size:10px;color:#888;margin-top:4px;}
+        .qr-fallback a{color:#004b8d;}
         @media print{.no-print{display:none!important;}}</style></head><body>
         <div class="no-print" style="margin-bottom:16px;">
           <button onclick="window.print()" style="padding:10px 20px;font-size:16px;cursor:pointer;">Print</button>
-          <span style="margin-left:12px;color:#666;">${withCodes.length} QR codes</span>
+          <span style="margin-left:12px;color:#666;">${mobileWithCodes.length} QR codes (mobile only)</span>
         </div>
-        <div class="qr-grid">${withCodes.map(c => {
+        <div class="qr-grid">${mobileWithCodes.map(c => {
           const url = "https://gkk-napa.com/s/" + c.short_code;
           const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url);
+          const phone = c.phone ? c.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : '';
           return '<div class="qr-item">'
             + '<img src="' + qrApi + '" alt="QR">'
             + '<div class="qr-name">' + esc(c.name || "Unnamed") + '</div>'
-            + '<div class="qr-url">' + url + '</div>'
+            + (phone ? '<div class="qr-phone">Texts will be sent to ' + phone + '</div>' : '')
+            + '<div class="qr-fallback">Not your number? Subscribe at <a href="https://gkk-napa.com/sms/subscribe">gkk-napa.com/sms/subscribe</a></div>'
             + '</div>';
         }).join("")}</div></body></html>`);
       win.document.close();
