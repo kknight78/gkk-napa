@@ -645,7 +645,12 @@ async function handleInvite(request, env, corsHeaders) {
     const token = await generateSubscribeToken(customer.id, env);
     const subscribeUrl = `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
 
-    const html = buildInviteEmail(greeting, storeName, subscribeUrl, emailIntro, emailBullets);
+    // Format phone for display: +12174419077 → (217) 441-9077
+    const displayPhone = customer.phone
+      ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
+      : null;
+
+    const html = buildInviteEmail(greeting, storeName, subscribeUrl, displayPhone, emailIntro, emailBullets);
 
     try {
       const resp = await fetch("https://api.resend.com/emails", {
@@ -682,10 +687,19 @@ async function handleInvite(request, env, corsHeaders) {
   return jsonOk(corsHeaders, { sent, failed, total_eligible: customers.results.length });
 }
 
-function buildInviteEmail(firstName, storeName, subscribeUrl, customIntro, customBullets) {
+function buildInviteEmail(firstName, storeName, subscribeUrl, displayPhone, customIntro, customBullets) {
   const intro = customIntro || `We're excited to offer text updates from ${storeName}! Subscribe to get:`;
   const bullets = customBullets || ["Order-ready notifications", "Store hours & closure alerts", "Occasional deals & promotions"];
   const bulletRows = bullets.map(b => `  <tr><td style="padding:6px 0;font-size:15px;color:#333;">&#10003;&nbsp;&nbsp;${escHtml(b)}</td></tr>`).join("\n");
+
+  const phoneNote = displayPhone
+    ? `<tr><td style="padding:0 24px 16px;">
+<p style="margin:0;font-size:14px;color:#333;line-height:1.5;text-align:center;">
+  Texts will be sent to <strong>${displayPhone}</strong><br>
+  <span style="font-size:12px;color:#888;">Not a mobile number? <a href="https://gkk-napa.com/sms/subscribe" style="color:#0A0094;">Subscribe with a different number</a></span>
+</p>
+</td></tr>`
+    : '';
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -711,6 +725,9 @@ ${bulletRows}
 </table>
 </td></tr>
 
+<!-- Phone number notice -->
+${phoneNote}
+
 <!-- One-Click Subscribe Button -->
 <tr><td align="center" style="padding:0 24px 16px;">
 <a href="${subscribeUrl}" target="_blank"
@@ -723,24 +740,11 @@ ${bulletRows}
 <tr><td style="padding:0 24px 24px;">
 <p style="margin:0;font-size:12px;color:#888;line-height:1.5;text-align:center;">
   By clicking subscribe, you agree to receive SMS messages from G&amp;KK NAPA Auto Parts
-  about order updates, store hours, and occasional promotions. Msg &amp; data rates may apply.
-  Reply STOP to opt out, HELP for help.
-</p>
-</td></tr>
-
-<!-- Divider + manual fallback -->
-<tr><td style="padding:0 24px 24px;">
-<p style="margin:0;font-size:13px;color:#666;line-height:1.5;text-align:center;">
-  Button not working? <a href="https://gkk-napa.com/sms/subscribe" style="color:#0A0094;font-weight:600;">Subscribe on our website</a> instead.
-</p>
-</td></tr>
-
-<!-- Disclosure -->
-<tr><td style="padding:0 24px 24px;">
-<p style="margin:0;font-size:12px;color:#888;line-height:1.5;">
-  Message frequency varies. Consent is not a condition of purchase. Carriers are not liable for delayed or undelivered messages.
-  <a href="https://gkk-napa.com/privacy.html" style="color:#0A0094;">Privacy Policy</a> |
-  <a href="https://gkk-napa.com/terms.html" style="color:#0A0094;">Terms of Service</a>
+  about order updates, store hours/closures, and occasional promotions.
+  Message frequency varies. Msg &amp; data rates may apply.
+  Consent is not a condition of purchase. Reply STOP to opt out, HELP for help.
+  See <a href="https://gkk-napa.com/privacy.html" style="color:#0A0094;">Privacy Policy</a> and
+  <a href="https://gkk-napa.com/terms.html" style="color:#0A0094;">Terms of Service</a>.
 </p>
 </td></tr>
 
