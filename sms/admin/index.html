@@ -1185,9 +1185,16 @@ Occasional deals &amp; promotions</textarea>
     window.deleteCustomer = async function(id, name) {
       if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
       try {
-        await fetch(`${WORKER_BASE}/admin/customers/${id}`, { method: "DELETE", headers: authHeaders() });
+        const resp = await fetch(`${WORKER_BASE}/admin/customers/${id}`, { method: "DELETE", headers: authHeaders() });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          alert(`Delete failed: ${err.error || resp.statusText}`);
+          return;
+        }
         loadCustomers();
-      } catch { /* ignore */ }
+      } catch (e) {
+        alert(`Delete failed: ${e.message}`);
+      }
     };
 
     // ─── Invite (with preview modal) ───────────────────────

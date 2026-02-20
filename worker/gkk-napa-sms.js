@@ -59,14 +59,14 @@ function checkAdmin(request, env) {
 function jsonOk(corsHeaders, data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }
 
 function jsonError(corsHeaders, message, status) {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }
 
@@ -543,10 +543,18 @@ async function handleAddCustomer(request, env, corsHeaders) {
     if (existing) return jsonError(corsHeaders, "A customer with this phone number already exists.", 409);
   }
 
+  // If phone provided, look up line type and generate short code
+  let lineType = null;
+  let shortCode = null;
+  if (phone) {
+    lineType = await lookupLineType(phone, env);
+    shortCode = generateShortCode();
+  }
+
   const now = new Date().toISOString();
   const result = await env.DB.prepare(
-    "INSERT INTO customers (phone, name, email, store, source, notes, created_at, updated_at) VALUES (?, ?, ?, ?, 'admin', ?, ?, ?)"
-  ).bind(phone, name || null, email || null, store || null, notes || null, now, now).run();
+    "INSERT INTO customers (phone, name, email, store, source, notes, line_type, short_code, created_at, updated_at) VALUES (?, ?, ?, ?, 'admin', ?, ?, ?, ?, ?)"
+  ).bind(phone, name || null, email || null, store || null, notes || null, lineType, shortCode, now, now).run();
 
   const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(result.meta.last_row_id).first();
   return jsonOk(corsHeaders, customer, 201);
@@ -555,10 +563,24 @@ async function handleAddCustomer(request, env, corsHeaders) {
 async function handleUpdateCustomer(request, path, env, corsHeaders) {
   const id = parseInt(path.split("/").pop());
   const body = await request.json();
-  const { name, email, store, notes, notes_append, sms_status, line_type, invite_sent_at } = body;
+  const { name, phone: rawPhone, email, store, notes, notes_append, sms_status, line_type, invite_sent_at } = body;
 
   const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
   if (!existing) return jsonError(corsHeaders, "Customer not found.", 404);
+
+  // Validate and normalize phone if provided
+  let phone;
+  if (rawPhone !== undefined) {
+    if (rawPhone) {
+      phone = normalizePhone(rawPhone);
+      if (!phone) return jsonError(corsHeaders, "Invalid phone number.", 400);
+      // Check for duplicate phone (exclude this customer)
+      const dup = await env.DB.prepare("SELECT id FROM customers WHERE phone = ? AND id != ?").bind(phone, id).first();
+      if (dup) return jsonError(corsHeaders, "A customer with this phone number already exists.", 409);
+    } else {
+      phone = null;
+    }
+  }
 
   if (store && !VALID_STORES.includes(store)) {
     return jsonError(corsHeaders, "Invalid store.", 400);
@@ -574,6 +596,20 @@ async function handleUpdateCustomer(request, path, env, corsHeaders) {
   const updates = [];
   const binds = [];
 
+  if (rawPhone !== undefined) {
+    updates.push("phone = ?"); binds.push(phone);
+    // If phone changed, re-lookup line type and ensure short code
+    if (phone && phone !== existing.phone) {
+      const newLineType = await lookupLineType(phone, env);
+      updates.push("line_type = ?"); binds.push(newLineType);
+      if (!existing.short_code) {
+        updates.push("short_code = ?"); binds.push(generateShortCode());
+      }
+    }
+    if (!phone) {
+      updates.push("line_type = ?"); binds.push(null);
+    }
+  }
   if (name !== undefined) { updates.push("name = ?"); binds.push(name || null); }
   if (email !== undefined) { updates.push("email = ?"); binds.push(email || null); }
   if (store !== undefined) { updates.push("store = ?"); binds.push(store || null); }
