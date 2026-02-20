@@ -976,14 +976,15 @@ async function handleInvite(request, env, corsHeaders) {
     const greeting = customer.name || "Valued Customer";
 
     // Format phone for display: +12174419077 → (217) 441-9077
-    const hasMobile = customer.phone && customer.line_type === 'mobile';
-    const displayPhone = hasMobile
+    // Any non-landline phone can receive SMS (mobile, voip, nonfixedvoip, etc.)
+    const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+    const displayPhone = canSms
       ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
       : null;
 
-    // Mobile customers get personalized one-click link; others get the subscribe form
+    // Non-landline customers get personalized one-click link; others get the subscribe form
     let subscribeUrl;
-    if (hasMobile) {
+    if (canSms) {
       const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
       subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
     } else {

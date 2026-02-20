@@ -1184,6 +1184,7 @@ Occasional deals &amp; promotions</textarea>
     // ─── Delete Customer ─────────────────────────────────────
     window.deleteCustomer = async function(id, name) {
       if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      await new Promise(r => setTimeout(r, 50));
       try {
         const resp = await fetch(`${WORKER_BASE}/admin/customers/${id}/delete`, { method: "POST", headers: authHeaders() });
         if (!resp.ok) {
@@ -1193,7 +1194,7 @@ Occasional deals &amp; promotions</textarea>
         }
         loadCustomers();
       } catch (e) {
-        alert(`Delete failed: ${e.message}`);
+        alert(`Delete failed: ${e.message}\n\nURL: ${WORKER_BASE}/admin/customers/${id}/delete\nPlease check DevTools Network tab for details.`);
       }
     };
 
