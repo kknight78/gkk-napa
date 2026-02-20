@@ -655,6 +655,8 @@ async function handleDeleteCustomer(path, env, corsHeaders) {
   const existing = await env.DB.prepare("SELECT id FROM customers WHERE id = ?").bind(id).first();
   if (!existing) return jsonError(corsHeaders, "Customer not found.", 404);
 
+  // Delete associated messages first (foreign key constraint)
+  await env.DB.prepare("DELETE FROM messages WHERE customer_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM customers WHERE id = ?").bind(id).run();
   return jsonOk(corsHeaders, { success: true });
 }
