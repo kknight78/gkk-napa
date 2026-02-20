@@ -250,10 +250,14 @@ export default {
         return handleUpdateCustomer(request, path, env, corsHeaders);
       }
 
-      // ── Admin: DELETE /admin/customers/:id ──
+      // ── Admin: DELETE /admin/customers/:id (supports both DELETE and POST to /delete) ──
       if (request.method === "DELETE" && path.match(/^\/admin\/customers\/\d+$/)) {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
-        return handleDeleteCustomer(path, env, corsHeaders);
+        return handleDeleteCustomer(path.replace(/\/delete$/, ""), env, corsHeaders);
+      }
+      if (request.method === "POST" && path.match(/^\/admin\/customers\/\d+\/delete$/)) {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleDeleteCustomer(path.replace(/\/delete$/, ""), env, corsHeaders);
       }
 
       // ── Admin: POST /admin/import ──

@@ -1185,7 +1185,7 @@ Occasional deals &amp; promotions</textarea>
     window.deleteCustomer = async function(id, name) {
       if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
       try {
-        const resp = await fetch(`${WORKER_BASE}/admin/customers/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${authToken}` } });
+        const resp = await fetch(`${WORKER_BASE}/admin/customers/${id}/delete`, { method: "POST", headers: authHeaders() });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
           alert(`Delete failed: ${err.error || resp.statusText}`);
