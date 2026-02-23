@@ -141,17 +141,60 @@ async function ensureShortCode(db, customerId) {
 }
 
 const SMS_LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
+const WORKER_URL = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
+
+// ─── Media proxy (strips content-type params for Twilio) ────
+function proxyMediaUrl(mediaUrl) {
+  if (!mediaUrl) return null;
+  // Proxy video URLs through our worker so Twilio gets clean content-type headers
+  if (mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || mediaUrl.includes('/video/')) {
+    return `${WORKER_URL}/media/proxy?url=${encodeURIComponent(mediaUrl)}`;
+  }
+  return mediaUrl;
+}
+
+async function handleMediaProxy(url) {
+  const targetUrl = url.searchParams.get('url');
+  if (!targetUrl) return new Response("Missing url parameter", { status: 400 });
+
+  // Only allow known media hosts to prevent open proxy abuse
+  try {
+    const parsed = new URL(targetUrl);
+    const allowed = ['res.cloudinary.com', 'cloudinary.com', 'f002.backblazeb2.com'];
+    if (!allowed.some(h => parsed.hostname.endsWith(h))) {
+      return new Response("Host not allowed", { status: 403 });
+    }
+  } catch {
+    return new Response("Invalid URL", { status: 400 });
+  }
+
+  const resp = await fetch(targetUrl);
+  if (!resp.ok) return new Response("Upstream error", { status: resp.status });
+
+  // Strip codec params: "video/mp4;codecs=avc1" → "video/mp4"
+  let contentType = resp.headers.get('content-type') || 'application/octet-stream';
+  contentType = contentType.split(';')[0].trim();
+
+  return new Response(resp.body, {
+    headers: {
+      'Content-Type': contentType,
+      'Content-Length': resp.headers.get('content-length') || '',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  });
+}
 
 // ─── Twilio helpers ──────────────────────────────────────────
 async function sendSms(env, to, body, mediaUrl) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
+  const finalMediaUrl = proxyMediaUrl(mediaUrl);
   const params = new URLSearchParams({
     From: env.TWILIO_PHONE_NUMBER,
     To: to,
-    Body: body,
-    StatusCallback: `https://gkk-napa-sms.kellyraeknight78.workers.dev/twilio/status`,
+    StatusCallback: `${WORKER_URL}/twilio/status`,
   });
-  if (mediaUrl) params.set("MediaUrl", mediaUrl);
+  if (body) params.set("Body", body);
+  if (finalMediaUrl) params.set("MediaUrl", finalMediaUrl);
 
   const resp = await fetch(url, {
     method: "POST",
@@ -327,6 +370,14 @@ export default {
       // ── Public: GET /l/:code (link shortener redirect) ──
       if (request.method === "GET" && path.match(/^\/l\/[a-z0-9]{7}$/)) {
         return handleLinkRedirect(path, env);
+      }
+
+      // ── Public: GET /media/proxy (clean content-type for Twilio) ──
+      if (request.method === "GET" && path === "/media/proxy") {
+        return handleMediaProxy(url);
+      }
+      if (request.method === "HEAD" && path === "/media/proxy") {
+        return handleMediaProxy(url);
       }
 
       // ── Admin: GET /admin/dashboard ──

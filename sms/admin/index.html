@@ -1345,11 +1345,23 @@ Occasional deals &amp; promotions</textarea>
       charCount.className = "char-count" + (len > 1500 ? " over" : len > 1400 ? " warn" : "");
     });
 
-    // Image option handling
+    // Image/video option handling
     const imagePreview = document.getElementById("imagePreview");
     const customImageRow = document.getElementById("customImageRow");
     const campaignImageUrl = document.getElementById("campaignImageUrl");
     const LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
+
+    function isVideoUrl(url) {
+      return /\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i.test(url) || url.includes('/video/');
+    }
+
+    function mediaPreviewHtml(url) {
+      if (!url) return '<div style="font-size:13px;color:var(--dim);padding:8px 0;">Enter a URL above</div>';
+      if (isVideoUrl(url)) {
+        return `<video src="${esc(url)}" controls muted playsinline style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);"></video>`;
+      }
+      return `<img src="${esc(url)}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+    }
 
     document.querySelectorAll('input[name="imageOption"]').forEach(radio => {
       radio.addEventListener("change", () => {
@@ -1358,19 +1370,16 @@ Occasional deals &amp; promotions</textarea>
         if (val === "logo") {
           imagePreview.innerHTML = `<img src="${LOGO_URL}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
         } else if (val === "none") {
-          imagePreview.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:8px 0;">No image — will send as SMS (cheaper)</div>';
+          imagePreview.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:8px 0;">No media — will send as SMS (cheaper)</div>';
         } else {
-          const url = campaignImageUrl.value.trim();
-          imagePreview.innerHTML = url
-            ? `<img src="${esc(url)}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`
-            : '<div style="font-size:13px;color:var(--dim);padding:8px 0;">Enter an image URL above</div>';
+          imagePreview.innerHTML = mediaPreviewHtml(campaignImageUrl.value.trim());
         }
       });
     });
     campaignImageUrl.addEventListener("input", () => {
       const url = campaignImageUrl.value.trim();
       if (url) {
-        imagePreview.innerHTML = `<img src="${esc(url)}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+        imagePreview.innerHTML = mediaPreviewHtml(url);
       }
     });
 
@@ -1424,7 +1433,8 @@ Occasional deals &amp; promotions</textarea>
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send test.");
 
-        testSuccess.textContent = "Test sent! Check your phone.";
+        const sid = data.sid || "";
+        testSuccess.innerHTML = `Test sent! Check your phone.${sid ? ` <span style="font-size:11px;color:var(--dim);user-select:all;cursor:text;">SID: ${sid}</span>` : ""}`;
         testSuccess.style.display = "block";
       } catch (e) {
         testError.textContent = e.message;
