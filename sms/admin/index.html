@@ -537,6 +537,16 @@
             Loading recipient count...
           </div>
 
+          <div style="margin-top:16px;padding:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.18);border-radius:12px;">
+            <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--dim);margin-bottom:8px;">Send Test First</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="testPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
+              <button class="btn-secondary" id="btnSendTest" style="flex-shrink:0;padding:10px 16px;">Send Test</button>
+            </div>
+            <div class="error" id="testError" style="display:none;font-size:13px;"></div>
+            <div class="success" id="testSuccess" style="display:none;font-size:13px;"></div>
+          </div>
+
           <div style="margin-top:16px;">
             <button class="btn-primary" id="btnSend" style="width:100%;font-size:16px;padding:14px;">Send Campaign</button>
           </div>
@@ -1371,6 +1381,57 @@ Occasional deals &amp; promotions</textarea>
     }
 
     campaignStore.addEventListener("change", updateRecipientPreview);
+
+    // ─── Send Test SMS ──────────────────────────────────────
+    const testPhone = document.getElementById("testPhone");
+    const testError = document.getElementById("testError");
+    const testSuccess = document.getElementById("testSuccess");
+
+    testPhone.addEventListener("input", () => {
+      const pos = testPhone.selectionStart;
+      const before = testPhone.value.length;
+      testPhone.value = formatPhone(testPhone.value);
+      const after = testPhone.value.length;
+      testPhone.setSelectionRange(pos + (after - before), pos + (after - before));
+    });
+
+    document.getElementById("btnSendTest").addEventListener("click", async () => {
+      testError.style.display = "none";
+      testSuccess.style.display = "none";
+
+      const body = campaignBody.value.trim();
+      const phone = testPhone.value.trim();
+
+      if (!body) { testError.textContent = "Write a message first."; testError.style.display = "block"; return; }
+      if (!phone) { testError.textContent = "Enter a phone number."; testError.style.display = "block"; return; }
+
+      const imageUrl = getImageUrl();
+      const btn = document.getElementById("btnSendTest");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      try {
+        const payload = { body, phone };
+        if (imageUrl) payload.image_url = imageUrl;
+
+        const resp = await fetch(`${WORKER_BASE}/admin/send-test`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Failed to send test.");
+
+        testSuccess.textContent = "Test sent! Check your phone.";
+        testSuccess.style.display = "block";
+      } catch (e) {
+        testError.textContent = e.message;
+        testError.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Test";
+      }
+    });
 
     async function updateRecipientPreview() {
       const params = new URLSearchParams({ status: "subscribed" });

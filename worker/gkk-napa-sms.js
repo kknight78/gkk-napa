@@ -140,6 +140,8 @@ async function ensureShortCode(db, customerId) {
   return code;
 }
 
+const SMS_LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
+
 // ─── Twilio helpers ──────────────────────────────────────────
 async function sendSms(env, to, body, mediaUrl) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -278,6 +280,12 @@ export default {
         return handleInvite(request, env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/send-test ──
+      if (request.method === "POST" && path === "/admin/send-test") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleSendTest(request, env, corsHeaders);
+      }
+
       // ── Admin: POST /admin/send ──
       if (request.method === "POST" && path === "/admin/send") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -385,7 +393,7 @@ async function handleSubscribe(request, env, corsHeaders) {
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     const confirmMsg =
       "Welcome to G&KK NAPA text updates! You'll receive order notifications, store hours, and occasional deals. Reply STOP to opt out, HELP for help. Msg&data rates may apply.";
-    const result = await sendSms(env, phone, confirmMsg);
+    const result = await sendSms(env, phone, confirmMsg, SMS_LOGO_URL);
 
     // Log the confirmation message
     if (result.ok) {
@@ -442,7 +450,7 @@ async function handleQuickSubscribe(url, env) {
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     const welcomeMsg =
       "Welcome to G&KK NAPA text updates! You'll receive order notifications, store hours, and occasional deals. Reply STOP to opt out, HELP for help. Msg&data rates may apply.";
-    const result = await sendSms(env, customer.phone, welcomeMsg);
+    const result = await sendSms(env, customer.phone, welcomeMsg, SMS_LOGO_URL);
     if (result.ok) {
       await env.DB.prepare(
         "INSERT INTO messages (twilio_sid, customer_id, direction, body, status, created_at, updated_at) VALUES (?, ?, 'outbound', ?, ?, ?, ?)"
@@ -1110,6 +1118,28 @@ ${phoneNote}
 // ═══════════════════════════════════════════════════════════════
 // Phase 4: SMS Campaign Sending
 // ═══════════════════════════════════════════════════════════════
+
+async function handleSendTest(request, env, corsHeaders) {
+  const body = await request.json();
+  const { body: messageBody, phone: rawPhone, image_url } = body;
+
+  if (!messageBody || !messageBody.trim()) return jsonError(corsHeaders, "Message body is required.", 400);
+  if (!rawPhone) return jsonError(corsHeaders, "Phone number is required.", 400);
+
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return jsonError(corsHeaders, "Invalid phone number.", 400);
+
+  const fullMessage = messageBody.trim() + "\n\nReply STOP to opt out.";
+  const mediaUrl = image_url || null;
+
+  const result = await sendSms(env, phone, fullMessage, mediaUrl);
+
+  if (!result.ok) {
+    return jsonError(corsHeaders, `Twilio error: ${result.error}`, 502);
+  }
+
+  return jsonOk(corsHeaders, { success: true, sid: result.sid });
+}
 
 async function handleSendCampaign(request, env, corsHeaders) {
   const body = await request.json();
