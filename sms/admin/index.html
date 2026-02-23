@@ -500,25 +500,26 @@
           <label for="campaignName">Campaign Name</label>
           <input id="campaignName" type="text" placeholder="e.g., February Promo" maxlength="100" />
 
-          <label for="campaignBody">Message</label>
-          <textarea id="campaignBody" placeholder="Type your message..." maxlength="1500" style="min-height:120px;"></textarea>
+          <label for="campaignBody">Message <span style="font-weight:400;font-size:12px;color:var(--dim);">(optional if media is attached)</span></label>
+          <textarea id="campaignBody" placeholder="Type your message... (optional if sending media only)" maxlength="1500" style="min-height:120px;"></textarea>
           <div class="char-count" id="charCount">0 / 1,500</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." will be appended automatically.</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." appended automatically. Links auto-shortened via gkk-napa.com.</div>
 
-          <label for="campaignImage">Image</label>
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;">
+          <label>Media</label>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
               <input type="radio" name="imageOption" value="logo" checked style="width:auto;accent-color:var(--napa-yellow);" /> Store logo
             </label>
             <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-              <input type="radio" name="imageOption" value="custom" style="width:auto;accent-color:var(--napa-yellow);" /> Custom URL
+              <input type="radio" name="imageOption" value="custom" style="width:auto;accent-color:var(--napa-yellow);" /> Image / Video URL
             </label>
             <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-              <input type="radio" name="imageOption" value="none" style="width:auto;accent-color:var(--napa-yellow);" /> No image (SMS only)
+              <input type="radio" name="imageOption" value="none" style="width:auto;accent-color:var(--napa-yellow);" /> No media (SMS only)
             </label>
           </div>
           <div id="customImageRow" style="display:none;margin-bottom:4px;">
-            <input id="campaignImageUrl" type="url" placeholder="https://example.com/image.png" />
+            <input id="campaignImageUrl" type="url" placeholder="https://example.com/image.png or video.mp4" />
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Supports images (jpg, png, gif) and video (mp4). Max 5 MB.</div>
           </div>
           <div id="imagePreview" style="margin-bottom:8px;">
             <img src="https://gkk-napa.com/assets/sms-logo.png" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
@@ -1402,16 +1403,17 @@ Occasional deals &amp; promotions</textarea>
       const body = campaignBody.value.trim();
       const phone = testPhone.value.trim();
 
-      if (!body) { testError.textContent = "Write a message first."; testError.style.display = "block"; return; }
+      const imageUrl = getImageUrl();
+      if (!body && !imageUrl) { testError.textContent = "Write a message or attach media."; testError.style.display = "block"; return; }
       if (!phone) { testError.textContent = "Enter a phone number."; testError.style.display = "block"; return; }
 
-      const imageUrl = getImageUrl();
       const btn = document.getElementById("btnSendTest");
       btn.disabled = true;
       btn.textContent = "Sending...";
 
       try {
-        const payload = { body, phone };
+        const payload = { phone };
+        if (body) payload.body = body;
         if (imageUrl) payload.image_url = imageUrl;
 
         const resp = await fetch(`${WORKER_BASE}/admin/send-test`, {
@@ -1454,21 +1456,25 @@ Occasional deals &amp; promotions</textarea>
       const name = campaignName.value.trim();
       const body = campaignBody.value.trim();
 
+      const imageUrl = getImageUrl();
       if (!name) { sendError.textContent = "Campaign name is required."; sendError.style.display = "block"; return; }
-      if (!body) { sendError.textContent = "Message body is required."; sendError.style.display = "block"; return; }
+      if (!body && !imageUrl) { sendError.textContent = "Message body or media is required."; sendError.style.display = "block"; return; }
       if (body.length > 1500) { sendError.textContent = "Message is too long."; sendError.style.display = "block"; return; }
 
-      const imageUrl = getImageUrl();
-      const msgType = imageUrl ? "MMS (with image)" : "SMS (text only)";
+      const msgType = imageUrl ? (body ? "MMS (with media)" : "MMS (media only)") : "SMS (text only)";
       const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
-      if (!confirm(`Send this ${msgType} campaign to all subscribed customers at ${storeName}?\n\nMessage:\n${body}\n\nReply STOP to opt out.`)) return;
+      const confirmMsg = body
+        ? `Send this ${msgType} campaign to all subscribed customers at ${storeName}?\n\nMessage:\n${body}\n\nReply STOP to opt out.`
+        : `Send this ${msgType} campaign to all subscribed customers at ${storeName}?\n\n(Media only, no text body)`;
+      if (!confirm(confirmMsg)) return;
 
       const btn = document.getElementById("btnSend");
       btn.disabled = true;
       btn.textContent = "Sending...";
 
       try {
-        const payload = { name, body, store: campaignStore.value || undefined };
+        const payload = { name, store: campaignStore.value || undefined };
+        if (body) payload.body = body;
         if (imageUrl) payload.image_url = imageUrl;
 
         const resp = await fetch(`${WORKER_BASE}/admin/send`, {

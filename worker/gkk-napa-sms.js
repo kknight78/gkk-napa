@@ -324,6 +324,11 @@ export default {
         return handleShortUrl(path, env);
       }
 
+      // ── Public: GET /l/:code (link shortener redirect) ──
+      if (request.method === "GET" && path.match(/^\/l\/[a-z0-9]{7}$/)) {
+        return handleLinkRedirect(path, env);
+      }
+
       // ── Admin: GET /admin/dashboard ──
       if (request.method === "GET" && path === "/admin/dashboard") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -737,6 +742,53 @@ async function handleShortUrl(path, env) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Link Shortener
+// ═══════════════════════════════════════════════════════════════
+
+async function handleLinkRedirect(path, env) {
+  const code = path.split('/').pop();
+  const row = await env.DB.prepare('SELECT url FROM short_links WHERE code = ?').bind(code).first();
+  if (!row) {
+    return new Response("Not found", { status: 404 });
+  }
+  return Response.redirect(row.url, 302);
+}
+
+/**
+ * Find URLs in text and replace them with gkk-napa.com/l/ short links.
+ * Reuses existing short links for the same URL.
+ */
+async function shortenUrlsInText(text, env) {
+  const urlRegex = /https?:\/\/[^\s)>\]]+/gi;
+  const urls = text.match(urlRegex);
+  if (!urls) return text;
+
+  // Ensure short_links table exists
+  await env.DB.prepare(
+    "CREATE TABLE IF NOT EXISTS short_links (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, url TEXT NOT NULL, created_at TEXT NOT NULL)"
+  ).run();
+
+  let result = text;
+  for (const url of urls) {
+    // Skip if already a gkk-napa.com short link
+    if (url.includes('gkk-napa.com/l/') || url.includes('gkk-napa.com/s/')) continue;
+
+    // Check if we already have a short link for this URL
+    let row = await env.DB.prepare('SELECT code FROM short_links WHERE url = ?').bind(url).first();
+    if (!row) {
+      const code = generateShortCode();
+      const now = new Date().toISOString();
+      await env.DB.prepare('INSERT INTO short_links (code, url, created_at) VALUES (?, ?, ?)').bind(code, url, now).run();
+      row = { code };
+    }
+
+    result = result.replace(url, `https://gkk-napa.com/l/${row.code}`);
+  }
+
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Admin: Dashboard (alerts + actions + KPIs)
 // ═══════════════════════════════════════════════════════════════
 
@@ -1123,16 +1175,23 @@ async function handleSendTest(request, env, corsHeaders) {
   const body = await request.json();
   const { body: messageBody, phone: rawPhone, image_url } = body;
 
-  if (!messageBody || !messageBody.trim()) return jsonError(corsHeaders, "Message body is required.", 400);
+  const hasBody = messageBody && messageBody.trim();
+  const mediaUrl = image_url || null;
+
+  if (!hasBody && !mediaUrl) return jsonError(corsHeaders, "Message body or media is required.", 400);
   if (!rawPhone) return jsonError(corsHeaders, "Phone number is required.", 400);
 
   const phone = normalizePhone(rawPhone);
   if (!phone) return jsonError(corsHeaders, "Invalid phone number.", 400);
 
-  const fullMessage = messageBody.trim() + "\n\nReply STOP to opt out.";
-  const mediaUrl = image_url || null;
+  // Auto-shorten any URLs in the message body
+  let finalBody = hasBody ? messageBody.trim() : "";
+  if (finalBody) {
+    finalBody = await shortenUrlsInText(finalBody, env);
+    finalBody += "\n\nReply STOP to opt out.";
+  }
 
-  const result = await sendSms(env, phone, fullMessage, mediaUrl);
+  const result = await sendSms(env, phone, finalBody, mediaUrl);
 
   if (!result.ok) {
     return jsonError(corsHeaders, `Twilio error: ${result.error}`, 502);
@@ -1145,19 +1204,23 @@ async function handleSendCampaign(request, env, corsHeaders) {
   const body = await request.json();
   const { name, body: messageBody, store, image_url } = body;
 
+  const hasBody = messageBody && messageBody.trim();
+  const mediaUrl = image_url || null;
+
   if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
-  if (!messageBody || !messageBody.trim()) return jsonError(corsHeaders, "Message body is required.", 400);
-  if (messageBody.length > 1500) return jsonError(corsHeaders, "Message body must be under 1500 characters.", 400);
+  if (!hasBody && !mediaUrl) return jsonError(corsHeaders, "Message body or media is required.", 400);
+  if (hasBody && messageBody.length > 1500) return jsonError(corsHeaders, "Message body must be under 1500 characters.", 400);
 
   if (store && !VALID_STORES.includes(store)) {
     return jsonError(corsHeaders, "Invalid store filter.", 400);
   }
 
-  // Append opt-out footer
-  const fullMessage = messageBody.trim() + "\n\nReply STOP to opt out.";
-
-  // Use provided image URL (or null for plain SMS — no default)
-  const mediaUrl = image_url || null;
+  // Auto-shorten URLs and append opt-out footer
+  let fullMessage = hasBody ? messageBody.trim() : "";
+  if (fullMessage) {
+    fullMessage = await shortenUrlsInText(fullMessage, env);
+    fullMessage += "\n\nReply STOP to opt out.";
+  }
 
   // Query subscribed customers
   let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
