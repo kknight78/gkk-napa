@@ -706,6 +706,12 @@ export default {
         return handleSendTest(request, env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/send-test-email ──
+      if (request.method === "POST" && path === "/admin/send-test-email") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleSendTestEmail(request, env, corsHeaders);
+      }
+
       // ── Admin: POST /admin/send ──
       if (request.method === "POST" && path === "/admin/send") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -1776,6 +1782,59 @@ async function handleSendTest(request, env, corsHeaders) {
   }
 
   return jsonOk(corsHeaders, { success: true, sid: result.sid });
+}
+
+async function handleSendTestEmail(request, env, corsHeaders) {
+  if (!env.RESEND_API_KEY) return jsonError(corsHeaders, "Email sending is not configured (RESEND_API_KEY).", 500);
+
+  const body = await request.json();
+  const { email, subject, sms_text, image_url } = body;
+
+  if (!email || !email.includes("@")) return jsonError(corsHeaders, "Valid email address is required.", 400);
+  if (!sms_text && !image_url) return jsonError(corsHeaders, "Message text or image is required.", 400);
+
+  const emailSubject = subject || "G&KK NAPA — Creative Studio Test";
+
+  // Build a simple HTML email showing the MMS image + SMS text
+  const imgHtml = image_url
+    ? `<tr><td style="padding:0 0 16px;"><img src="${escHtml(image_url)}" alt="MMS Preview" style="max-width:100%;border-radius:8px;" /></td></tr>`
+    : "";
+  const textHtml = sms_text
+    ? `<tr><td style="padding:16px;background:#f5f5f5;border-radius:8px;font-family:monospace;font-size:14px;line-height:1.5;white-space:pre-wrap;color:#333;">${escHtml(sms_text)}</td></tr>`
+    : "";
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#fff;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;padding:24px;">
+  <tr><td style="padding:0 0 12px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">Creative Studio Test Preview</td></tr>
+  ${imgHtml}
+  ${textHtml ? `<tr><td style="padding:12px 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">SMS Text</td></tr>` + textHtml : ""}
+  <tr><td style="padding:24px 0 0;font-size:11px;color:#aaa;text-align:center;">Sent from G&amp;KK NAPA Creative Studio</td></tr>
+</table></body></html>`;
+
+  try {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: env.FROM_EMAIL,
+        to: [email],
+        reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
+        subject: emailSubject,
+        html,
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error(JSON.stringify({ tag: "TEST_EMAIL_ERROR", error: err }));
+      return jsonError(corsHeaders, `Email send failed: ${err}`, 502);
+    }
+
+    return jsonOk(corsHeaders, { success: true });
+  } catch (e) {
+    console.error(JSON.stringify({ tag: "TEST_EMAIL_EXCEPTION", error: e.message }));
+    return jsonError(corsHeaders, `Email error: ${e.message}`, 500);
+  }
 }
 
 async function handleSendCampaign(request, env, corsHeaders) {

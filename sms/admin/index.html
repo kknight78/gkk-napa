@@ -1161,7 +1161,11 @@
                 <h3>Test Send</h3>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <input id="csTestPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
-                  <button class="btn-secondary" id="btnCsSendTest" style="flex-shrink:0;padding:10px 16px;" disabled>Send Test</button>
+                  <button class="btn-secondary" id="btnCsSendTest" style="flex-shrink:0;padding:10px 16px;" disabled>Send SMS</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+                  <input id="csTestEmail" type="email" placeholder="email@example.com" style="flex:1;padding:10px 12px;font-size:14px;" />
+                  <button class="btn-secondary" id="btnCsSendTestEmail" style="flex-shrink:0;padding:10px 16px;" disabled>Send Email</button>
                 </div>
                 <div class="error" id="csTestError" style="display:none;font-size:13px;"></div>
                 <div class="success" id="csTestSuccess" style="display:none;font-size:13px;"></div>
@@ -2715,6 +2719,7 @@ Occasional deals &amp; promotions</textarea>
       csPreviewStale = true;
       document.getElementById("csStaleBar").classList.add("visible");
       document.getElementById("btnCsSendTest").disabled = true;
+      document.getElementById("btnCsSendTestEmail").disabled = true;
       document.getElementById("btnCsSave").disabled = true;
     }
 
@@ -3115,6 +3120,7 @@ Occasional deals &amp; promotions</textarea>
 
         // 8. Enable test/save buttons
         document.getElementById("btnCsSendTest").disabled = false;
+        document.getElementById("btnCsSendTestEmail").disabled = false;
         document.getElementById("btnCsSave").disabled = false;
 
       } catch (e) {
@@ -3170,7 +3176,45 @@ Occasional deals &amp; promotions</textarea>
         errEl.style.display = "block";
       } finally {
         btn.disabled = false;
-        btn.textContent = "Send Test";
+        btn.textContent = "Send SMS";
+      }
+    });
+
+    // ─── CS: Send Test Email ──────────────────────────────────
+    document.getElementById("btnCsSendTestEmail").addEventListener("click", async () => {
+      const errEl = document.getElementById("csTestError");
+      const successEl = document.getElementById("csTestSuccess");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      const email = document.getElementById("csTestEmail").value.trim();
+      if (!email || !email.includes("@")) { errEl.textContent = "Enter a valid email address."; errEl.style.display = "block"; return; }
+      if (!csLastPreview) { errEl.textContent = "Generate a preview first."; errEl.style.display = "block"; return; }
+
+      const btn = document.getElementById("btnCsSendTestEmail");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/send-test-email`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            email,
+            sms_text: csLastPreview.smsPreview || "",
+            image_url: csComposedImageUrl,
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Failed to send test email.");
+        successEl.textContent = "Test email sent! Check your inbox.";
+        successEl.style.display = "block";
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Email";
       }
     });
 
