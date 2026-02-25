@@ -1054,7 +1054,10 @@
               <div class="ob-section">
                 <h3>Product Image</h3>
                 <div class="media-source-group">
-                  <div class="media-source-card active" data-source="napa" onclick="csToggleMediaSource('napa')">
+                  <div class="media-source-card active" data-source="partnum" onclick="csToggleMediaSource('partnum')">
+                    Part #
+                  </div>
+                  <div class="media-source-card" data-source="napa" onclick="csToggleMediaSource('napa')">
                     NAPA URL
                   </div>
                   <div class="media-source-card" data-source="url" onclick="csToggleMediaSource('url')">
@@ -1065,8 +1068,24 @@
                   </div>
                 </div>
 
+                <!-- Part Number panel -->
+                <div id="csMediaPartnum">
+                  <div style="display:flex;gap:8px;align-items:flex-end;">
+                    <div style="flex:1;">
+                      <label for="csPartNumber" style="margin-top:0;">NAPA Part Number</label>
+                      <input id="csPartNumber" type="text" placeholder="e.g. GRT 48880279 or NOL75521" />
+                    </div>
+                    <button class="btn-primary" id="btnCsPartFetch" style="padding:12px 16px;margin-bottom:0;">Fetch</button>
+                  </div>
+                  <div class="error" id="csPartFetchError" style="display:none;font-size:13px;"></div>
+                  <div id="csPartResults" class="napa-results">
+                    <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px;">FETCHED FROM NAPA:</div>
+                    <div id="csPartResultBody"></div>
+                  </div>
+                </div>
+
                 <!-- NAPA URL panel -->
-                <div id="csMediaNapa">
+                <div id="csMediaNapa" style="display:none;">
                   <div style="display:flex;gap:8px;align-items:flex-end;">
                     <div style="flex:1;">
                       <label for="csNapaUrl" style="margin-top:0;">NAPA Product URL</label>
@@ -2505,7 +2524,7 @@ Occasional deals &amp; promotions</textarea>
     // Creative Studio v3
     // ═══════════════════════════════════════════════════════════
 
-    let csMediaSource = "napa";
+    let csMediaSource = "partnum";
     let csProductImageUrl = null;   // URL of the product image (for canvas)
     let csLastPreview = null;       // cached preview response
     let csPreviewStale = false;
@@ -2548,6 +2567,7 @@ Occasional deals &amp; promotions</textarea>
       csMediaSource = source;
       // Only update cards inside #sendModeCreative
       document.querySelectorAll("#sendModeCreative .media-source-card").forEach(c => c.classList.toggle("active", c.dataset.source === source));
+      document.getElementById("csMediaPartnum").style.display = source === "partnum" ? "block" : "none";
       document.getElementById("csMediaNapa").style.display = source === "napa" ? "block" : "none";
       document.getElementById("csMediaUrl").style.display = source === "url" ? "block" : "none";
       document.getElementById("csMediaUpload").style.display = source === "upload" ? "block" : "none";
@@ -2724,6 +2744,78 @@ Occasional deals &amp; promotions</textarea>
     }
 
     // ─── CS: NAPA Fetch ──────────────────────────────────────
+    // ─── CS: Part Number Fetch ──────────────────────────────
+    document.getElementById("btnCsPartFetch").addEventListener("click", async () => {
+      const raw = document.getElementById("csPartNumber").value.trim();
+      const errEl = document.getElementById("csPartFetchError");
+      const resultsEl = document.getElementById("csPartResults");
+      errEl.style.display = "none";
+      resultsEl.classList.remove("visible");
+
+      if (!raw) { errEl.textContent = "Enter a NAPA part number."; errEl.style.display = "block"; return; }
+
+      // Strip "Part #:" prefix if pasted, remove spaces → e.g. "GRT 48880279" → "GRT48880279"
+      const partNum = raw.replace(/^part\s*#\s*:?\s*/i, "").replace(/\s+/g, "").toUpperCase();
+      if (!partNum) { errEl.textContent = "Invalid part number."; errEl.style.display = "block"; return; }
+
+      const napaUrl = `https://www.napaonline.com/en/p/${partNum}`;
+      const btn = document.getElementById("btnCsPartFetch");
+      btn.disabled = true;
+      btn.textContent = "Fetching...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/napa-lookup`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ url: napaUrl }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Lookup failed.");
+        csNapaFetched = data;
+
+        let html = "";
+        if (data.title) {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;">${esc(data.title)}</span>
+            <button class="napa-use-btn" onclick="csUseNapaField('title')">Use as Name</button>
+          </div>`;
+        }
+        if (data.price) {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;">Price: $${esc(data.price)}</span>
+            <button class="napa-use-btn" onclick="csUseNapaField('price')">Use as Sale Price</button>
+          </div>`;
+        }
+        if (data.image) {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;">
+            <img src="${esc(data.image)}" style="max-width:80px;max-height:60px;border-radius:6px;border:1px solid rgba(255,255,255,.14);" />
+            <button class="napa-use-btn" onclick="csUseNapaField('image')">Use Image</button>
+          </div>`;
+        }
+        if (!html) html = '<div style="font-size:13px;color:var(--dim);">No product data found for that part number.</div>';
+
+        document.getElementById("csPartResultBody").innerHTML = html;
+        resultsEl.classList.add("visible");
+
+        // Also populate the NAPA URL field + CTA destination
+        document.getElementById("csNapaUrl").value = napaUrl;
+        if (document.getElementById("csCtaType").value === "view_product") {
+          document.getElementById("csCtaDestination").value = napaUrl;
+        }
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Fetch";
+      }
+    });
+
+    document.getElementById("csPartNumber").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); document.getElementById("btnCsPartFetch").click(); }
+    });
+
+    // ─── CS: NAPA URL Fetch ───────────────────────────────────
     document.getElementById("btnCsNapaFetch").addEventListener("click", async () => {
       const napaUrl = document.getElementById("csNapaUrl").value.trim();
       const errEl = document.getElementById("csNapaFetchError");
