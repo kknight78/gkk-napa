@@ -143,14 +143,30 @@ async function ensureShortCode(db, customerId) {
 const SMS_LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
 const WORKER_URL = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
 
+// ─── Video compression (Cloudinary on-the-fly transforms) ───
+// Carrier MMS limit is ~600 KB. Cloudinary transforms compress server-side via URL params.
+const MMS_VIDEO_TRANSFORMS = 'w_360,q_auto,br_250k,f_mp4,vc_h264';
+
+function compressVideoUrl(mediaUrl) {
+  if (!mediaUrl) return mediaUrl;
+  // Only transform Cloudinary video URLs
+  const match = mediaUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(v\d+\/.+)$/);
+  if (match) {
+    return `${match[1]}${MMS_VIDEO_TRANSFORMS}/${match[2]}`;
+  }
+  return mediaUrl;
+}
+
 // ─── Media proxy (strips content-type params for Twilio) ────
 function proxyMediaUrl(mediaUrl) {
   if (!mediaUrl) return null;
+  // Compress Cloudinary videos to fit carrier MMS limits
+  const compressed = compressVideoUrl(mediaUrl);
   // Proxy video URLs through our worker so Twilio gets clean content-type headers
-  if (mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || mediaUrl.includes('/video/')) {
-    return `${WORKER_URL}/media/proxy?url=${encodeURIComponent(mediaUrl)}`;
+  if (compressed.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || compressed.includes('/video/')) {
+    return `${WORKER_URL}/media/proxy?url=${encodeURIComponent(compressed)}`;
   }
-  return mediaUrl;
+  return compressed;
 }
 
 async function handleMediaProxy(url) {
@@ -182,6 +198,364 @@ async function handleMediaProxy(url) {
       'Cache-Control': 'public, max-age=86400',
     },
   });
+}
+
+// ─── Sale-Aware Promo Templates ─────────────────────────────
+// Phase keys: upcoming, starts_today, reminder, ends_tomorrow, last_day
+const SALE_TEMPLATES = {
+  upcoming:       "Heads up! {{product_name}} goes on sale {{sale_start}} at {{store_label}}. {{sale_price_line}}\n\n{{cta_text}}: {{cta_url}}\n\nG&KK NAPA Auto Parts",
+  starts_today:   "Starts today: {{product_name}} {{sale_price_line}} through {{sale_end}} at {{store_label}}.\n\n{{cta_text}}: {{cta_url}}\n\nG&KK NAPA Auto Parts",
+  reminder:       "Reminder: {{product_name}} {{sale_price_line}} through {{sale_end}} at {{store_label}}.\n\n{{cta_text}}: {{cta_url}}\n\nG&KK NAPA",
+  ends_tomorrow:  "Last chance! {{product_name}} sale ends tomorrow. {{sale_price_line}} at {{store_label}}.\n\n{{cta_text}}: {{cta_url}}\n\nG&KK NAPA",
+  last_day:       "Final day: {{product_name}} {{sale_price_line}} today only at {{store_label}}.\n\n{{cta_text}}: {{cta_url}}\n\nG&KK NAPA",
+};
+
+// Sale-aware sequence presets — offsets relative to sale start/end
+const SALE_SEQUENCE_PRESETS = {
+  standard: [
+    { anchor: "start", offsetDays: -2, phase: "upcoming",      label: "Upcoming" },
+    { anchor: "start", offsetDays: 0,  phase: "starts_today",  label: "Starts Today" },
+    { anchor: "mid",   offsetDays: 0,  phase: "reminder",      label: "Reminder" },
+    { anchor: "end",   offsetDays: -1, phase: "ends_tomorrow", label: "Ends Tomorrow" },
+    { anchor: "end",   offsetDays: 0,  phase: "last_day",      label: "Last Day" },
+  ],
+  light: [
+    { anchor: "start", offsetDays: 0,  phase: "starts_today",  label: "Starts Today" },
+    { anchor: "mid",   offsetDays: 0,  phase: "reminder",      label: "Reminder" },
+    { anchor: "end",   offsetDays: 0,  phase: "last_day",      label: "Last Day" },
+  ],
+  "one-and-done": [
+    { anchor: "start", offsetDays: 0,  phase: "starts_today",  label: "Starts Today" },
+  ],
+};
+
+// CTA type definitions
+const CTA_TYPES = {
+  all_locations:  { text: "All Locations",  url: "https://gkk-napa.com/#locations" },
+  get_directions: { text: "Get Directions", url: "https://gkk-napa.com/#locations" },
+  call_store:     { text: "Call Us",        url: "https://gkk-napa.com/#locations" },
+  view_product:   { text: "View Product",   url: null },
+  shop_online:    { text: "Shop Online",    url: "https://www.napaonline.com/" },
+};
+
+const STORE_PHONES = {
+  danville:   "(217) 446-9067",
+  cayuga:     "(765) 492-3292",
+  rockville:  "(765) 569-3100",
+  covington:  "(765) 793-4693",
+};
+
+const STORE_MAP_URLS = {
+  danville:   "https://maps.google.com/?q=G%26KK+NAPA+Danville+IL",
+  cayuga:     "https://maps.google.com/?q=G%26KK+NAPA+Cayuga+IN",
+  rockville:  "https://maps.google.com/?q=G%26KK+NAPA+Rockville+IN",
+  covington:  "https://maps.google.com/?q=G%26KK+NAPA+Covington+IN",
+};
+
+// ─── Price Formatting Helper ────────────────────────────────
+function formatPromoPrice(input) {
+  if (!input || typeof input !== "string") return { formatted: null, warning: null };
+  const cleaned = input.replace(/[$,\s]/g, "");
+  const num = parseFloat(cleaned);
+  if (isNaN(num)) return { formatted: null, warning: "Enter a valid price (example: 19.99)." };
+  // Ambiguity check: no decimal and > 999
+  if (!cleaned.includes(".") && num > 999) {
+    return {
+      formatted: "$" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      warning: `Price looks unusual. Did you mean $${(num / 100).toFixed(2)}? Enter decimals to avoid mistakes.`,
+    };
+  }
+  return {
+    formatted: "$" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    warning: null,
+  };
+}
+
+function buildSalePriceLine(regularPrice, salePrice) {
+  const reg = formatPromoPrice(regularPrice);
+  const sale = formatPromoPrice(salePrice);
+  if (!sale.formatted) return "";
+  if (reg.formatted && reg.formatted !== sale.formatted) {
+    return `was ${reg.formatted}, now ${sale.formatted}`;
+  }
+  return `now ${sale.formatted}`;
+}
+
+// ─── CTA Resolver ───────────────────────────────────────────
+function resolvePromoCta({ ctaType, storeFilter, napaUrl, textOverride, destinationOverride }) {
+  const def = CTA_TYPES[ctaType] || CTA_TYPES.all_locations;
+  let ctaText = textOverride || def.text;
+  let destinationUrl = destinationOverride || def.url || "";
+
+  if (ctaType === "get_directions" && storeFilter && STORE_MAP_URLS[storeFilter]) {
+    destinationUrl = destinationOverride || STORE_MAP_URLS[storeFilter];
+  }
+  if (ctaType === "call_store" && storeFilter && STORE_PHONES[storeFilter]) {
+    destinationUrl = destinationOverride || `tel:${STORE_PHONES[storeFilter].replace(/\D/g, "")}`;
+    if (!textOverride) ctaText = `Call ${STORE_PHONES[storeFilter]}`;
+  }
+  if (ctaType === "view_product") {
+    destinationUrl = destinationOverride || napaUrl || "https://www.napaonline.com/";
+  }
+
+  return { ctaText, destinationUrl, imageBadgeText: textOverride || def.text };
+}
+
+// ─── Sale-Aware Template Renderer ───────────────────────────
+function renderSaleTemplate(phase, vars) {
+  const tpl = SALE_TEMPLATES[phase] || SALE_TEMPLATES.starts_today;
+  let msg = tpl
+    .replace(/\{\{product_name\}\}/g, vars.productName || "")
+    .replace(/\{\{sale_price_line\}\}/g, vars.salePriceLine || "")
+    .replace(/\{\{store_label\}\}/g, vars.storeLabel || "G&KK NAPA")
+    .replace(/\{\{cta_text\}\}/g, vars.ctaText || "Shop Now")
+    .replace(/\{\{cta_url\}\}/g, vars.ctaUrl || "")
+    .replace(/\{\{sale_start\}\}/g, vars.saleStartDisplay || "")
+    .replace(/\{\{sale_end\}\}/g, vars.saleEndDisplay || "");
+  msg += "\n\nReply STOP to opt out.";
+  return msg;
+}
+
+// ─── Cloudinary Image Composition ───────────────────────────
+function buildPromoImageUrl(baseImageUrl, { headline, price, ctaText, dateLine }) {
+  if (!baseImageUrl || !baseImageUrl.includes("res.cloudinary.com")) return baseImageUrl;
+  const match = baseImageUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(v\d+\/.+)$/);
+  if (!match) return baseImageUrl;
+
+  const overlays = [];
+  if (headline) {
+    const h = headline.length > 50 ? headline.slice(0, 47) + "..." : headline;
+    const encoded = encodeURIComponent(h).replace(/%20/g, "%20");
+    overlays.push(`l_text:Montserrat_48_bold:${encoded},co_white,g_north,y_40`);
+  }
+  if (price) {
+    const encoded = encodeURIComponent(price).replace(/%20/g, "%20");
+    overlays.push(`l_text:Montserrat_64_bold:${encoded},co_rgb:FFC836,g_center,y_30`);
+  }
+  if (ctaText) {
+    const c = ctaText.length > 24 ? ctaText.slice(0, 21) + "..." : ctaText;
+    const encoded = encodeURIComponent(c).replace(/%20/g, "%20");
+    overlays.push(`l_text:Montserrat_36_bold:${encoded},co_rgb:111111,b_rgb:FFC836,bo_16px_solid_rgb:FFC836,g_south,y_40`);
+  }
+  if (dateLine) {
+    const encoded = encodeURIComponent(dateLine).replace(/%20/g, "%20");
+    overlays.push(`l_text:Montserrat_24_bold:${encoded},co_white,g_south_east,y_10,x_10`);
+  }
+  if (overlays.length === 0) return baseImageUrl;
+  return `${match[1]}${overlays.join("/")}/${match[2]}`;
+}
+
+// ─── NAPA Product Scraper ───────────────────────────────────
+async function fetchNapaMeta(url) {
+  if (!url || !url.startsWith("https://www.napaonline.com/")) {
+    throw new Error("URL must start with https://www.napaonline.com/");
+  }
+  const resp = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+    redirect: "follow",
+  });
+  if (!resp.ok) throw new Error(`NAPA fetch failed: HTTP ${resp.status}`);
+  const html = await resp.text();
+
+  // Product image: prefer pdp-gallery-img data-src (actual product photo)
+  // over og:image (which is often just the NAPA logo)
+  let image = null;
+  const galleryMatch = html.match(/class="[^"]*pdp-gallery-img[^"]*"\s+data-src="Product=([^"]+)"/i)
+    || html.match(/data-src="Product=([^"]+)"\s+class="[^"]*pdp-gallery-img/i);
+  if (galleryMatch) {
+    // data-src contains e.g. "GenuinePartsCompany/3213755" — use it directly
+    const dataSrc = galleryMatch[1];
+    image = `https://media.napaonline.com/is/image/${dataSrc}`;
+  }
+  if (!image) {
+    // Fallback: try og:image but skip if it's a logo/icon
+    const ogMatch = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]+)"/i)
+      || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:image"/i);
+    if (ogMatch && ogMatch[1] && !ogMatch[1].includes("logo") && !ogMatch[1].includes("icon")) {
+      image = ogMatch[1];
+    }
+  }
+
+  const titleMatch = html.match(/<meta\s+(?:property|name)="og:title"\s+content="([^"]+)"/i)
+    || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:title"/i);
+  const title = titleMatch ? titleMatch[1] : null;
+
+  const priceMatch = html.match(/"price"\s*:\s*"?([\d.]+)"?/i)
+    || html.match(/class="[^"]*price[^"]*"[^>]*>\s*\$?([\d,.]+)/i);
+  const price = priceMatch ? priceMatch[1] : null;
+
+  return { title, image, price };
+}
+
+// ─── Sale-Aware Sequence Event Generator ────────────────────
+function computeSaleEventDates(presetKey, saleStartDate, saleEndDate, defaultSendTime) {
+  const preset = SALE_SEQUENCE_PRESETS[presetKey];
+  if (!preset) throw new Error(`Unknown preset: ${presetKey}`);
+
+  const saleStart = new Date(saleStartDate);
+  const saleEnd = new Date(saleEndDate);
+  const saleMid = new Date(saleStart.getTime() + (saleEnd.getTime() - saleStart.getTime()) / 2);
+
+  // Parse time "09:00" → hours/minutes
+  const [hours, minutes] = (defaultSendTime || "09:00").split(":").map(Number);
+
+  return preset.map(step => {
+    let baseDate;
+    if (step.anchor === "start") baseDate = new Date(saleStart);
+    else if (step.anchor === "end") baseDate = new Date(saleEnd);
+    else baseDate = new Date(saleMid); // mid
+
+    baseDate.setDate(baseDate.getDate() + step.offsetDays);
+    baseDate.setHours(hours, minutes, 0, 0);
+
+    return {
+      phase: step.phase,
+      label: step.label,
+      sendAt: baseDate,
+      sendAtIso: baseDate.toISOString(),
+      isPast: baseDate < new Date(),
+    };
+  });
+}
+
+async function generateSaleSequenceEvents(db, campaignId, events, templateVars, mediaUrl, enabledPhases) {
+  const now = new Date().toISOString();
+
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    const enabled = !enabledPhases || enabledPhases.includes(ev.phase);
+    const body = renderSaleTemplate(ev.phase, templateVars);
+
+    let status;
+    if (!enabled) status = "cancelled";
+    else if (ev.isPast) status = "skipped";
+    else status = "scheduled";
+
+    await db.prepare(
+      "INSERT INTO campaign_events (campaign_id, event_index, label, body, media_url, send_at, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      campaignId, i, ev.label, body,
+      mediaUrl || null,
+      ev.sendAtIso,
+      status,
+      now
+    ).run();
+  }
+}
+
+// ─── Cron: Process Scheduled Events ─────────────────────────
+async function processScheduledEvents(env) {
+  const now = new Date().toISOString();
+  const events = await env.DB.prepare(
+    "SELECT * FROM campaign_events WHERE status = 'scheduled' AND send_at <= ? ORDER BY send_at LIMIT 10"
+  ).bind(now).all();
+
+  if (events.results.length === 0) {
+    console.log(JSON.stringify({ tag: "CRON_NO_EVENTS" }));
+    return;
+  }
+
+  for (const event of events.results) {
+    try {
+      // Load parent campaign
+      const campaign = await env.DB.prepare("SELECT * FROM campaigns WHERE id = ?").bind(event.campaign_id).first();
+      if (!campaign) {
+        await env.DB.prepare("UPDATE campaign_events SET status = 'cancelled' WHERE id = ?").bind(event.id).run();
+        continue;
+      }
+
+      const promoMeta = campaign.promo_meta ? JSON.parse(campaign.promo_meta) : {};
+
+      // Query eligible customers (same logic as handleSendCampaign)
+      let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+      const binds = [];
+      if (campaign.store_filter) { customerSql += " AND store = ?"; binds.push(campaign.store_filter); }
+      if (promoMeta.priority_only) { customerSql += " AND is_priority = 1"; }
+
+      const stmt = env.DB.prepare(customerSql);
+      const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+
+      let sentCount = 0;
+      let failedCount = 0;
+
+      // Shorten URLs in the event body
+      let finalBody = event.body;
+      finalBody = await shortenUrlsInText(finalBody, env);
+
+      for (const customer of customers.results) {
+        const result = await sendSms(env, customer.phone, finalBody, event.media_url);
+
+        await env.DB.prepare(
+          "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+        ).bind(
+          result.ok ? result.sid : null,
+          customer.id,
+          event.campaign_id,
+          finalBody,
+          result.ok ? (result.status || "queued") : "failed",
+          result.ok ? null : (result.error || "send_failed"),
+          now, now
+        ).run();
+
+        if (result.ok) sentCount++;
+        else failedCount++;
+      }
+
+      // Email fallback for scheduled events
+      if (promoMeta.email_fallback && env.RESEND_API_KEY) {
+        let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
+        const emailBinds = [];
+        if (campaign.store_filter) { emailSql += " AND store = ?"; emailBinds.push(campaign.store_filter); }
+        if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
+
+        const emailStmt = env.DB.prepare(emailSql);
+        const emailCustomers = emailBinds.length > 0 ? await emailStmt.bind(...emailBinds).all() : await emailStmt.all();
+
+        for (const customer of emailCustomers.results) {
+          const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
+          const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+          const displayPhone = canSms
+            ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
+            : null;
+          let subscribeUrl;
+          if (canSms) {
+            const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
+            subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
+          } else {
+            subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
+          }
+          const emailMedia = event.media_url && !event.media_url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) ? event.media_url : null;
+          const html = buildCampaignEmail(greeting, event.body, subscribeUrl, displayPhone, emailMedia);
+
+          try {
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                from: env.FROM_EMAIL,
+                to: [customer.email],
+                reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
+                subject: `${campaign.name} \u2014 G&KK NAPA`,
+                html,
+              }),
+            });
+          } catch (e) {
+            console.error(JSON.stringify({ tag: "CRON_EMAIL_ERROR", customer_id: customer.id, error: e.message }));
+          }
+          await new Promise(r => setTimeout(r, 600));
+        }
+      }
+
+      // Update event
+      await env.DB.prepare(
+        "UPDATE campaign_events SET status = 'sent', sent_count = ?, failed_count = ? WHERE id = ?"
+      ).bind(sentCount, failedCount, event.id).run();
+
+      console.log(JSON.stringify({ tag: "CRON_EVENT_SENT", event_id: event.id, campaign_id: event.campaign_id, sent: sentCount, failed: failedCount }));
+    } catch (e) {
+      console.error(JSON.stringify({ tag: "CRON_EVENT_ERROR", event_id: event.id, error: e.message }));
+    }
+  }
 }
 
 // ─── Twilio helpers ──────────────────────────────────────────
@@ -247,8 +621,11 @@ async function validateTwilioSignature(request, env, body) {
   return signature === expected;
 }
 
-// ─── Main fetch handler ──────────────────────────────────────
+// ─── Main fetch + scheduled handler ──────────────────────────
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(processScheduledEvents(env));
+  },
   async fetch(request, env) {
     const corsHeaders = getCorsHeaders(request);
 
@@ -380,6 +757,48 @@ export default {
         return handleMediaProxy(url);
       }
 
+      // ── Admin: POST /admin/promo/preview ──
+      if (request.method === "POST" && path === "/admin/promo/preview") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handlePromoPreview(request, env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/promo/schedule ──
+      if (request.method === "POST" && path === "/admin/promo/schedule") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handlePromoSchedule(request, env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/promo/cancel/:campaignId ──
+      if (request.method === "POST" && path.match(/^\/admin\/promo\/cancel\/\d+$/)) {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handlePromoCancel(path, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/promo/events ──
+      if (request.method === "GET" && path === "/admin/promo/events") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handlePromoEvents(url, env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/napa-lookup ──
+      if (request.method === "POST" && path === "/admin/napa-lookup") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleNapaLookup(request, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/promo/assets ──
+      if (request.method === "GET" && path === "/admin/promo/assets") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleListPromoAssets(env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/promo/assets ──
+      if (request.method === "POST" && path === "/admin/promo/assets") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleCreatePromoAsset(request, env, corsHeaders);
+      }
+
       // ── Admin: GET /admin/dashboard ──
       if (request.method === "GET" && path === "/admin/dashboard") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -398,6 +817,36 @@ export default {
       if (request.method === "POST" && path === "/admin/generate-short-codes") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
         return handleGenerateShortCodes(env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/proxy-image (CORS image proxy for canvas) ──
+      // No auth required — URL domain is validated in handler, and CORS limits browser access
+      if (request.method === "GET" && path === "/admin/proxy-image") {
+        return handleProxyImage(request, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/creative/preview ──
+      if (request.method === "POST" && path === "/admin/creative/preview") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleCreativePreview(request, env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/creative/save ──
+      if (request.method === "POST" && path === "/admin/creative/save") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleCreativeSave(request, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/creative/:id ──
+      if (request.method === "GET" && path.match(/^\/admin\/creative\/\d+$/)) {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleGetCreative(path, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/creatives ──
+      if (request.method === "GET" && path === "/admin/creatives") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleListCreatives(env, corsHeaders);
       }
 
       return jsonError(corsHeaders, "Not found", 404);
@@ -591,7 +1040,7 @@ async function handleListCustomers(url, env, corsHeaders) {
 
 async function handleAddCustomer(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, phone: rawPhone, email, store, notes } = body;
+  const { name, phone: rawPhone, email, store, notes, is_priority } = body;
 
   if (!rawPhone && !email) return jsonError(corsHeaders, "Phone number or email is required.", 400);
 
@@ -621,8 +1070,8 @@ async function handleAddCustomer(request, env, corsHeaders) {
 
   const now = new Date().toISOString();
   const result = await env.DB.prepare(
-    "INSERT INTO customers (phone, name, email, store, source, notes, line_type, short_code, created_at, updated_at) VALUES (?, ?, ?, ?, 'admin', ?, ?, ?, ?, ?)"
-  ).bind(phone, name || null, email || null, store || null, notes || null, lineType, shortCode, now, now).run();
+    "INSERT INTO customers (phone, name, email, store, source, notes, line_type, short_code, is_priority, created_at, updated_at) VALUES (?, ?, ?, ?, 'admin', ?, ?, ?, ?, ?, ?)"
+  ).bind(phone, name || null, email || null, store || null, notes || null, lineType, shortCode, is_priority ? 1 : 0, now, now).run();
 
   const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(result.meta.last_row_id).first();
   return jsonOk(corsHeaders, customer, 201);
@@ -631,7 +1080,7 @@ async function handleAddCustomer(request, env, corsHeaders) {
 async function handleUpdateCustomer(request, path, env, corsHeaders) {
   const id = parseInt(path.split("/").pop());
   const body = await request.json();
-  const { name, phone: rawPhone, email, store, notes, notes_append, sms_status, line_type, invite_sent_at } = body;
+  const { name, phone: rawPhone, email, store, notes, notes_append, sms_status, line_type, invite_sent_at, is_priority } = body;
 
   const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
   if (!existing) return jsonError(corsHeaders, "Customer not found.", 404);
@@ -689,6 +1138,7 @@ async function handleUpdateCustomer(request, path, env, corsHeaders) {
   }
   if (invite_sent_at !== undefined) { updates.push("invite_sent_at = ?"); binds.push(invite_sent_at); }
   if (line_type !== undefined) { updates.push("line_type = ?"); binds.push(line_type || null); }
+  if (is_priority !== undefined) { updates.push("is_priority = ?"); binds.push(is_priority ? 1 : 0); }
   if (sms_status !== undefined) {
     updates.push("sms_status = ?");
     binds.push(sms_status);
@@ -864,6 +1314,9 @@ async function handleDashboard(env, corsHeaders) {
     totalSubscribed,
     totalCustomers,
     failedSms,
+    failedSmsDetails,
+    priorityCustomers,
+    messagesThisMonth,
   ] = await Promise.all([
     // Ready to invite: has email + mobile + status none
     env.DB.prepare(
@@ -915,6 +1368,20 @@ async function handleDashboard(env, corsHeaders) {
     env.DB.prepare(
       "SELECT COUNT(*) as count FROM messages WHERE direction = 'outbound' AND status IN ('failed', 'undelivered') AND created_at >= ?"
     ).bind(weekAgo).first(),
+    // Failed SMS details this week
+    env.DB.prepare(
+      `SELECT m.id, m.body, m.status, m.error_code, m.created_at,
+              c.name, c.phone, c.id as customer_id
+       FROM messages m JOIN customers c ON m.customer_id = c.id
+       WHERE m.direction='outbound' AND m.status IN ('failed','undelivered') AND m.created_at >= ?
+       ORDER BY m.created_at DESC LIMIT 20`
+    ).bind(weekAgo).all(),
+    // Priority customers count
+    env.DB.prepare("SELECT COUNT(*) as count FROM customers WHERE is_priority = 1").first(),
+    // Messages sent this month
+    env.DB.prepare(
+      "SELECT COUNT(*) as count FROM messages WHERE direction = 'outbound' AND created_at >= ?"
+    ).bind(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()).first(),
   ]);
 
   const conversionRate = totalInvited.count > 0
@@ -924,6 +1391,7 @@ async function handleDashboard(env, corsHeaders) {
   return jsonOk(corsHeaders, {
     alerts: {
       failed_sms: failedSms.count,
+      failed_sms_details: failedSmsDetails.results,
       new_from_stripe: newFromStripe.count,
       new_from_web: newFromWeb.count,
       new_from_quick_subscribe: newFromQuickSubscribe.count,
@@ -941,6 +1409,8 @@ async function handleDashboard(env, corsHeaders) {
       conversion_rate: conversionRate,
       total_invited: totalInvited.count,
       converted_from_invite: convertedFromInvite.count,
+      priority_customers: priorityCustomers.count,
+      messages_this_month: messagesThisMonth.count,
     },
     source_breakdown: sourceBreakdown.results,
     recent_activity: recentActivity.results,
@@ -955,10 +1425,10 @@ async function handleDashboard(env, corsHeaders) {
 
 async function handleExport(env, corsHeaders) {
   const customers = await env.DB.prepare(
-    "SELECT id, name, phone, email, store, sms_status, line_type, source, short_code, notes, invite_sent_at, sms_consent_at, created_at FROM customers ORDER BY name ASC"
+    "SELECT id, name, phone, email, store, sms_status, line_type, source, short_code, is_priority, notes, invite_sent_at, sms_consent_at, created_at FROM customers ORDER BY name ASC"
   ).all();
 
-  const headers = ['ID', 'Name', 'Phone', 'Email', 'Store', 'Status', 'Line Type', 'Source', 'Short Code', 'Subscribe URL', 'Notes', 'Invite Sent', 'Subscribed At', 'Created'];
+  const headers = ['ID', 'Name', 'Phone', 'Email', 'Store', 'Status', 'Line Type', 'Source', 'Short Code', 'Subscribe URL', 'Priority', 'Notes', 'Invite Sent', 'Subscribed At', 'Created'];
 
   const csvEscape = (val) => {
     if (val === null || val === undefined) return '';
@@ -975,7 +1445,7 @@ async function handleExport(env, corsHeaders) {
     csv += [
       c.id, csvEscape(c.name), c.phone, csvEscape(c.email),
       STORE_DISPLAY[c.store] || c.store || '', c.sms_status, c.line_type || '',
-      c.source || '', c.short_code || '', subscribeUrl,
+      c.source || '', c.short_code || '', subscribeUrl, c.is_priority ? 'Yes' : '',
       csvEscape(c.notes), c.invite_sent_at || '', c.sms_consent_at || '', c.created_at
     ].join(',') + '\n';
   }
@@ -1218,6 +1688,63 @@ ${phoneNote}
 </body></html>`;
 }
 
+function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl) {
+  const phoneNote = displayPhone
+    ? `<tr><td style="padding:0 24px 16px;">
+<p style="margin:0;font-size:14px;color:#333;line-height:1.5;text-align:center;">
+  Want texts instead? Get updates faster via SMS!<br>
+  Texts will be sent to <strong>${displayPhone}</strong>
+</p>
+</td></tr>`
+    : '';
+
+  const mediaSection = mediaUrl
+    ? `<tr><td align="center" style="padding:0 24px 16px;">
+<img src="${mediaUrl}" alt="" style="max-width:100%;border-radius:8px;" />
+</td></tr>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:24px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+<!-- NAPA Header -->
+<tr><td style="background-color:#0A0094;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
+<div style="color:#ffffff;font-size:13px;padding:0 0 10px 12px;">G&amp;KK Store Updates</div>
+</td></tr>
+
+<!-- Body -->
+<tr><td style="padding:32px 24px 16px;">
+<h1 style="margin:0 0 16px;font-size:22px;color:#111;font-weight:700;">Hi ${escHtml(greeting)},</h1>
+<p style="margin:0 0 16px;font-size:16px;color:#333;line-height:1.6;white-space:pre-wrap;">${escHtml(messageBody)}</p>
+</td></tr>
+
+${mediaSection}
+
+<!-- Subscribe CTA -->
+${phoneNote}
+<tr><td align="center" style="padding:0 24px 24px;">
+<a href="${subscribeUrl}" target="_blank"
+   style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:14px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">
+  Subscribe to Text Updates
+</a>
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="background-color:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb;">
+<p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; <a href="https://gkk-napa.com" style="color:#0A0094;">gkk-napa.com</a></p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Phase 4: SMS Campaign Sending
 // ═══════════════════════════════════════════════════════════════
@@ -1253,7 +1780,7 @@ async function handleSendTest(request, env, corsHeaders) {
 
 async function handleSendCampaign(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, body: messageBody, store, image_url } = body;
+  const { name, body: messageBody, store, image_url, email_fallback, priority_only } = body;
 
   const hasBody = messageBody && messageBody.trim();
   const mediaUrl = image_url || null;
@@ -1279,6 +1806,9 @@ async function handleSendCampaign(request, env, corsHeaders) {
   if (store) {
     customerSql += " AND store = ?";
     binds.push(store);
+  }
+  if (priority_only) {
+    customerSql += " AND is_priority = 1";
   }
 
   const stmt = env.DB.prepare(customerSql);
@@ -1320,16 +1850,85 @@ async function handleSendCampaign(request, env, corsHeaders) {
     else failedCount++;
   }
 
+  // ── Email fallback: email non-subscribed customers ──
+  let emailSent = 0;
+  let emailFailed = 0;
+
+  if (email_fallback && env.RESEND_API_KEY) {
+    let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
+    const emailBinds = [];
+    if (store) { emailSql += " AND store = ?"; emailBinds.push(store); }
+    if (priority_only) { emailSql += " AND is_priority = 1"; }
+
+    const emailStmt = env.DB.prepare(emailSql);
+    const emailCustomers = emailBinds.length > 0 ? await emailStmt.bind(...emailBinds).all() : await emailStmt.all();
+
+    for (const customer of emailCustomers.results) {
+      const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
+      const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+      const displayPhone = canSms
+        ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
+        : null;
+
+      let subscribeUrl;
+      if (canSms) {
+        const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
+        subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
+      } else {
+        subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
+      }
+
+      // Only include image media in email (not video)
+      const emailMedia = mediaUrl && !mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) && !mediaUrl.includes('/video/')
+        ? mediaUrl : null;
+
+      const html = buildCampaignEmail(greeting, messageBody.trim(), subscribeUrl, displayPhone, emailMedia);
+
+      try {
+        const resp = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: env.FROM_EMAIL,
+            to: [customer.email],
+            reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
+            subject: `${name.trim()} — G&KK NAPA`,
+            html,
+          }),
+        });
+
+        if (resp.ok) {
+          emailSent++;
+        } else {
+          const err = await resp.text();
+          console.error(JSON.stringify({ tag: "CAMPAIGN_EMAIL_ERROR", customer_id: customer.id, error: err }));
+          emailFailed++;
+        }
+      } catch (e) {
+        console.error(JSON.stringify({ tag: "CAMPAIGN_EMAIL_EXCEPTION", customer_id: customer.id, error: e.message }));
+        emailFailed++;
+      }
+
+      // Rate limit: 600ms between sends (Resend free tier = 2/sec)
+      await new Promise(r => setTimeout(r, 600));
+    }
+  }
+
   // Update campaign counters
   await env.DB.prepare(
-    "UPDATE campaigns SET sent_count = ?, failed_count = ? WHERE id = ?"
-  ).bind(sentCount, failedCount, campaignId).run();
+    "UPDATE campaigns SET sent_count = ?, failed_count = ?, email_count = ?, email_failed_count = ? WHERE id = ?"
+  ).bind(sentCount, failedCount, emailSent, emailFailed, campaignId).run();
 
   return jsonOk(corsHeaders, {
     campaign_id: campaignId,
     recipient_count: customers.results.length,
     sent: sentCount,
     failed: failedCount,
+    email_sent: emailSent,
+    email_failed: emailFailed,
   });
 }
 
@@ -1472,6 +2071,346 @@ function escHtml(str) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Admin: Promo Endpoints
+// ═══════════════════════════════════════════════════════════════
+
+async function handlePromoPreview(request, env, corsHeaders) {
+  const body = await request.json();
+  const { offer, media, cta, sequence, storeFilter } = body;
+
+  if (!offer || !offer.productName) return jsonError(corsHeaders, "Product name is required.", 400);
+  if (!offer.salePrice) return jsonError(corsHeaders, "Sale price is required.", 400);
+  if (!offer.saleStartDate || !offer.saleEndDate) return jsonError(corsHeaders, "Sale start and end dates are required.", 400);
+
+  // Price formatting
+  const salePriceFmt = formatPromoPrice(offer.salePrice);
+  const regularPriceFmt = offer.regularPrice ? formatPromoPrice(offer.regularPrice) : { formatted: null, warning: null };
+  const warnings = [];
+  if (salePriceFmt.warning) warnings.push(salePriceFmt.warning);
+  if (regularPriceFmt.warning) warnings.push(regularPriceFmt.warning);
+  if (!salePriceFmt.formatted) return jsonError(corsHeaders, "Enter a valid sale price.", 400);
+
+  const salePriceLine = buildSalePriceLine(offer.regularPrice, offer.salePrice);
+
+  // CTA resolution
+  const resolvedCta = resolvePromoCta({
+    ctaType: cta?.type || "all_locations",
+    storeFilter: storeFilter || null,
+    napaUrl: media?.napaUrl || null,
+    textOverride: cta?.textOverride || null,
+    destinationOverride: cta?.destinationOverride || null,
+  });
+
+  // Shorten the CTA URL for preview
+  let shortCtaUrl = resolvedCta.destinationUrl;
+  if (shortCtaUrl && shortCtaUrl.startsWith("http") && !shortCtaUrl.includes("gkk-napa.com/l/")) {
+    const shortened = await shortenUrlsInText(shortCtaUrl, env);
+    shortCtaUrl = shortened;
+  }
+
+  const storeLabel = storeFilter ? (STORE_DISPLAY[storeFilter] || storeFilter) : "G&KK NAPA";
+  const saleStartDisplay = new Date(offer.saleStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const saleEndDisplay = new Date(offer.saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  const templateVars = {
+    productName: offer.productName,
+    salePriceLine,
+    storeLabel,
+    ctaText: resolvedCta.ctaText,
+    ctaUrl: shortCtaUrl,
+    saleStartDisplay,
+    saleEndDisplay,
+  };
+
+  // Generate messages for all phases
+  const presetKey = sequence?.preset || "one-and-done";
+  const events = computeSaleEventDates(
+    presetKey, offer.saleStartDate, offer.saleEndDate,
+    sequence?.defaultSendTimeLocal || "09:00"
+  );
+
+  const renderedMessages = {};
+  for (const ev of events) {
+    renderedMessages[ev.phase] = renderSaleTemplate(ev.phase, templateVars);
+  }
+
+  // Compose promo image
+  let composedImageUrl = null;
+  const imageUrl = media?.imageUrl || media?.napaUrl ? null : null; // base image
+  const baseImg = media?.imageUrl || null;
+  if (baseImg && baseImg.includes("res.cloudinary.com")) {
+    const dateLine = `${saleStartDisplay}\u2013${saleEndDisplay}`;
+    composedImageUrl = buildPromoImageUrl(baseImg, {
+      headline: offer.productName,
+      price: salePriceFmt.formatted,
+      ctaText: resolvedCta.imageBadgeText,
+      dateLine,
+    });
+  } else if (baseImg) {
+    composedImageUrl = baseImg;
+  }
+
+  // Timeline
+  const timeline = events.map((ev, i) => ({
+    index: i,
+    phase: ev.phase,
+    label: ev.label,
+    date: ev.sendAtIso,
+    isPast: ev.isPast,
+  }));
+
+  return jsonOk(corsHeaders, {
+    renderedMessages,
+    composedImageUrl,
+    timeline,
+    resolvedCta: { ctaText: resolvedCta.ctaText, destinationUrl: shortCtaUrl, imageBadgeText: resolvedCta.imageBadgeText },
+    salePriceLine,
+    salePriceFormatted: salePriceFmt.formatted,
+    regularPriceFormatted: regularPriceFmt.formatted,
+    warnings,
+  });
+}
+
+async function handlePromoSchedule(request, env, corsHeaders) {
+  const body = await request.json();
+  const { campaignName, storeFilter, priorityOnly, emailFallback, offer, media, cta, sequence } = body;
+
+  // Validation
+  if (!campaignName || !campaignName.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
+  if (!offer || !offer.productName) return jsonError(corsHeaders, "Product name is required.", 400);
+  if (!offer.salePrice) return jsonError(corsHeaders, "Sale price is required.", 400);
+  if (!offer.saleStartDate || !offer.saleEndDate) return jsonError(corsHeaders, "Sale start and end dates are required.", 400);
+  if (new Date(offer.saleEndDate) < new Date(offer.saleStartDate)) return jsonError(corsHeaders, "Sale end date must be on or after the start date.", 400);
+  if (storeFilter && !VALID_STORES.includes(storeFilter)) return jsonError(corsHeaders, "Invalid store filter.", 400);
+
+  const salePriceFmt = formatPromoPrice(offer.salePrice);
+  if (!salePriceFmt.formatted) return jsonError(corsHeaders, "Enter a valid sale price.", 400);
+
+  const presetKey = sequence?.preset || "one-and-done";
+  if (!SALE_SEQUENCE_PRESETS[presetKey]) return jsonError(corsHeaders, "Invalid sequence preset.", 400);
+
+  const salePriceLine = buildSalePriceLine(offer.regularPrice, offer.salePrice);
+  const resolvedCta = resolvePromoCta({
+    ctaType: cta?.type || "all_locations",
+    storeFilter: storeFilter || null,
+    napaUrl: media?.napaUrl || null,
+    textOverride: cta?.textOverride || null,
+    destinationOverride: cta?.destinationOverride || null,
+  });
+
+  // Shorten the CTA URL
+  let shortCtaUrl = resolvedCta.destinationUrl;
+  if (shortCtaUrl && shortCtaUrl.startsWith("http")) {
+    shortCtaUrl = await shortenUrlsInText(shortCtaUrl, env);
+  }
+
+  const storeLabel = storeFilter ? (STORE_DISPLAY[storeFilter] || storeFilter) : "G&KK NAPA";
+  const saleStartDisplay = new Date(offer.saleStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const saleEndDisplay = new Date(offer.saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  const templateVars = {
+    productName: offer.productName,
+    salePriceLine,
+    storeLabel,
+    ctaText: resolvedCta.ctaText,
+    ctaUrl: shortCtaUrl,
+    saleStartDisplay,
+    saleEndDisplay,
+  };
+
+  // Build composed image URL
+  let mediaUrl = media?.imageUrl || null;
+  if (mediaUrl && mediaUrl.includes("res.cloudinary.com")) {
+    const dateLine = `${saleStartDisplay}\u2013${saleEndDisplay}`;
+    mediaUrl = buildPromoImageUrl(mediaUrl, {
+      headline: offer.productName,
+      price: salePriceFmt.formatted,
+      ctaText: resolvedCta.imageBadgeText,
+      dateLine,
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  // Store all promo metadata
+  const promoMeta = {
+    offer, media, cta: { type: cta?.type, textOverride: cta?.textOverride, destinationOverride: cta?.destinationOverride },
+    resolvedCta, salePriceLine,
+    priority_only: !!priorityOnly, email_fallback: !!emailFallback,
+  };
+
+  // Create campaign
+  const firstBody = renderSaleTemplate("starts_today", templateVars);
+  const campaignResult = await env.DB.prepare(
+    "INSERT INTO campaigns (name, body, store_filter, recipient_count, promo_type, promo_meta, media_url, sequence_preset, created_at) VALUES (?, ?, ?, 0, 'promo', ?, ?, ?, ?)"
+  ).bind(campaignName.trim(), firstBody, storeFilter || null, JSON.stringify(promoMeta), mediaUrl, presetKey, now).run();
+
+  const campaignId = campaignResult.meta.last_row_id;
+
+  // Generate events
+  const events = computeSaleEventDates(
+    presetKey, offer.saleStartDate, offer.saleEndDate,
+    sequence?.defaultSendTimeLocal || "09:00"
+  );
+  const enabledPhases = sequence?.enabledPhases || null;
+  await generateSaleSequenceEvents(env.DB, campaignId, events, templateVars, mediaUrl, enabledPhases);
+
+  // Optionally send first touch immediately
+  const sendFirstNow = sequence?.sendFirstTouchNow === true;
+  let sentCount = 0;
+  let failedCount = 0;
+  let emailSent = 0;
+
+  if (sendFirstNow) {
+    // Find the first enabled, non-past event
+    const firstEvent = await env.DB.prepare(
+      "SELECT * FROM campaign_events WHERE campaign_id = ? AND status = 'scheduled' ORDER BY send_at ASC LIMIT 1"
+    ).bind(campaignId).first();
+
+    if (firstEvent) {
+      let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+      const binds = [];
+      if (storeFilter) { customerSql += " AND store = ?"; binds.push(storeFilter); }
+      if (priorityOnly) { customerSql += " AND is_priority = 1"; }
+
+      const stmt = env.DB.prepare(customerSql);
+      const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+
+      let finalBody = await shortenUrlsInText(firstEvent.body, env);
+
+      for (const customer of customers.results) {
+        const result = await sendSms(env, customer.phone, finalBody, mediaUrl);
+        await env.DB.prepare(
+          "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+        ).bind(
+          result.ok ? result.sid : null, customer.id, campaignId,
+          finalBody, result.ok ? (result.status || "queued") : "failed",
+          result.ok ? null : (result.error || "send_failed"), now, now
+        ).run();
+        if (result.ok) sentCount++;
+        else failedCount++;
+      }
+
+      // Email fallback
+      if (emailFallback && env.RESEND_API_KEY) {
+        let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
+        const emailBinds = [];
+        if (storeFilter) { emailSql += " AND store = ?"; emailBinds.push(storeFilter); }
+        if (priorityOnly) { emailSql += " AND is_priority = 1"; }
+        const emailStmt = env.DB.prepare(emailSql);
+        const emailCustomers = emailBinds.length > 0 ? await emailStmt.bind(...emailBinds).all() : await emailStmt.all();
+
+        for (const customer of emailCustomers.results) {
+          const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
+          const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+          const displayPhone = canSms ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : null;
+          let subscribeUrl = canSms
+            ? `https://gkk-napa.com/s/${customer.short_code || await ensureShortCode(env.DB, customer.id)}`
+            : 'https://gkk-napa.com/sms/subscribe';
+          const emailMedia = mediaUrl && !mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) ? mediaUrl : null;
+          const html = buildCampaignEmail(greeting, firstEvent.body, subscribeUrl, displayPhone, emailMedia);
+          try {
+            const resp = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                from: env.FROM_EMAIL, to: [customer.email],
+                reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
+                subject: `${campaignName.trim()} \u2014 G&KK NAPA`, html,
+              }),
+            });
+            if (resp.ok) emailSent++;
+          } catch (e) {
+            console.error(JSON.stringify({ tag: "PROMO_EMAIL_ERROR", customer_id: customer.id, error: e.message }));
+          }
+          await new Promise(r => setTimeout(r, 600));
+        }
+      }
+
+      await env.DB.prepare(
+        "UPDATE campaign_events SET status = 'sent', sent_count = ?, failed_count = ? WHERE id = ?"
+      ).bind(sentCount, failedCount, firstEvent.id).run();
+
+      await env.DB.prepare(
+        "UPDATE campaigns SET recipient_count = ?, sent_count = ?, failed_count = ?, email_count = ? WHERE id = ?"
+      ).bind(sentCount + failedCount, sentCount, failedCount, emailSent, campaignId).run();
+    }
+  }
+
+  // Get event summary
+  const allEvents = await env.DB.prepare(
+    "SELECT id, event_index, label, status, send_at FROM campaign_events WHERE campaign_id = ? ORDER BY event_index ASC"
+  ).bind(campaignId).all();
+
+  const skippedCount = allEvents.results.filter(e => e.status === "skipped").length;
+  const scheduledCount = allEvents.results.filter(e => e.status === "scheduled").length;
+
+  return jsonOk(corsHeaders, {
+    campaign_id: campaignId,
+    events: allEvents.results,
+    scheduled_count: scheduledCount,
+    skipped_count: skippedCount,
+    immediate_send: sendFirstNow,
+    sent: sentCount,
+    failed: failedCount,
+    email_sent: emailSent,
+  });
+}
+
+async function handlePromoCancel(path, env, corsHeaders) {
+  const campaignId = parseInt(path.split("/").pop());
+  const result = await env.DB.prepare(
+    "UPDATE campaign_events SET status = 'cancelled' WHERE campaign_id = ? AND status = 'scheduled'"
+  ).bind(campaignId).run();
+
+  return jsonOk(corsHeaders, { cancelled: result.meta.changes });
+}
+
+async function handlePromoEvents(url, env, corsHeaders) {
+  const campaignId = url.searchParams.get("campaign_id");
+  if (!campaignId) return jsonError(corsHeaders, "campaign_id is required.", 400);
+
+  const events = await env.DB.prepare(
+    "SELECT * FROM campaign_events WHERE campaign_id = ? ORDER BY event_index ASC"
+  ).bind(parseInt(campaignId)).all();
+
+  return jsonOk(corsHeaders, events.results);
+}
+
+async function handleNapaLookup(request, env, corsHeaders) {
+  const body = await request.json();
+  const { url: napaUrl } = body;
+
+  if (!napaUrl) return jsonError(corsHeaders, "URL is required.", 400);
+
+  try {
+    const meta = await fetchNapaMeta(napaUrl);
+    return jsonOk(corsHeaders, meta);
+  } catch (e) {
+    return jsonError(corsHeaders, e.message, 400);
+  }
+}
+
+async function handleListPromoAssets(env, corsHeaders) {
+  const assets = await env.DB.prepare("SELECT * FROM promo_assets ORDER BY created_at DESC").all();
+  return jsonOk(corsHeaders, assets.results);
+}
+
+async function handleCreatePromoAsset(request, env, corsHeaders) {
+  const body = await request.json();
+  const { name, cloudinary_url, thumb_url, asset_type } = body;
+
+  if (!name || !cloudinary_url) return jsonError(corsHeaders, "Name and cloudinary_url are required.", 400);
+
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare(
+    "INSERT INTO promo_assets (name, cloudinary_url, thumb_url, asset_type, created_at) VALUES (?, ?, ?, ?, ?)"
+  ).bind(name, cloudinary_url, thumb_url || null, asset_type || "image", now).run();
+
+  return jsonOk(corsHeaders, { id: result.meta.last_row_id, success: true }, 201);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Admin: Campaign History
 // ═══════════════════════════════════════════════════════════════
 
@@ -1479,7 +2418,21 @@ async function handleListCampaigns(env, corsHeaders) {
   const campaigns = await env.DB.prepare(
     "SELECT * FROM campaigns ORDER BY created_at DESC"
   ).all();
-  return jsonOk(corsHeaders, campaigns.results);
+
+  // For promo campaigns, attach event summary
+  const results = [];
+  for (const c of campaigns.results) {
+    if (c.promo_type === "promo") {
+      const events = await env.DB.prepare(
+        "SELECT id, event_index, label, status, sent_count, failed_count, send_at FROM campaign_events WHERE campaign_id = ? ORDER BY event_index ASC"
+      ).bind(c.id).all();
+      results.push({ ...c, events: events.results });
+    } else {
+      results.push({ ...c, events: [] });
+    }
+  }
+
+  return jsonOk(corsHeaders, results);
 }
 
 async function handleGetCampaign(path, env, corsHeaders) {
@@ -1492,4 +2445,170 @@ async function handleGetCampaign(path, env, corsHeaders) {
   ).bind(id).all();
 
   return jsonOk(corsHeaders, { ...campaign, messages: messages.results });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Creative Studio
+// ═══════════════════════════════════════════════════════════════
+
+async function handleProxyImage(request, corsHeaders) {
+  const url = new URL(request.url);
+  const imageUrl = url.searchParams.get("url");
+  if (!imageUrl) return jsonError(corsHeaders, "Missing url parameter.", 400);
+
+  try {
+    const parsed = new URL(imageUrl);
+    const allowed = [
+      "www.napaonline.com", "napaonline.com",
+      "media.napaonline.com", "images.napaonline.com",
+      "res.cloudinary.com", "cloudinary.com",
+    ];
+    if (!allowed.some(h => parsed.hostname === h || parsed.hostname.endsWith("." + h))) {
+      return jsonError(corsHeaders, "Host not allowed.", 403);
+    }
+  } catch {
+    return jsonError(corsHeaders, "Invalid URL.", 400);
+  }
+
+  const resp = await fetch(imageUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+  });
+  if (!resp.ok) return new Response("Upstream error", { status: resp.status });
+
+  let contentType = resp.headers.get("content-type") || "image/png";
+  contentType = contentType.split(";")[0].trim();
+
+  return new Response(resp.body, {
+    headers: {
+      ...corsHeaders,
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=86400",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
+
+async function ensureCreativesTable(db) {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS promo_creatives (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      template_id TEXT NOT NULL DEFAULT 'promo_split_v1',
+      status TEXT NOT NULL DEFAULT 'draft',
+      image_content_json TEXT NOT NULL,
+      sms_content_json TEXT NOT NULL,
+      cta_json TEXT NOT NULL,
+      media_json TEXT NOT NULL,
+      render_json TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `).run();
+}
+
+async function handleCreativePreview(request, env, corsHeaders) {
+  const body = await request.json();
+  const { imageContent, smsContent, cta, media, storeContext } = body;
+
+  if (!imageContent) return jsonError(corsHeaders, "imageContent is required.", 400);
+  if (!imageContent.salePrice) return jsonError(corsHeaders, "Sale price is required.", 400);
+  if (!imageContent.productName) return jsonError(corsHeaders, "Product name is required.", 400);
+
+  // Price formatting
+  const salePriceFmt = formatPromoPrice(imageContent.salePrice);
+  const regularPriceFmt = imageContent.regularPrice ? formatPromoPrice(imageContent.regularPrice) : { formatted: null, warning: null };
+  const warnings = [];
+  if (salePriceFmt.warning) warnings.push(salePriceFmt.warning);
+  if (regularPriceFmt.warning) warnings.push(regularPriceFmt.warning);
+  if (!salePriceFmt.formatted) return jsonError(corsHeaders, "Enter a valid sale price.", 400);
+
+  const salePriceLine = buildSalePriceLine(imageContent.regularPrice, imageContent.salePrice);
+
+  // CTA resolution
+  const resolvedCta = resolvePromoCta({
+    ctaType: cta?.type || "all_locations",
+    storeFilter: storeContext || null,
+    napaUrl: media?.napaUrl || null,
+    textOverride: null,
+    destinationOverride: cta?.destinationOverride || null,
+  });
+
+  // Shorten CTA URL
+  let shortCtaUrl = resolvedCta.destinationUrl;
+  if (shortCtaUrl && shortCtaUrl.startsWith("http") && !shortCtaUrl.includes("gkk-napa.com/l/")) {
+    shortCtaUrl = await shortenUrlsInText(shortCtaUrl, env);
+  }
+
+  // Build SMS preview from body template
+  let smsPreview = (smsContent?.body || "").trim();
+  if (smsPreview) {
+    smsPreview = smsPreview
+      .replace(/\{\{sale_price_line\}\}/g, salePriceLine)
+      .replace(/\{\{product_name\}\}/g, imageContent.productName || "")
+      .replace(/\{\{sale_price\}\}/g, salePriceFmt.formatted || "")
+      .replace(/\{\{regular_price\}\}/g, regularPriceFmt.formatted || "")
+      .replace(/\{\{cta_text\}\}/g, resolvedCta.ctaText || "")
+      .replace(/\{\{cta_url\}\}/g, shortCtaUrl || "");
+    smsPreview = await shortenUrlsInText(smsPreview, env);
+    smsPreview += "\n\nReply STOP to opt out.";
+  }
+
+  return jsonOk(corsHeaders, {
+    smsPreview,
+    resolvedCta: { ctaText: resolvedCta.ctaText, destinationUrl: shortCtaUrl, badgeText: resolvedCta.imageBadgeText },
+    salePriceLine,
+    salePriceFormatted: salePriceFmt.formatted,
+    regularPriceFormatted: regularPriceFmt.formatted,
+    warnings,
+  });
+}
+
+async function handleCreativeSave(request, env, corsHeaders) {
+  const body = await request.json();
+  const { name, imageContent, smsContent, cta, media, composedImageUrl } = body;
+
+  if (!imageContent) return jsonError(corsHeaders, "imageContent is required.", 400);
+  if (!imageContent.salePrice) return jsonError(corsHeaders, "Sale price is required.", 400);
+
+  await ensureCreativesTable(env.DB);
+
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare(
+    "INSERT INTO promo_creatives (name, image_content_json, sms_content_json, cta_json, media_json, render_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(
+    name || "Untitled",
+    JSON.stringify(imageContent),
+    JSON.stringify(smsContent || {}),
+    JSON.stringify(cta || {}),
+    JSON.stringify(media || {}),
+    JSON.stringify({ composedImageUrl: composedImageUrl || null }),
+    now, now
+  ).run();
+
+  return jsonOk(corsHeaders, { id: result.meta.last_row_id, success: true }, 201);
+}
+
+async function handleGetCreative(path, env, corsHeaders) {
+  await ensureCreativesTable(env.DB);
+  const id = parseInt(path.split("/").pop());
+  const row = await env.DB.prepare("SELECT * FROM promo_creatives WHERE id = ?").bind(id).first();
+  if (!row) return jsonError(corsHeaders, "Creative not found.", 404);
+
+  return jsonOk(corsHeaders, {
+    ...row,
+    imageContent: JSON.parse(row.image_content_json),
+    smsContent: JSON.parse(row.sms_content_json),
+    cta: JSON.parse(row.cta_json),
+    media: JSON.parse(row.media_json),
+    render: row.render_json ? JSON.parse(row.render_json) : null,
+  });
+}
+
+async function handleListCreatives(env, corsHeaders) {
+  await ensureCreativesTable(env.DB);
+  const rows = await env.DB.prepare(
+    "SELECT id, name, status, template_id, updated_at, created_at FROM promo_creatives ORDER BY updated_at DESC"
+  ).all();
+  return jsonOk(corsHeaders, rows.results);
 }

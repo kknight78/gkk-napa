@@ -25,7 +25,7 @@
       background: var(--bg);
       color: var(--white);
     }
-    .wrap { max-width: 800px; margin: 0 auto; padding: 20px 18px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 18px; }
     h1 { text-transform: uppercase; letter-spacing: .4px; margin: 0 0 8px; font-size: 24px; }
     h2 { font-size: 16px; margin: 24px 0 12px; color: var(--napa-yellow); text-transform: uppercase; letter-spacing: .3px; }
     .logo-banner { background: #0A0094; padding: 20px 16px; text-align: center; }
@@ -114,7 +114,10 @@
       border-radius: 12px;
       padding: 16px;
       text-align: center;
+      transition: border-color .2s;
     }
+    .kpi-card.clickable { cursor: pointer; }
+    .kpi-card.clickable:hover { border-color: rgba(255,255,255,.35); }
     .kpi-num { font-size: 28px; font-weight: 800; color: var(--napa-yellow); }
     .kpi-label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .3px; margin-top: 4px; }
 
@@ -137,6 +140,21 @@
       background: rgba(100,180,255,.08);
       border-color: rgba(100,180,255,.25);
     }
+    .alert-card.clickable { cursor: pointer; }
+    .alert-card.clickable:hover { border-color: rgba(255,255,255,.3); }
+    .alert-expand { display: none; margin-top: 10px; font-size: 13px; }
+    .alert-expand.open { display: block; }
+    .alert-expand-item {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .alert-expand-item:last-child { border-bottom: none; }
+    .alert-dismiss { cursor: pointer; opacity: .5; font-size: 18px; margin-left: 12px; }
+    .alert-dismiss:hover { opacity: 1; }
+    .alert-toggle { cursor: pointer; font-size: 12px; opacity: .6; margin-left: 8px; }
     .alert-card .count { font-weight: 800; font-size: 18px; color: var(--napa-yellow); margin-right: 12px; }
 
     .action-card {
@@ -238,6 +256,11 @@
     .badge-mobile { background: rgba(142,207,142,.12); color: var(--green); font-size:10px; }
     .badge-landline { background: rgba(255,107,107,.12); color: #ffb0b0; font-size:10px; }
     .badge-voip { background: rgba(100,180,255,.15); color: #8cc4ff; font-size:10px; }
+    .priority-star { cursor: pointer; font-size: 18px; margin-right: 4px; vertical-align: middle; user-select: none; }
+    .priority-star.active { color: var(--napa-yellow); }
+    .priority-star:not(.active) { color: rgba(255,255,255,.25); }
+    .priority-star:hover { opacity: .8; }
+    .kpi-sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
 
     .filter-bar {
       display: flex;
@@ -350,6 +373,414 @@
     .msg-sent, .msg-queued { color: var(--orange); }
     .msg-failed, .msg-undelivered { color: var(--red); }
 
+    /* Mode Toggle */
+    .mode-toggle {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      background: rgba(255,255,255,.06);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.14);
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,.5);
+      transition: all .2s;
+    }
+    .mode-btn.active {
+      background: var(--napa-yellow);
+      color: #111;
+    }
+
+    /* Offer Builder sections */
+    .ob-section {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .ob-section h3 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      color: var(--napa-yellow);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+
+    /* Timeline preview */
+    .timeline-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 13px;
+    }
+    .timeline-step:last-child { border-bottom: none; }
+    .timeline-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--napa-yellow);
+      flex-shrink: 0;
+    }
+    .timeline-dot.future { background: rgba(255,255,255,.2); }
+    .timeline-dot.sent { background: var(--green); }
+    .timeline-dot.cancelled { background: var(--red); }
+
+    /* Phone mockup */
+    .phone-mockup {
+      background: #1a1a2e;
+      border: 2px solid rgba(255,255,255,.2);
+      border-radius: 24px;
+      padding: 20px 16px;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    .phone-mockup img {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .phone-mockup .msg-text {
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      color: var(--white);
+    }
+
+    /* Promo badge in history */
+    .badge-promo { background: rgba(100,180,255,.2); color: #8cc4ff; }
+    .badge-manual { background: rgba(255,255,255,.08); color: var(--dim); }
+
+    /* Sequence group in history */
+    .sequence-events {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .sequence-events.open { display: block; }
+    .event-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .event-row:last-child { border-bottom: none; }
+    .event-status { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .event-sent { color: var(--green); }
+    .event-scheduled { color: var(--orange); }
+    .event-cancelled { color: var(--red); }
+
+    /* Media source radio cards */
+    .media-source-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .media-source-card {
+      flex: 1;
+      min-width: 100px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      transition: border-color .2s;
+    }
+    .media-source-card.active {
+      border-color: var(--napa-yellow);
+      background: rgba(255,200,54,.06);
+    }
+    .media-source-card:hover { border-color: rgba(255,255,255,.3); }
+
+    /* Preview tabs */
+    .preview-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid rgba(255,255,255,.1);
+      margin-bottom: 14px;
+    }
+    .preview-tab {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      color: var(--dim);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all .2s;
+    }
+    .preview-tab.active {
+      color: var(--napa-yellow);
+      border-bottom-color: var(--napa-yellow);
+    }
+    .preview-pane { display: none; }
+    .preview-pane.active { display: block; }
+
+    /* Price warning */
+    .price-warning {
+      background: rgba(255,179,71,.12);
+      border: 1px solid rgba(255,179,71,.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--orange);
+      margin-top: 4px;
+    }
+
+    /* Stale preview banner */
+    .stale-banner {
+      background: rgba(255,179,71,.12);
+      border: 1px solid rgba(255,179,71,.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--orange);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .stale-banner.visible { display: flex; }
+
+    /* NAPA fetch results card */
+    .napa-results {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      display: none;
+    }
+    .napa-results.visible { display: block; }
+    .napa-use-btn {
+      background: rgba(255,200,54,.15);
+      color: var(--napa-yellow);
+      border: 1px solid rgba(255,200,54,.3);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .napa-use-btn:hover { background: rgba(255,200,54,.25); }
+
+    /* Phase checkbox in timeline */
+    .phase-check {
+      width: auto;
+      accent-color: var(--napa-yellow);
+      cursor: pointer;
+    }
+    .timeline-step.disabled { opacity: .4; }
+    .timeline-step.past { opacity: .5; text-decoration: line-through; }
+
+    /* Carrier safety badge */
+    .carrier-badge {
+      display: inline-block;
+      background: rgba(142,207,142,.15);
+      color: var(--green);
+      border: 1px solid rgba(142,207,142,.3);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      margin-top: 8px;
+    }
+
+    /* Destination preview */
+    .destination-preview {
+      font-size: 12px;
+      color: var(--dim);
+      margin-top: 4px;
+      word-break: break-all;
+    }
+
+    /* Help text under fields */
+    .field-help {
+      font-size: 12px;
+      color: var(--dim);
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    /* ─── NAPA Sans @font-face ─── */
+    @font-face {
+      font-family: 'NAPA Sans';
+      src: url('/assets/fonts/NAPASANS-Roman.woff2') format('woff2');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'NAPA Sans';
+      src: url('/assets/fonts/NAPASANS-Bd.woff2') format('woff2');
+      font-weight: 700;
+      font-display: swap;
+    }
+
+    /* ─── Creative Studio Layout ─── */
+    .cs-layout {
+      display: grid;
+      grid-template-columns: 2fr 3fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .cs-controls { min-width: 0; }
+    .cs-preview {
+      position: sticky;
+      top: 20px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    /* ─── MMS Image Preview (HTML/CSS) ─── */
+    .mms-canvas {
+      width: 100%;
+      aspect-ratio: 1080 / 566;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: 'NAPA Sans', system-ui, sans-serif;
+    }
+    /* All mms-* sizes use cqi (container query inline) so the preview
+       scales proportionally regardless of how wide the container is.
+       1cqi ≈ 1% of the .mms-canvas width. At 1080px real render,
+       the canvas is ~540px per panel, so font sizes are tuned to that. */
+    .mms-canvas { container-type: inline-size; }
+    .mms-left {
+      background: #fff;
+      color: #111;
+      padding: 6% 5%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 1.5%;
+    }
+    .mms-right {
+      background: #0A0094;
+      color: #fff;
+      padding: 3% 5% 4%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .mms-logo-area {
+      text-align: center;
+      padding: 0 2%;
+    }
+    .mms-price-line {
+      display: flex;
+      align-items: baseline;
+      gap: 2px;
+      justify-content: center;
+    }
+    .mms-price-sale {
+      color: #0A0094;
+      font-size: 6cqi;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .mms-price-unit {
+      color: #333;
+      font-size: 2.6cqi;
+      font-weight: 400;
+    }
+    .mms-price-regular {
+      color: #d0021b;
+      font-size: 2.4cqi;
+      text-decoration: line-through;
+      font-weight: 400;
+    }
+    .mms-product-img {
+      max-width: 90%;
+      max-height: 55%;
+      object-fit: contain;
+      flex: 1;
+      min-height: 0;
+    }
+    .mms-logo {
+      width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .mms-product-name {
+      font-weight: 700;
+      font-size: 2.8cqi;
+      line-height: 1.25;
+    }
+    .mms-sale-text {
+      color: #FBC421;
+      font-size: 2.1cqi;
+      font-weight: 400;
+      line-height: 1.35;
+      margin-top: 2%;
+    }
+    .mms-cta-badge {
+      background: #FBC421;
+      color: #111;
+      padding: 3.5% 6%;
+      border-radius: 6px;
+      font-weight: 700;
+      text-align: center;
+      font-size: 2.2cqi;
+      align-self: stretch;
+    }
+    .mms-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dim);
+      font-size: 13px;
+      width: 80%;
+      flex: 1;
+      min-height: 0;
+      background: rgba(0,0,0,.05);
+      border-radius: 8px;
+      border: 2px dashed rgba(0,0,0,.12);
+    }
+
+    /* ─── Generate Preview button ─── */
+    .cs-generate-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .cs-layout {
+        grid-template-columns: 1fr;
+      }
+      .cs-preview {
+        position: static;
+        order: -1;
+      }
+    }
+
     @media (max-width: 600px) {
       .tabs { overflow-x: auto; }
       .tab { padding: 10px 12px; font-size: 12px; white-space: nowrap; }
@@ -398,10 +829,10 @@
 
         <!-- KPIs -->
         <div class="kpi-grid" id="kpiGrid">
-          <div class="kpi-card"><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-label">Total Customers</div></div>
-          <div class="kpi-card"><div class="kpi-num" id="kpiSubscribed">—</div><div class="kpi-label">Subscribed</div></div>
-          <div class="kpi-card"><div class="kpi-num" id="kpiConversion">—</div><div class="kpi-label">Invite → Subscribe</div></div>
-          <div class="kpi-card"><div class="kpi-num" id="kpiMessages">—</div><div class="kpi-label">Messages (Month)</div></div>
+          <div class="kpi-card clickable" onclick="switchToTab('customers')"><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-label">Total Customers</div><div class="kpi-sub" id="kpiPriority"></div></div>
+          <div class="kpi-card clickable" onclick="switchToTab('customers',{status:'subscribed'})"><div class="kpi-num" id="kpiSubscribed">—</div><div class="kpi-label">Subscribed</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiConversion">—</div><div class="kpi-label">Invite → Subscribe</div><div class="kpi-sub" id="kpiConversionSub"></div></div>
+          <div class="kpi-card clickable" onclick="switchToTab('history')"><div class="kpi-num" id="kpiMessages">—</div><div class="kpi-label">Messages (Month)</div></div>
         </div>
 
         <!-- Actions -->
@@ -474,6 +905,10 @@
             <option value="has">Has Email</option>
             <option value="no">No Email</option>
           </select>
+          <select id="filterPriority">
+            <option value="">All</option>
+            <option value="priority">Priority Only</option>
+          </select>
           <div style="flex:2;position:relative;min-width:120px;">
             <input id="filterSearch" type="text" placeholder="Search name, phone, email..." style="width:100%;padding-right:36px;" />
             <button id="btnClearSearch" type="button" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;padding:0;">&times;</button>
@@ -494,66 +929,329 @@
 
       <!-- ═══ Tab 3: Send SMS ═══ -->
       <div class="tab-content" id="tab-send">
-        <div class="form-card">
-          <h2 style="margin-top:0;">New SMS Campaign</h2>
 
-          <label for="campaignName">Campaign Name</label>
-          <input id="campaignName" type="text" placeholder="e.g., February Promo" maxlength="100" />
-
-          <label for="campaignBody">Message <span style="font-weight:400;font-size:12px;color:var(--dim);">(optional if media is attached)</span></label>
-          <textarea id="campaignBody" placeholder="Type your message... (optional if sending media only)" maxlength="1500" style="min-height:120px;"></textarea>
-          <div class="char-count" id="charCount">0 / 1,500</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." appended automatically. Links auto-shortened via gkk-napa.com.</div>
-
-          <label>Media</label>
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-              <input type="radio" name="imageOption" value="logo" checked style="width:auto;accent-color:var(--napa-yellow);" /> Store logo
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-              <input type="radio" name="imageOption" value="custom" style="width:auto;accent-color:var(--napa-yellow);" /> Image / Video URL
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-              <input type="radio" name="imageOption" value="none" style="width:auto;accent-color:var(--napa-yellow);" /> No media (SMS only)
-            </label>
-          </div>
-          <div id="customImageRow" style="display:none;margin-bottom:4px;">
-            <input id="campaignImageUrl" type="url" placeholder="https://example.com/image.png or video.mp4" />
-            <div style="font-size:11px;color:var(--dim);margin-top:4px;">Supports images (jpg, png, gif) and video (mp4). Max 5 MB.</div>
-          </div>
-          <div id="imagePreview" style="margin-bottom:8px;">
-            <img src="https://gkk-napa.com/assets/sms-logo.png" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
-          </div>
-
-          <label for="campaignStore">Send To</label>
-          <select id="campaignStore">
-            <option value="">All Stores</option>
-            <option value="danville">Danville, IL</option>
-            <option value="cayuga">Cayuga, IN</option>
-            <option value="rockville">Rockville, IN</option>
-            <option value="covington">Covington, IN</option>
-          </select>
-
-          <div class="recipient-preview" id="recipientPreview">
-            Loading recipient count...
-          </div>
-
-          <div style="margin-top:16px;padding:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.18);border-radius:12px;">
-            <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--dim);margin-bottom:8px;">Send Test First</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <input id="testPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
-              <button class="btn-secondary" id="btnSendTest" style="flex-shrink:0;padding:10px 16px;">Send Test</button>
-            </div>
-            <div class="error" id="testError" style="display:none;font-size:13px;"></div>
-            <div class="success" id="testSuccess" style="display:none;font-size:13px;"></div>
-          </div>
-
-          <div style="margin-top:16px;">
-            <button class="btn-primary" id="btnSend" style="width:100%;font-size:16px;padding:14px;">Send Campaign</button>
-          </div>
-          <div class="error" id="sendError" style="display:none;"></div>
-          <div class="success" id="sendSuccess" style="display:none;"></div>
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+          <button class="mode-btn active" data-mode="manual" onclick="setSendMode('manual')">Manual Message</button>
+          <button class="mode-btn" data-mode="creative" onclick="setSendMode('creative')">Creative Studio</button>
         </div>
+
+        <!-- ── Manual Message Mode (existing) ── -->
+        <div id="sendModeManual">
+          <div class="form-card">
+            <h2 style="margin-top:0;">New SMS Campaign</h2>
+
+            <label for="campaignName">Campaign Name</label>
+            <input id="campaignName" type="text" placeholder="e.g., February Promo" maxlength="100" />
+
+            <label for="campaignBody">Message <span style="font-weight:400;font-size:12px;color:var(--dim);">(optional if media is attached)</span></label>
+            <textarea id="campaignBody" placeholder="Type your message... (optional if sending media only)" maxlength="1500" style="min-height:120px;"></textarea>
+            <div class="char-count" id="charCount">0 / 1,500</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." appended automatically. Links auto-shortened via gkk-napa.com.</div>
+
+            <label>Media</label>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
+              <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
+                <input type="radio" name="imageOption" value="logo" checked style="width:auto;accent-color:var(--napa-yellow);" /> Store logo
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
+                <input type="radio" name="imageOption" value="custom" style="width:auto;accent-color:var(--napa-yellow);" /> Image / Video URL
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
+                <input type="radio" name="imageOption" value="none" style="width:auto;accent-color:var(--napa-yellow);" /> No media (SMS only)
+              </label>
+            </div>
+            <div id="customImageRow" style="display:none;margin-bottom:4px;">
+              <input id="campaignImageUrl" type="url" placeholder="https://example.com/image.png or video.mp4" />
+              <div style="font-size:11px;color:var(--dim);margin-top:4px;">Supports images (jpg, png, gif) and video (mp4). Max 5 MB.</div>
+            </div>
+            <div id="imagePreview" style="margin-bottom:8px;">
+              <img src="https://gkk-napa.com/assets/sms-logo.png" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
+            </div>
+
+            <label for="campaignStore">Send To</label>
+            <select id="campaignStore">
+              <option value="">All Stores</option>
+              <option value="danville">Danville, IL</option>
+              <option value="cayuga">Cayuga, IN</option>
+              <option value="rockville">Rockville, IN</option>
+              <option value="covington">Covington, IN</option>
+            </select>
+
+            <div style="margin-top:12px;">
+              <label style="display:flex;align-items:center;gap:8px;margin:0 0 8px;cursor:pointer;">
+                <input type="checkbox" id="priorityOnly" style="width:auto;accent-color:var(--napa-yellow);" />
+                <span style="font-size:14px;">★ Priority customers only</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
+                <input type="checkbox" id="emailFallback" style="width:auto;accent-color:var(--napa-yellow);" />
+                <span style="font-size:14px;">Also email non-subscribed customers with email addresses</span>
+              </label>
+              <div id="emailFallbackPreview" style="display:none;font-size:13px;color:var(--dim);margin:6px 0 0 28px;"></div>
+            </div>
+
+            <div class="recipient-preview" id="recipientPreview">
+              Loading recipient count...
+            </div>
+
+            <div style="margin-top:16px;padding:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.18);border-radius:12px;">
+              <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--dim);margin-bottom:8px;">Send Test First</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input id="testPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
+                <button class="btn-secondary" id="btnSendTest" style="flex-shrink:0;padding:10px 16px;">Send Test</button>
+              </div>
+              <div class="error" id="testError" style="display:none;font-size:13px;"></div>
+              <div class="success" id="testSuccess" style="display:none;font-size:13px;"></div>
+            </div>
+
+            <div style="margin-top:16px;">
+              <button class="btn-primary" id="btnSend" style="width:100%;font-size:16px;padding:14px;">Send Campaign</button>
+            </div>
+            <div class="error" id="sendError" style="display:none;"></div>
+            <div class="success" id="sendSuccess" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- ── Creative Studio Mode ── -->
+        <div id="sendModeCreative" style="display:none;">
+
+          <div class="cs-layout">
+            <!-- ═══ LEFT COLUMN: Controls ═══ -->
+            <div class="cs-controls">
+
+              <!-- Template -->
+              <div class="ob-section">
+                <h3>Template</h3>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,200,54,.06);border:1px solid rgba(255,200,54,.2);border-radius:8px;">
+                  <div style="font-size:20px;">📐</div>
+                  <div>
+                    <div style="font-weight:700;font-size:13px;">Split Panel Promo</div>
+                    <div style="font-size:11px;color:var(--dim);">1080×566 • Product left, branding right</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pricing -->
+              <div class="ob-section">
+                <h3>Pricing</h3>
+                <div style="display:flex;gap:12px;">
+                  <div style="flex:1;">
+                    <label for="csRegularPrice">Regular Price <span class="field-help">(optional)</span></label>
+                    <input id="csRegularPrice" type="text" placeholder="29.99" />
+                    <div id="csRegularPriceWarn" class="price-warning" style="display:none;"></div>
+                  </div>
+                  <div style="flex:1;">
+                    <label for="csSalePrice">Sale Price <span class="field-help">(required)</span></label>
+                    <input id="csSalePrice" type="text" placeholder="24.99" />
+                    <div id="csSalePriceWarn" class="price-warning" style="display:none;"></div>
+                  </div>
+                </div>
+                <label for="csUnit">Unit Label <span class="field-help">(optional)</span></label>
+                <input id="csUnit" type="text" placeholder="/ each" maxlength="30" value="/ each" />
+              </div>
+
+              <!-- Product Image -->
+              <div class="ob-section">
+                <h3>Product Image</h3>
+                <div class="media-source-group">
+                  <div class="media-source-card active" data-source="napa" onclick="csToggleMediaSource('napa')">
+                    NAPA URL
+                  </div>
+                  <div class="media-source-card" data-source="url" onclick="csToggleMediaSource('url')">
+                    Image URL
+                  </div>
+                  <div class="media-source-card" data-source="upload" onclick="csToggleMediaSource('upload')">
+                    Upload
+                  </div>
+                </div>
+
+                <!-- NAPA URL panel -->
+                <div id="csMediaNapa">
+                  <div style="display:flex;gap:8px;align-items:flex-end;">
+                    <div style="flex:1;">
+                      <label for="csNapaUrl" style="margin-top:0;">NAPA Product URL</label>
+                      <input id="csNapaUrl" type="url" placeholder="https://www.napaonline.com/en/p/..." />
+                    </div>
+                    <button class="btn-primary" id="btnCsNapaFetch" style="padding:12px 16px;margin-bottom:0;">Fetch</button>
+                  </div>
+                  <div class="error" id="csNapaFetchError" style="display:none;font-size:13px;"></div>
+                  <div id="csNapaResults" class="napa-results">
+                    <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px;">FETCHED FROM NAPA:</div>
+                    <div id="csNapaResultBody"></div>
+                  </div>
+                </div>
+
+                <!-- URL panel -->
+                <div id="csMediaUrl" style="display:none;">
+                  <label for="csImageUrl" style="margin-top:0;">Image URL</label>
+                  <input id="csImageUrl" type="url" placeholder="https://example.com/product.png" />
+                </div>
+
+                <!-- Upload panel -->
+                <div id="csMediaUpload" style="display:none;">
+                  <label style="margin-top:0;">Upload Image</label>
+                  <input type="file" id="csImageFile" accept="image/*" style="font-size:13px;" />
+                </div>
+
+                <div id="csImagePreview" style="margin-top:10px;"></div>
+              </div>
+
+              <!-- Sale Info -->
+              <div class="ob-section">
+                <h3>Sale Info</h3>
+                <label for="csProductName">Product Name <span class="field-help">(required — white on navy)</span></label>
+                <input id="csProductName" type="text" placeholder="NAPA Motor Oil 5W30 Full Synthetic 5 qt (US)" maxlength="80" />
+
+                <label for="csSaleText">Sale Text <span class="field-help">(optional — yellow on navy)</span></label>
+                <textarea id="csSaleText" placeholder="On sale at Danville location while supplies last" maxlength="200" style="min-height:50px;"></textarea>
+              </div>
+
+              <!-- CTA Badge -->
+              <div class="ob-section">
+                <h3>CTA Badge</h3>
+                <label for="csCtaBadgeLabel">Badge Label <span class="field-help">(shown on image)</span></label>
+                <input id="csCtaBadgeLabel" type="text" placeholder="All Locations" maxlength="30" value="All Locations" />
+              </div>
+
+              <!-- SMS Text -->
+              <div class="ob-section">
+                <h3>SMS Text</h3>
+                <label for="csSmsBody">Message Body</label>
+                <textarea id="csSmsBody" placeholder="Motor oil on sale! {{sale_price_line}}&#10;&#10;{{cta_text}}: {{cta_url}}" maxlength="1500" style="min-height:100px;"></textarea>
+                <div style="font-size:11px;color:var(--dim);margin-top:4px;">
+                  Variables: <code>{{sale_price_line}}</code> <code>{{product_name}}</code> <code>{{cta_text}}</code> <code>{{cta_url}}</code><br>
+                  Links and timing info go here, not on the image. "Reply STOP" appended automatically.
+                </div>
+                <div id="csSmsLivePreview" style="margin-top:8px;padding:10px 12px;background:rgba(0,0,0,.18);border-radius:8px;font-size:13px;color:rgba(255,255,255,.7);white-space:pre-wrap;line-height:1.5;display:none;">
+                  <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">Preview:</div>
+                  <div id="csSmsLiveText"></div>
+                </div>
+              </div>
+
+              <!-- CTA & Destination -->
+              <div class="ob-section">
+                <h3>CTA & Destination</h3>
+                <label for="csCtaType">CTA Type</label>
+                <select id="csCtaType">
+                  <option value="all_locations">All Locations (gkk-napa.com)</option>
+                  <option value="get_directions">Get Directions (Google Maps)</option>
+                  <option value="call_store">Call Store</option>
+                  <option value="view_product">View Product (NAPA URL)</option>
+                  <option value="shop_online">Shop Online (napaonline.com)</option>
+                </select>
+
+                <label for="csStoreContext">Preview Store Context</label>
+                <select id="csStoreContext">
+                  <option value="">All Stores</option>
+                  <option value="danville" selected>Danville, IL</option>
+                  <option value="cayuga">Cayuga, IN</option>
+                  <option value="rockville">Rockville, IN</option>
+                  <option value="covington">Covington, IN</option>
+                </select>
+
+                <div style="margin-top:8px;">
+                  <label for="csCtaDestination">Destination <span class="field-help">(auto-filled, editable)</span></label>
+                  <input id="csCtaDestination" type="text" placeholder="Auto-resolved from CTA type" />
+                  <div id="csCtaResolvedPreview" class="destination-preview"></div>
+                </div>
+              </div>
+
+              <!-- Test Send -->
+              <div class="ob-section">
+                <h3>Test Send</h3>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input id="csTestPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
+                  <button class="btn-secondary" id="btnCsSendTest" style="flex-shrink:0;padding:10px 16px;" disabled>Send Test</button>
+                </div>
+                <div class="error" id="csTestError" style="display:none;font-size:13px;"></div>
+                <div class="success" id="csTestSuccess" style="display:none;font-size:13px;"></div>
+                <div style="font-size:11px;color:var(--dim);margin-top:4px;">Generate preview first to enable test sends.</div>
+              </div>
+
+              <!-- Save Creative -->
+              <div class="ob-section">
+                <h3>Save Creative</h3>
+                <label for="csCreativeName">Creative Name</label>
+                <input id="csCreativeName" type="text" placeholder="e.g., Feb Motor Oil Promo" maxlength="100" />
+                <div style="margin-top:10px;">
+                  <button class="btn-primary" id="btnCsSave" style="width:100%;padding:12px;font-size:14px;" disabled>Save Creative</button>
+                </div>
+                <div class="error" id="csSaveError" style="display:none;font-size:13px;"></div>
+                <div class="success" id="csSaveSuccess" style="display:none;font-size:13px;"></div>
+              </div>
+
+            </div>
+
+            <!-- ═══ RIGHT COLUMN: Preview ═══ -->
+            <div class="cs-preview">
+
+              <!-- Generate Preview button + stale banner -->
+              <div class="cs-generate-row">
+                <button class="btn-primary" id="btnCsPreview" style="flex:1;padding:12px;font-size:14px;" onclick="csGeneratePreview()">Generate Preview</button>
+              </div>
+
+              <div id="csStaleBar" class="stale-banner">
+                Form changed since last preview. <button class="btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="csGeneratePreview()">Refresh</button>
+              </div>
+
+              <!-- Preview Tabs -->
+              <div class="preview-tabs">
+                <div class="preview-tab active" data-pane="image" onclick="csSwitchPreviewTab('image')">Image</div>
+                <div class="preview-tab" data-pane="sms" onclick="csSwitchPreviewTab('sms')">SMS</div>
+                <div class="preview-tab" data-pane="package" onclick="csSwitchPreviewTab('package')">Package</div>
+              </div>
+
+              <!-- Pane: Image -->
+              <div id="csPaneImage" class="preview-pane active">
+                <div id="csLivePreview">
+                  <div class="mms-canvas" id="csMmsCanvas">
+                    <div class="mms-left">
+                      <div class="mms-price-line">
+                        <div class="mms-price-sale" id="csPrevSalePrice">$24.99</div>
+                        <div class="mms-price-unit" id="csPrevUnit">/ each</div>
+                      </div>
+                      <div class="mms-price-regular" id="csPrevRegPrice" style="display:none;"></div>
+                      <div class="mms-placeholder" id="csPrevImgPlaceholder">Product Image</div>
+                      <img id="csPrevProductImg" class="mms-product-img" style="display:none;" />
+                    </div>
+                    <div class="mms-right">
+                      <div class="mms-logo-area">
+                        <img src="/assets/napa-auto-parts-g+kk-combo.svg" class="mms-logo" alt="G&KK NAPA" />
+                      </div>
+                      <div>
+                        <div class="mms-product-name" id="csPrevProductName">Product Name</div>
+                        <div class="mms-sale-text" id="csPrevSaleText">Sale details here</div>
+                      </div>
+                      <div class="mms-cta-badge" id="csPrevCtaBadge">All Locations</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rendered image (shown after generate) -->
+                <div id="csRenderedImage" style="display:none;margin-top:12px;">
+                  <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:6px;">RENDERED PNG (sent via MMS):</div>
+                  <img id="csRenderedImg" style="width:100%;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
+                </div>
+              </div>
+
+              <!-- Pane: SMS -->
+              <div id="csPaneSms" class="preview-pane">
+                <div id="csSmsPreviewText" style="font-size:14px;color:var(--dim);white-space:pre-wrap;line-height:1.6;background:rgba(0,0,0,.18);border-radius:10px;padding:14px;">Generate preview to see final SMS text...</div>
+                <div id="csCarrierBadge" style="text-align:center;display:none;">
+                  <span class="carrier-badge">MMS verified</span>
+                </div>
+              </div>
+
+              <!-- Pane: Package -->
+              <div id="csPanePackage" class="preview-pane">
+                <div id="csPackageInfo" style="font-size:13px;color:var(--dim);line-height:1.8;">Generate preview to see package details...</div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
       <!-- ═══ Tab 4: History ═══ -->
@@ -589,6 +1287,11 @@
 
       <label for="modalNotes">Notes (optional)</label>
       <textarea id="modalNotes" placeholder="Account number, special instructions..." maxlength="500" style="min-height:60px;"></textarea>
+
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;">
+        <input type="checkbox" id="modalPriority" style="width:auto;accent-color:var(--napa-yellow);" />
+        <span>Priority Customer ★</span>
+      </label>
 
       <div id="subscribeUrlRow" style="display:none;">
         <label>Subscribe URL</label>
@@ -663,8 +1366,33 @@ Occasional deals &amp; promotions</textarea>
       none: '<span class="badge badge-none">None</span>',
     };
 
+    const TWILIO_ERRORS = { "30003": "Unreachable", "30004": "Blocked", "30005": "Unknown #", "30006": "Landline", "30007": "Carrier violation", "21610": "Opted out" };
+
     let authToken = "";
     let allCustomers = [];
+
+    // ─── Tab navigation helper ───────────────────────────────
+    window.switchToTab = function(tabName, filters) {
+      const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+      if (!tab) return;
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById(`tab-${tabName}`).classList.add("active");
+
+      if (filters && tabName === "customers") {
+        if (filters.status) document.getElementById("filterStatus").value = filters.status;
+        loadCustomers();
+      } else if (tabName === "customers") {
+        loadCustomers();
+      } else if (tabName === "history") {
+        loadCampaigns();
+      } else if (tabName === "send") {
+        updateRecipientPreview();
+      } else if (tabName === "dashboard") {
+        loadDashboard();
+      }
+    };
 
     // ─── Auth ────────────────────────────────────────────────
     function authHeaders() {
@@ -734,15 +1462,37 @@ Occasional deals &amp; promotions</textarea>
         document.getElementById("kpiTotal").textContent = dash.kpis.total_customers;
         document.getElementById("kpiSubscribed").textContent = dash.kpis.total_subscribed;
         document.getElementById("kpiConversion").textContent = dash.kpis.conversion_rate + "%";
-        document.getElementById("kpiMessages").textContent = stats.messages_this_month;
+        document.getElementById("kpiConversionSub").textContent = dash.kpis.converted_from_invite + " of " + dash.kpis.total_invited + " invited";
+        document.getElementById("kpiMessages").textContent = dash.kpis.messages_this_month;
+        document.getElementById("kpiPriority").textContent = dash.kpis.priority_customers > 0 ? "★ " + dash.kpis.priority_customers + " priority" : "";
 
         // Alerts
         const alertsEl = document.getElementById("dashAlerts");
         let alertHtml = "";
-        if (dash.alerts.failed_sms > 0)
-          alertHtml += `<div class="alert-card"><div><span class="count">${dash.alerts.failed_sms}</span> failed SMS this week</div></div>`;
+        if (dash.alerts.failed_sms > 0) {
+          const details = dash.alerts.failed_sms_details || [];
+          alertHtml += `<div class="alert-card" id="alertFailedSms">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;">
+                <span class="count">${dash.alerts.failed_sms}</span> failed SMS this week
+                <span class="alert-toggle" onclick="document.getElementById('failedSmsDetails').classList.toggle('open');this.textContent=this.textContent==='▼'?'▲':'▼'">▼</span>
+              </div>
+              <div class="alert-expand" id="failedSmsDetails">
+                ${details.map(d => `<div class="alert-expand-item">
+                  <div>
+                    <strong>${esc(d.name || 'Unknown')}</strong>
+                    <span style="color:var(--dim);margin-left:6px;">${esc(d.phone || '')}</span>
+                    ${d.error_code ? `<span style="color:var(--red);margin-left:6px;font-size:12px;">${d.error_code}${TWILIO_ERRORS[d.error_code] ? ' — ' + TWILIO_ERRORS[d.error_code] : ''}</span>` : ''}
+                  </div>
+                  <span style="color:var(--dim);font-size:11px;">${new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                </div>`).join('')}
+              </div>
+            </div>
+            <span class="alert-dismiss" onclick="this.closest('.alert-card').style.display='none'" title="Dismiss">&times;</span>
+          </div>`;
+        }
         if (dash.alerts.new_from_stripe > 0)
-          alertHtml += `<div class="alert-card info"><div><span class="count">${dash.alerts.new_from_stripe}</span> new customer${dash.alerts.new_from_stripe !== 1 ? 's' : ''} from Stripe payments this week</div></div>`;
+          alertHtml += `<div class="alert-card info clickable" onclick="document.getElementById('recentActivity').scrollIntoView({behavior:'smooth'})"><div><span class="count">${dash.alerts.new_from_stripe}</span> new customer${dash.alerts.new_from_stripe !== 1 ? 's' : ''} from Stripe payments this week <span style="font-size:11px;color:var(--dim);margin-left:4px;">View ↓</span></div></div>`;
         if (dash.alerts.new_from_web > 0)
           alertHtml += `<div class="alert-card info"><div><span class="count">${dash.alerts.new_from_web}</span> new subscriber${dash.alerts.new_from_web !== 1 ? 's' : ''} from web form this week</div></div>`;
         if (dash.alerts.new_from_quick_subscribe > 0)
@@ -1021,7 +1771,8 @@ Occasional deals &amp; promotions</textarea>
 
     const filterLineType = document.getElementById("filterLineType");
     const filterEmail = document.getElementById("filterEmail");
-    [filterStore, filterStatus, filterLineType, filterEmail].forEach(el => el.addEventListener("change", loadCustomers));
+    const filterPriority = document.getElementById("filterPriority");
+    [filterStore, filterStatus, filterLineType, filterEmail, filterPriority].forEach(el => el.addEventListener("change", loadCustomers));
     let searchTimeout;
     filterSearch.addEventListener("input", () => {
       btnClearSearch.style.display = filterSearch.value ? "block" : "none";
@@ -1052,6 +1803,9 @@ Occasional deals &amp; promotions</textarea>
         } else if (filterEmail.value === "no") {
           filtered = filtered.filter(c => !c.email);
         }
+        if (filterPriority.value === "priority") {
+          filtered = filtered.filter(c => c.is_priority);
+        }
         renderCustomers(filtered);
       } catch {
         customerList.innerHTML = '<div class="error">Failed to load customers.</div>';
@@ -1070,6 +1824,7 @@ Occasional deals &amp; promotions</textarea>
         <div class="customer-item" data-id="${c.id}">
           <div class="customer-info">
             <div class="customer-name">
+              <span class="priority-star ${c.is_priority ? 'active' : ''}" onclick="event.stopPropagation();togglePriority(${c.id},${c.is_priority ? 0 : 1})" title="${c.is_priority ? 'Remove priority' : 'Mark as priority'}">${c.is_priority ? '★' : '☆'}</span>
               ${esc(c.name || "Unnamed")}
               ${STATUS_BADGE[c.sms_status] || ""}
               ${c.line_type ? `<span class="badge badge-${c.line_type}">${c.line_type}</span>` : ""}
@@ -1086,6 +1841,20 @@ Occasional deals &amp; promotions</textarea>
         </div>
       `).join("");
     }
+
+    // ─── Toggle Priority ─────────────────────────────────────
+    window.togglePriority = async function(id, newValue) {
+      try {
+        await fetch(`${WORKER_BASE}/admin/customers/${id}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ is_priority: newValue }),
+        });
+        loadCustomers();
+      } catch (e) {
+        console.error("Priority toggle failed:", e);
+      }
+    };
 
     // ─── Add/Edit Customer Modal ─────────────────────────────
     const customerModal = document.getElementById("customerModal");
@@ -1107,6 +1876,7 @@ Occasional deals &amp; promotions</textarea>
       modalEmail.value = "";
       modalStore.value = "";
       modalNotes.value = "";
+      document.getElementById("modalPriority").checked = false;
       modalError.style.display = "none";
       document.getElementById("subscribeUrlRow").style.display = "none";
       customerModal.classList.add("open");
@@ -1123,6 +1893,7 @@ Occasional deals &amp; promotions</textarea>
       modalEmail.value = c.email || "";
       modalStore.value = c.store || "";
       modalNotes.value = c.notes || "";
+      document.getElementById("modalPriority").checked = !!c.is_priority;
       modalError.style.display = "none";
 
       // Show subscribe URL (prefer short URL if available)
@@ -1151,6 +1922,7 @@ Occasional deals &amp; promotions</textarea>
         email: modalEmail.value.trim(),
         store: modalStore.value,
         notes: modalNotes.value.trim(),
+        is_priority: document.getElementById("modalPriority").checked ? 1 : 0,
       };
 
       if (!data.phone && !data.email) {
@@ -1392,6 +2164,17 @@ Occasional deals &amp; promotions</textarea>
 
     campaignStore.addEventListener("change", updateRecipientPreview);
 
+    // Priority + email fallback toggles
+    const priorityOnly = document.getElementById("priorityOnly");
+    const emailFallback = document.getElementById("emailFallback");
+    const emailFallbackPreview = document.getElementById("emailFallbackPreview");
+
+    priorityOnly.addEventListener("change", updateRecipientPreview);
+    emailFallback.addEventListener("change", () => {
+      emailFallbackPreview.style.display = emailFallback.checked ? "block" : "none";
+      updateRecipientPreview();
+    });
+
     // ─── Send Test SMS ──────────────────────────────────────
     const testPhone = document.getElementById("testPhone");
     const testError = document.getElementById("testError");
@@ -1450,10 +2233,22 @@ Occasional deals &amp; promotions</textarea>
       if (campaignStore.value) params.set("store", campaignStore.value);
 
       try {
-        const resp = await fetch(`${WORKER_BASE}/admin/customers?${params}`, { headers: authHeaders() });
-        const customers = await resp.json();
+        const allResp = await fetch(`${WORKER_BASE}/admin/customers?${params}`, { headers: authHeaders() });
+        let smsRecipients = await allResp.json();
+        if (priorityOnly.checked) smsRecipients = smsRecipients.filter(c => c.is_priority);
         const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
-        recipientPreview.innerHTML = `Will send to <strong>${customers.length}</strong> subscribed customer${customers.length !== 1 ? "s" : ""} at ${storeName}.`;
+        const priorityLabel = priorityOnly.checked ? " priority" : "";
+        recipientPreview.innerHTML = `Will send SMS to <strong>${smsRecipients.length}</strong>${priorityLabel} subscribed customer${smsRecipients.length !== 1 ? "s" : ""} at ${storeName}.`;
+
+        // Email fallback count
+        if (emailFallback.checked) {
+          const allCustResp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
+          const allCusts = await allCustResp.json();
+          let emailEligible = allCusts.filter(c => c.sms_status !== 'subscribed' && c.email);
+          if (campaignStore.value) emailEligible = emailEligible.filter(c => c.store === campaignStore.value);
+          if (priorityOnly.checked) emailEligible = emailEligible.filter(c => c.is_priority);
+          emailFallbackPreview.textContent = `+ Will email ${emailEligible.length}${priorityLabel} non-subscribed customer${emailEligible.length !== 1 ? 's' : ''} with email addresses.`;
+        }
       } catch {
         recipientPreview.innerHTML = "Could not load recipient count.";
       }
@@ -1473,9 +2268,11 @@ Occasional deals &amp; promotions</textarea>
 
       const msgType = imageUrl ? (body ? "MMS (with media)" : "MMS (media only)") : "SMS (text only)";
       const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
+      const priorityLabel = priorityOnly.checked ? " PRIORITY" : "";
+      const emailNote = emailFallback.checked ? `\n\n+ Email to${priorityLabel.toLowerCase()} non-subscribed customers with email.` : '';
       const confirmMsg = body
-        ? `Send this ${msgType} campaign to all subscribed customers at ${storeName}?\n\nMessage:\n${body}\n\nReply STOP to opt out.`
-        : `Send this ${msgType} campaign to all subscribed customers at ${storeName}?\n\n(Media only, no text body)`;
+        ? `Send this ${msgType} campaign to${priorityLabel} subscribed customers at ${storeName}?${emailNote}\n\nMessage:\n${body}\n\nReply STOP to opt out.`
+        : `Send this ${msgType} campaign to${priorityLabel} subscribed customers at ${storeName}?${emailNote}\n\n(Media only, no text body)`;
       if (!confirm(confirmMsg)) return;
 
       const btn = document.getElementById("btnSend");
@@ -1486,6 +2283,8 @@ Occasional deals &amp; promotions</textarea>
         const payload = { name, store: campaignStore.value || undefined };
         if (body) payload.body = body;
         if (imageUrl) payload.image_url = imageUrl;
+        if (priorityOnly.checked) payload.priority_only = true;
+        if (emailFallback.checked) payload.email_fallback = true;
 
         const resp = await fetch(`${WORKER_BASE}/admin/send`, {
           method: "POST",
@@ -1495,7 +2294,11 @@ Occasional deals &amp; promotions</textarea>
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send.");
 
-        sendSuccess.textContent = `Campaign sent! ${data.sent} delivered, ${data.failed} failed out of ${data.recipient_count} recipients.`;
+        let successMsg = `Campaign sent! ${data.sent} SMS delivered, ${data.failed} failed out of ${data.recipient_count} recipients.`;
+        if (data.email_sent > 0 || data.email_failed > 0) {
+          successMsg += ` Emails: ${data.email_sent} sent, ${data.email_failed} failed.`;
+        }
+        sendSuccess.textContent = successMsg;
         sendSuccess.style.display = "block";
         campaignName.value = "";
         campaignBody.value = "";
@@ -1523,25 +2326,87 @@ Occasional deals &amp; promotions</textarea>
           return;
         }
 
-        campaignList.innerHTML = campaigns.map(c => `
-          <div class="campaign-item" onclick="viewCampaign(${c.id})">
-            <div class="campaign-name">${esc(c.name)}</div>
-            <div class="campaign-meta">
-              ${new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
-              ${c.store_filter ? " &middot; " + (STORE_NAMES[c.store_filter] || c.store_filter) : " &middot; All Stores"}
+        campaignList.innerHTML = campaigns.map(c => {
+          const isPromo = c.promo_type === "promo";
+          const typeBadge = isPromo
+            ? '<span class="badge badge-promo">PROMO</span>'
+            : '<span class="badge badge-manual">MANUAL</span>';
+
+          // Total stats across all events for promo campaigns
+          const totalSent = isPromo && c.events ? c.events.reduce((s, e) => s + (e.sent_count || 0), 0) : c.sent_count;
+          const totalFailed = isPromo && c.events ? c.events.reduce((s, e) => s + (e.failed_count || 0), 0) : c.failed_count;
+
+          let eventsHtml = '';
+          if (isPromo && c.events && c.events.length > 0) {
+            const hasScheduled = c.events.some(e => e.status === "scheduled");
+            eventsHtml = `
+              <div style="margin-top:8px;">
+                <span style="cursor:pointer;font-size:12px;color:var(--dim);" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open');this.textContent=this.textContent.includes('▼')?'Sequence ▲':'Sequence ▼'">Sequence ▼</span>
+                <div class="sequence-events">
+                  ${c.events.map(e => {
+                    const statusClass = e.status === "sent" ? "event-sent" : e.status === "cancelled" ? "event-cancelled" : "event-scheduled";
+                    const dateStr = new Date(e.send_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+                    return `<div class="event-row">
+                      <div>
+                        <span class="timeline-dot ${e.status}" style="display:inline-block;width:8px;height:8px;vertical-align:middle;margin-right:6px;"></span>
+                        ${esc(e.label)}
+                        <span style="color:var(--dim);font-size:12px;margin-left:6px;">${dateStr}</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        ${e.status === "sent" ? `<span style="font-size:12px;color:var(--dim);">${e.sent_count} sent${e.failed_count ? ', ' + e.failed_count + ' failed' : ''}</span>` : ''}
+                        <span class="event-status ${statusClass}">${e.status}</span>
+                        ${e.status === "scheduled" ? `<button class="btn-danger" style="padding:4px 8px;font-size:10px;" onclick="event.stopPropagation();cancelPromoEvent(${c.id},${e.id})">Cancel</button>` : ''}
+                      </div>
+                    </div>`;
+                  }).join('')}
+                  ${hasScheduled ? `<div style="margin-top:8px;text-align:right;"><button class="btn-danger" style="padding:6px 12px;font-size:11px;" onclick="event.stopPropagation();cancelAllPromoEvents(${c.id})">Cancel All Remaining</button></div>` : ''}
+                </div>
+              </div>`;
+          }
+
+          return `
+            <div class="campaign-item" onclick="viewCampaign(${c.id})">
+              <div class="campaign-name">${esc(c.name)} ${typeBadge}</div>
+              <div class="campaign-meta">
+                ${new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                ${c.store_filter ? " &middot; " + (STORE_NAMES[c.store_filter] || c.store_filter) : " &middot; All Stores"}
+                ${c.sequence_preset ? " &middot; " + c.sequence_preset : ""}
+              </div>
+              <div class="campaign-stats">
+                <span><span class="stat-label">Recipients:</span> ${c.recipient_count}</span>
+                <span><span class="stat-label">Sent:</span> ${totalSent}</span>
+                <span style="color:var(--green);"><span class="stat-label">Delivered:</span> ${c.delivered_count || 0}</span>
+                <span style="color:var(--red);"><span class="stat-label">Failed:</span> ${totalFailed}</span>
+                ${(c.email_count || 0) > 0 ? `<span style="color:#8cc4ff;"><span class="stat-label">Emailed:</span> ${c.email_count}${c.email_failed_count > 0 ? ` (${c.email_failed_count} failed)` : ''}</span>` : ''}
+              </div>
+              ${eventsHtml}
             </div>
-            <div class="campaign-stats">
-              <span><span class="stat-label">Recipients:</span> ${c.recipient_count}</span>
-              <span><span class="stat-label">Sent:</span> ${c.sent_count}</span>
-              <span style="color:var(--green);"><span class="stat-label">Delivered:</span> ${c.delivered_count}</span>
-              <span style="color:var(--red);"><span class="stat-label">Failed:</span> ${c.failed_count}</span>
-            </div>
-          </div>
-        `).join("");
+          `;
+        }).join("");
       } catch {
         campaignList.innerHTML = '<div class="error">Failed to load campaigns.</div>';
       }
     }
+
+    window.cancelPromoEvent = async function(campaignId, eventId) {
+      if (!confirm("Cancel this scheduled event?")) return;
+      // Cancel single event not supported by API — cancel all for this campaign
+      // The API cancels all scheduled events, so this is the same effect
+      try {
+        await fetch(`${WORKER_BASE}/admin/promo/cancel/${campaignId}`, { method: "POST", headers: authHeaders() });
+        loadCampaigns();
+      } catch { alert("Failed to cancel."); }
+    };
+
+    window.cancelAllPromoEvents = async function(campaignId) {
+      if (!confirm("Cancel ALL remaining scheduled events for this campaign?")) return;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/promo/cancel/${campaignId}`, { method: "POST", headers: authHeaders() });
+        const data = await resp.json();
+        alert(`${data.cancelled} event(s) cancelled.`);
+        loadCampaigns();
+      } catch { alert("Failed to cancel."); }
+    };
 
     // ─── Campaign Detail Modal ───────────────────────────────
     const campaignModal = document.getElementById("campaignModal");
@@ -1557,20 +2422,53 @@ Occasional deals &amp; promotions</textarea>
         const resp = await fetch(`${WORKER_BASE}/admin/campaigns/${id}`, { headers: authHeaders() });
         const data = await resp.json();
 
-        campaignDetailTitle.textContent = data.name;
+        const isPromo = data.promo_type === "promo";
+        const typeBadge = isPromo
+          ? '<span class="badge badge-promo">PROMO</span>'
+          : '<span class="badge badge-manual">MANUAL</span>';
+
+        campaignDetailTitle.innerHTML = esc(data.name) + " " + typeBadge;
         let html = `
           <div style="font-size:13px;color:var(--dim);margin-bottom:12px;">
             ${new Date(data.created_at).toLocaleString()} &middot;
             ${data.store_filter ? (STORE_NAMES[data.store_filter] || data.store_filter) : "All Stores"}
+            ${data.sequence_preset ? " &middot; Sequence: " + data.sequence_preset : ""}
           </div>
           <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:14px;white-space:pre-wrap;">${esc(data.body)}</div>
+          ${data.media_url ? `<div style="margin-bottom:16px;"><img src="${esc(data.media_url)}" alt="Media" style="max-width:200px;border-radius:8px;" /></div>` : ''}
           <div class="campaign-stats" style="margin-bottom:16px;">
             <span>Recipients: <strong>${data.recipient_count}</strong></span>
             <span>Sent: <strong>${data.sent_count}</strong></span>
             <span style="color:var(--green);">Delivered: <strong>${data.delivered_count}</strong></span>
             <span style="color:var(--red);">Failed: <strong>${data.failed_count}</strong></span>
+            ${(data.email_count || 0) > 0 ? `<span style="color:#8cc4ff;">Emailed: <strong>${data.email_count}</strong>${data.email_failed_count > 0 ? ` (${data.email_failed_count} failed)` : ''}</span>` : ''}
           </div>
         `;
+
+        // Show promo events if applicable
+        if (isPromo) {
+          try {
+            const evResp = await fetch(`${WORKER_BASE}/admin/promo/events?campaign_id=${id}`, { headers: authHeaders() });
+            const events = await evResp.json();
+            if (events.length > 0) {
+              html += '<h2 style="font-size:14px;">Sequence Events</h2>';
+              html += events.map(e => {
+                const statusClass = e.status === "sent" ? "event-sent" : e.status === "cancelled" ? "event-cancelled" : "event-scheduled";
+                const dateStr = new Date(e.send_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+                return `<div class="event-row">
+                  <div>
+                    <strong>${esc(e.label)}</strong>
+                    <span style="color:var(--dim);margin-left:8px;">${dateStr}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    ${e.status === "sent" ? `<span style="font-size:12px;">${e.sent_count} sent, ${e.failed_count} failed</span>` : ''}
+                    <span class="event-status ${statusClass}">${e.status}</span>
+                  </div>
+                </div>`;
+              }).join('');
+            }
+          } catch { /* events fetch failed, show basic view */ }
+        }
 
         if (data.messages && data.messages.length > 0) {
           html += '<h2 style="font-size:14px;">Message Log</h2>';
@@ -1598,6 +2496,748 @@ Occasional deals &amp; promotions</textarea>
         if (e.target === modal) modal.classList.remove("open");
       });
     });
+
+    // ═══════════════════════════════════════════════════════════
+    // Creative Studio v3
+    // ═══════════════════════════════════════════════════════════
+
+    let csMediaSource = "napa";
+    let csProductImageUrl = null;   // URL of the product image (for canvas)
+    let csLastPreview = null;       // cached preview response
+    let csPreviewStale = false;
+    let csNapaFetched = null;       // cached NAPA fetch result
+    let csComposedImageUrl = null;  // Cloudinary URL of rendered PNG
+    let csNapaSansLoaded = false;   // font load status
+
+    // CTA type → destination map (mirrors worker CTA_TYPES)
+    const CS_CTA_DEFAULTS = {
+      all_locations:  "https://gkk-napa.com/#locations",
+      get_directions: "https://gkk-napa.com/#locations",
+      call_store:     "https://gkk-napa.com/#locations",
+      view_product:   "",
+      shop_online:    "https://www.napaonline.com/",
+    };
+    const CS_CTA_BADGE_DEFAULTS = {
+      all_locations:  "All Locations",
+      get_directions: "Get Directions",
+      call_store:     "Call Us",
+      view_product:   "View Product",
+      shop_online:    "Shop Online",
+    };
+    const CS_STORE_PHONES = { danville: "(217) 446-9067", cayuga: "(765) 492-3292", rockville: "(765) 569-3100", covington: "(765) 793-4693" };
+    const CS_STORE_MAPS = {
+      danville: "https://maps.google.com/?q=G%26KK+NAPA+Danville+IL",
+      cayuga: "https://maps.google.com/?q=G%26KK+NAPA+Cayuga+IN",
+      rockville: "https://maps.google.com/?q=G%26KK+NAPA+Rockville+IN",
+      covington: "https://maps.google.com/?q=G%26KK+NAPA+Covington+IN",
+    };
+
+    // ─── Send Mode Toggle ────────────────────────────────────
+    window.setSendMode = function(mode) {
+      document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+      document.getElementById("sendModeManual").style.display = mode === "manual" ? "block" : "none";
+      document.getElementById("sendModeCreative").style.display = mode === "creative" ? "block" : "none";
+    };
+
+    // ─── CS: Media Source Toggle ─────────────────────────────
+    window.csToggleMediaSource = function(source) {
+      csMediaSource = source;
+      // Only update cards inside #sendModeCreative
+      document.querySelectorAll("#sendModeCreative .media-source-card").forEach(c => c.classList.toggle("active", c.dataset.source === source));
+      document.getElementById("csMediaNapa").style.display = source === "napa" ? "block" : "none";
+      document.getElementById("csMediaUrl").style.display = source === "url" ? "block" : "none";
+      document.getElementById("csMediaUpload").style.display = source === "upload" ? "block" : "none";
+      csMarkPreviewStale();
+    };
+
+    // ─── CS: Preview Tab Switcher ────────────────────────────
+    window.csSwitchPreviewTab = function(pane) {
+      document.querySelectorAll("#sendModeCreative .preview-tab").forEach(t => t.classList.toggle("active", t.dataset.pane === pane));
+      document.getElementById("csPaneImage").classList.toggle("active", pane === "image");
+      document.getElementById("csPaneSms").classList.toggle("active", pane === "sms");
+      document.getElementById("csPanePackage").classList.toggle("active", pane === "package");
+    };
+
+    // ─── CS: CTA → auto-resolve destination + badge ──────────
+    function csResolveCtaDestination() {
+      const ctaType = document.getElementById("csCtaType").value;
+      const store = document.getElementById("csStoreContext").value;
+      const destEl = document.getElementById("csCtaDestination");
+      const previewEl = document.getElementById("csCtaResolvedPreview");
+      const badgeEl = document.getElementById("csCtaBadgeLabel");
+
+      let dest = CS_CTA_DEFAULTS[ctaType] || "";
+      let hint = "";
+
+      if (ctaType === "get_directions" && store && CS_STORE_MAPS[store]) {
+        dest = CS_STORE_MAPS[store];
+        hint = "Google Maps link for selected store";
+      } else if (ctaType === "call_store" && store && CS_STORE_PHONES[store]) {
+        dest = `tel:${CS_STORE_PHONES[store].replace(/\D/g, "")}`;
+        hint = `Will show "Call ${CS_STORE_PHONES[store]}" in message`;
+      } else if (ctaType === "view_product") {
+        const napaUrl = document.getElementById("csNapaUrl").value.trim();
+        dest = napaUrl || "https://www.napaonline.com/";
+        hint = napaUrl ? "From NAPA product URL" : "Enter a NAPA URL or set manually";
+      }
+
+      destEl.value = dest;
+      previewEl.textContent = hint;
+      // Auto-fill badge label from CTA type
+      badgeEl.value = CS_CTA_BADGE_DEFAULTS[ctaType] || "All Locations";
+      csUpdateLivePreview();
+      csUpdateSmsLivePreview();
+      csMarkPreviewStale();
+    }
+
+    document.getElementById("csCtaType").addEventListener("change", csResolveCtaDestination);
+    document.getElementById("csStoreContext").addEventListener("change", csResolveCtaDestination);
+
+    // ─── CS: Price Warning ───────────────────────────────────
+    function csCheckPriceWarning(inputId, warnId) {
+      const val = document.getElementById(inputId).value.trim();
+      const warnEl = document.getElementById(warnId);
+      if (!val) { warnEl.style.display = "none"; return; }
+      const cleaned = val.replace(/[$,\s]/g, "");
+      const num = parseFloat(cleaned);
+      if (isNaN(num)) { warnEl.textContent = "Enter a valid price (e.g., 19.99)"; warnEl.style.display = "block"; return; }
+      if (!cleaned.includes(".") && num > 999) {
+        warnEl.textContent = `Did you mean $${(num / 100).toFixed(2)}? Add a decimal to be sure.`;
+        warnEl.style.display = "block";
+        return;
+      }
+      warnEl.style.display = "none";
+    }
+
+    // ─── CS: Format price for display ────────────────────────
+    function csFormatPrice(input) {
+      if (!input || typeof input !== "string") return null;
+      const cleaned = input.replace(/[$,\s]/g, "");
+      const num = parseFloat(cleaned);
+      if (isNaN(num)) return null;
+      return "$" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // ─── CS: Live Preview Update ─────────────────────────────
+    function csUpdateLivePreview() {
+      const salePrice = csFormatPrice(document.getElementById("csSalePrice").value);
+      const regularPrice = csFormatPrice(document.getElementById("csRegularPrice").value);
+      const unit = document.getElementById("csUnit").value.trim();
+      const productName = document.getElementById("csProductName").value.trim();
+      const saleText = document.getElementById("csSaleText").value.trim();
+      const ctaBadge = document.getElementById("csCtaBadgeLabel").value.trim();
+
+      // Left panel
+      const regEl = document.getElementById("csPrevRegPrice");
+      if (regularPrice && regularPrice !== salePrice) {
+        regEl.textContent = "was " + regularPrice;
+        regEl.style.display = "block";
+      } else {
+        regEl.style.display = "none";
+      }
+      document.getElementById("csPrevSalePrice").textContent = salePrice || "$0.00";
+      document.getElementById("csPrevUnit").textContent = unit || "";
+
+      // Product image
+      const imgEl = document.getElementById("csPrevProductImg");
+      const placeholderEl = document.getElementById("csPrevImgPlaceholder");
+      if (csProductImageUrl) {
+        imgEl.src = csProductImageUrl;
+        imgEl.style.display = "block";
+        placeholderEl.style.display = "none";
+      } else {
+        imgEl.style.display = "none";
+        placeholderEl.style.display = "flex";
+      }
+
+      // Right panel
+      document.getElementById("csPrevProductName").textContent = productName || "Product Name";
+      document.getElementById("csPrevSaleText").textContent = saleText || "Sale details here";
+      document.getElementById("csPrevCtaBadge").textContent = ctaBadge || "All Locations";
+    }
+
+    // ─── CS: Wire up live preview inputs ─────────────────────
+    ["csSalePrice", "csRegularPrice", "csUnit", "csProductName", "csSaleText", "csCtaBadgeLabel"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", () => { csUpdateLivePreview(); csUpdateSmsLivePreview(); csMarkPreviewStale(); });
+    });
+
+    document.getElementById("csSalePrice").addEventListener("input", () => csCheckPriceWarning("csSalePrice", "csSalePriceWarn"));
+    document.getElementById("csRegularPrice").addEventListener("input", () => csCheckPriceWarning("csRegularPrice", "csRegularPriceWarn"));
+
+    // ─── CS: Live SMS Variable Preview ─────────────────────
+    function csUpdateSmsLivePreview() {
+      const body = document.getElementById("csSmsBody").value;
+      const previewDiv = document.getElementById("csSmsLivePreview");
+      const textDiv = document.getElementById("csSmsLiveText");
+      if (!body || !body.includes("{{")) {
+        previewDiv.style.display = "none";
+        return;
+      }
+
+      const salePrice = csFormatPrice(document.getElementById("csSalePrice").value);
+      const regularPrice = csFormatPrice(document.getElementById("csRegularPrice").value);
+      const productName = document.getElementById("csProductName").value.trim() || "[product name]";
+      const ctaBadge = document.getElementById("csCtaBadgeLabel").value.trim() || "All Locations";
+      const ctaDest = document.getElementById("csCtaDestination").value.trim() || "[link]";
+
+      let salePriceLine = "";
+      if (salePrice) {
+        salePriceLine = (regularPrice && regularPrice !== salePrice)
+          ? `was ${regularPrice}, now ${salePrice}`
+          : `now ${salePrice}`;
+      }
+
+      let resolved = body
+        .replace(/\{\{sale_price_line\}\}/g, salePriceLine || "[sale price]")
+        .replace(/\{\{product_name\}\}/g, productName)
+        .replace(/\{\{sale_price\}\}/g, salePrice || "[price]")
+        .replace(/\{\{regular_price\}\}/g, regularPrice || "[price]")
+        .replace(/\{\{cta_text\}\}/g, ctaBadge)
+        .replace(/\{\{cta_url\}\}/g, ctaDest);
+
+      textDiv.textContent = resolved + "\n\nReply STOP to opt out.";
+      previewDiv.style.display = "block";
+    }
+
+    // Wire SMS live preview to all relevant inputs
+    document.getElementById("csSmsBody").addEventListener("input", () => { csUpdateSmsLivePreview(); csMarkPreviewStale(); });
+
+    // Stale on CTA destination / creative name changes
+    ["csCtaDestination", "csCreativeName"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", csMarkPreviewStale);
+    });
+
+    // ─── CS: Stale Detection ─────────────────────────────────
+    function csMarkPreviewStale() {
+      if (!csLastPreview) return;
+      csPreviewStale = true;
+      document.getElementById("csStaleBar").classList.add("visible");
+      document.getElementById("btnCsSendTest").disabled = true;
+      document.getElementById("btnCsSave").disabled = true;
+    }
+
+    // ─── CS: NAPA Fetch ──────────────────────────────────────
+    document.getElementById("btnCsNapaFetch").addEventListener("click", async () => {
+      const napaUrl = document.getElementById("csNapaUrl").value.trim();
+      const errEl = document.getElementById("csNapaFetchError");
+      const resultsEl = document.getElementById("csNapaResults");
+      errEl.style.display = "none";
+      resultsEl.classList.remove("visible");
+
+      if (!napaUrl) { errEl.textContent = "Enter a NAPA product URL."; errEl.style.display = "block"; return; }
+
+      const btn = document.getElementById("btnCsNapaFetch");
+      btn.disabled = true;
+      btn.textContent = "Fetching...";
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/napa-lookup`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ url: napaUrl }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Lookup failed.");
+        csNapaFetched = data;
+
+        let html = "";
+        if (data.title) {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;">${esc(data.title)}</span>
+            <button class="napa-use-btn" onclick="csUseNapaField('title')">Use as Name</button>
+          </div>`;
+        }
+        if (data.price) {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;">Price: $${esc(data.price)}</span>
+            <button class="napa-use-btn" onclick="csUseNapaField('price')">Use as Sale Price</button>
+          </div>`;
+        }
+        if (data.image) {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;">
+            <img src="${esc(data.image)}" style="max-width:80px;max-height:60px;border-radius:6px;border:1px solid rgba(255,255,255,.14);" />
+            <button class="napa-use-btn" onclick="csUseNapaField('image')">Use Image</button>
+          </div>`;
+        }
+        if (!html) html = '<div style="font-size:13px;color:var(--dim);">No product data found.</div>';
+
+        document.getElementById("csNapaResultBody").innerHTML = html;
+        resultsEl.classList.add("visible");
+
+        if (document.getElementById("csCtaType").value === "view_product") {
+          document.getElementById("csCtaDestination").value = napaUrl;
+        }
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Fetch";
+      }
+    });
+
+    // "Use" buttons for NAPA fetched data
+    window.csUseNapaField = function(field) {
+      if (!csNapaFetched) return;
+      if (field === "title" && csNapaFetched.title) {
+        document.getElementById("csProductName").value = csNapaFetched.title.slice(0, 80);
+      } else if (field === "price" && csNapaFetched.price) {
+        document.getElementById("csSalePrice").value = csNapaFetched.price;
+        csCheckPriceWarning("csSalePrice", "csSalePriceWarn");
+      } else if (field === "image" && csNapaFetched.image) {
+        csProductImageUrl = csNapaFetched.image;
+        document.getElementById("csImagePreview").innerHTML = `<img src="${esc(csNapaFetched.image)}" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+      }
+      csUpdateLivePreview();
+      csMarkPreviewStale();
+    };
+
+    // ─── CS: Image URL input ─────────────────────────────────
+    document.getElementById("csImageUrl").addEventListener("input", function() {
+      const url = this.value.trim();
+      if (url) {
+        csProductImageUrl = url;
+        document.getElementById("csImagePreview").innerHTML = `<img src="${esc(url)}" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+      } else {
+        csProductImageUrl = null;
+        document.getElementById("csImagePreview").innerHTML = "";
+      }
+      csUpdateLivePreview();
+      csMarkPreviewStale();
+    });
+
+    // ─── CS: Image Upload ────────────────────────────────────
+    document.getElementById("csImageFile").addEventListener("change", function() {
+      const file = this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        csProductImageUrl = e.target.result;
+        document.getElementById("csImagePreview").innerHTML = `<img src="${esc(e.target.result)}" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
+        csUpdateLivePreview();
+        csMarkPreviewStale();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ─── CS: Canvas Rendering ────────────────────────────────
+    // Pre-load the NAPA logo
+    const csLogoImg = new Image();
+    csLogoImg.crossOrigin = "anonymous";
+    csLogoImg.src = "/assets/napa-auto-parts-g+kk-combo.svg";
+
+    // Load NAPA Sans font for canvas
+    (async function loadNapaSans() {
+      try {
+        const regular = new FontFace("NAPA Sans", "url(/assets/fonts/NAPASANS-Roman.woff2)", { weight: "400" });
+        const bold = new FontFace("NAPA Sans", "url(/assets/fonts/NAPASANS-Bd.woff2)", { weight: "700" });
+        await Promise.all([regular.load(), bold.load()]);
+        document.fonts.add(regular);
+        document.fonts.add(bold);
+        csNapaSansLoaded = true;
+      } catch (e) {
+        console.warn("NAPA Sans font load failed, using fallback:", e);
+      }
+    })();
+
+    // Word-wrap helper for canvas
+    function csWrapText(ctx, text, maxWidth) {
+      const words = text.split(" ");
+      const lines = [];
+      let line = "";
+      for (const word of words) {
+        const test = line ? line + " " + word : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    async function csRenderToCanvas() {
+      const W = 1080, H = 566;
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+
+      const halfW = W / 2;
+      const font = csNapaSansLoaded ? "NAPA Sans" : "system-ui";
+
+      // === Left panel (white) ===
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, halfW, H);
+
+      const salePrice = csFormatPrice(document.getElementById("csSalePrice").value) || "$0.00";
+      const regularPrice = csFormatPrice(document.getElementById("csRegularPrice").value);
+      const unit = document.getElementById("csUnit").value.trim();
+
+      let leftY = 60;
+
+      // Sale price + unit on same baseline (large, bold, navy)
+      ctx.font = `700 64px ${font}`;
+      ctx.fillStyle = "#0A0094";
+      const salePriceW = ctx.measureText(salePrice).width;
+      let lineW = salePriceW;
+      let unitW = 0;
+      if (unit) {
+        ctx.font = `400 28px ${font}`;
+        unitW = ctx.measureText(unit).width;
+        lineW += 8 + unitW; // 8px gap
+      }
+      const lineX = (halfW - lineW) / 2;
+      ctx.font = `700 64px ${font}`;
+      ctx.fillStyle = "#0A0094";
+      ctx.fillText(salePrice, lineX, leftY + 64);
+      if (unit) {
+        ctx.font = `400 28px ${font}`;
+        ctx.fillStyle = "#333333";
+        ctx.fillText(unit, lineX + salePriceW + 8, leftY + 64);
+      }
+      leftY += 80;
+
+      // "was $X.XX" below (smaller, red, strikethrough)
+      if (regularPrice && regularPrice !== salePrice) {
+        ctx.font = `400 26px ${font}`;
+        ctx.fillStyle = "#d0021b";
+        const regText = "was " + regularPrice;
+        const regW = ctx.measureText(regText).width;
+        const regX = (halfW - regW) / 2;
+        ctx.fillText(regText, regX, leftY + 26);
+        // Strikethrough line
+        ctx.strokeStyle = "#d0021b";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(regX, leftY + 18);
+        ctx.lineTo(regX + regW, leftY + 18);
+        ctx.stroke();
+        leftY += 42;
+      }
+
+      // Product image — fill remaining left panel space
+      if (csProductImageUrl) {
+        try {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          // Use proxy for external images to avoid CORS tainting
+          const proxyUrl = csProductImageUrl.startsWith("http") && !csProductImageUrl.startsWith(location.origin)
+            ? `${WORKER_BASE}/admin/proxy-image?url=${encodeURIComponent(csProductImageUrl)}`
+            : csProductImageUrl;
+          img.src = proxyUrl;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = () => { console.warn("Proxy image failed:", proxyUrl); reject(); };
+          });
+          const maxImgW = halfW * 0.85;
+          const maxImgH = H - leftY - 16;
+          const scale = Math.min(maxImgW / img.width, maxImgH / img.height);
+          const imgW = img.width * scale;
+          const imgH = img.height * scale;
+          ctx.drawImage(img, (halfW - imgW) / 2, leftY + (H - leftY - imgH) / 2, imgW, imgH);
+        } catch {
+          // Skip image if proxy fails
+        }
+      }
+
+      // === Right panel (navy) ===
+      ctx.fillStyle = "#0A0094";
+      ctx.fillRect(halfW, 0, halfW, H);
+
+      // Logo (centered, generous size)
+      let rightY = 20;
+      if (csLogoImg.complete && csLogoImg.naturalWidth > 0) {
+        const logoMaxW = halfW * 0.8;
+        const logoMaxH = 130;
+        const logoScale = Math.min(logoMaxW / csLogoImg.width, logoMaxH / csLogoImg.height, 1);
+        const logoW = csLogoImg.width * logoScale;
+        const logoH = csLogoImg.height * logoScale;
+        ctx.drawImage(csLogoImg, halfW + (halfW - logoW) / 2, rightY, logoW, logoH);
+        rightY += logoH + 16;
+      }
+
+      // Product name (white, bold, word-wrapped)
+      const productName = document.getElementById("csProductName").value.trim() || "Product Name";
+      ctx.font = `700 30px ${font}`;
+      ctx.fillStyle = "#ffffff";
+      const nameLines = csWrapText(ctx, productName, halfW - 60);
+      const nameX = halfW + 30;
+      for (const line of nameLines) {
+        ctx.fillText(line, nameX, rightY + 30);
+        rightY += 36;
+      }
+      rightY += 10;
+
+      // Sale text (yellow, regular, word-wrapped)
+      const saleText = document.getElementById("csSaleText").value.trim();
+      if (saleText) {
+        ctx.font = `400 22px ${font}`;
+        ctx.fillStyle = "#FBC421";
+        const saleLines = csWrapText(ctx, saleText, halfW - 60);
+        for (const line of saleLines) {
+          ctx.fillText(line, nameX, rightY + 22);
+          rightY += 28;
+        }
+      }
+
+      // CTA badge (yellow rect at bottom)
+      const ctaBadge = document.getElementById("csCtaBadgeLabel").value.trim() || "All Locations";
+      const badgeH = 50;
+      const badgeY = H - badgeH - 25;
+      const badgeX = halfW + 25;
+      const badgeW = halfW - 50;
+      ctx.fillStyle = "#FBC421";
+      // Rounded rect
+      const r = 8;
+      ctx.beginPath();
+      ctx.moveTo(badgeX + r, badgeY);
+      ctx.lineTo(badgeX + badgeW - r, badgeY);
+      ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + r);
+      ctx.lineTo(badgeX + badgeW, badgeY + badgeH - r);
+      ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - r, badgeY + badgeH);
+      ctx.lineTo(badgeX + r, badgeY + badgeH);
+      ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - r);
+      ctx.lineTo(badgeX, badgeY + r);
+      ctx.quadraticCurveTo(badgeX, badgeY, badgeX + r, badgeY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = `700 24px ${font}`;
+      ctx.fillStyle = "#111111";
+      const badgeTextW = ctx.measureText(ctaBadge).width;
+      ctx.fillText(ctaBadge, badgeX + (badgeW - badgeTextW) / 2, badgeY + 33);
+
+      return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    }
+
+    // ─── CS: Generate Preview Flow ───────────────────────────
+    window.csGeneratePreview = async function() {
+      const btn = document.getElementById("btnCsPreview");
+      const errEl = document.getElementById("csSaveError");
+      errEl.style.display = "none";
+
+      // Validate
+      const salePrice = document.getElementById("csSalePrice").value.trim();
+      const productName = document.getElementById("csProductName").value.trim();
+      if (!salePrice) { errEl.textContent = "Sale price is required."; errEl.style.display = "block"; return; }
+      if (!productName) { errEl.textContent = "Product name is required."; errEl.style.display = "block"; return; }
+
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+
+      try {
+        // 1. Call worker for SMS preview + CTA resolution
+        const payload = {
+          imageContent: {
+            regularPrice: document.getElementById("csRegularPrice").value.trim() || undefined,
+            salePrice,
+            unit: document.getElementById("csUnit").value.trim() || undefined,
+            productName,
+            saleText: document.getElementById("csSaleText").value.trim() || undefined,
+            ctaBadgeLabel: document.getElementById("csCtaBadgeLabel").value.trim() || undefined,
+          },
+          smsContent: {
+            body: document.getElementById("csSmsBody").value.trim() || undefined,
+          },
+          cta: {
+            type: document.getElementById("csCtaType").value,
+            destinationOverride: document.getElementById("csCtaDestination").value.trim() || undefined,
+          },
+          media: {
+            napaUrl: document.getElementById("csNapaUrl").value.trim() || undefined,
+            imageUrl: csProductImageUrl || undefined,
+          },
+          storeContext: document.getElementById("csStoreContext").value || undefined,
+        };
+
+        const resp = await fetch(`${WORKER_BASE}/admin/creative/preview`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Preview failed.");
+
+        // 2. Render Canvas → PNG blob
+        btn.textContent = "Rendering...";
+        const pngBlob = await csRenderToCanvas();
+
+        // 3. Upload PNG to Cloudinary (unsigned)
+        btn.textContent = "Uploading...";
+        const formData = new FormData();
+        formData.append("file", pngBlob, "creative.png");
+        formData.append("upload_preset", "gkk_napa_mms");
+        const uploadResp = await fetch("https://api.cloudinary.com/v1_1/dtpqxuwby/image/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadResp.json();
+        if (!uploadResp.ok) throw new Error(uploadData.error?.message || "Cloudinary upload failed.");
+        csComposedImageUrl = uploadData.secure_url;
+
+        // 4. Store preview data
+        csLastPreview = {
+          ...data,
+          composedImageUrl: csComposedImageUrl,
+          imageBytes: pngBlob.size,
+        };
+        csPreviewStale = false;
+        document.getElementById("csStaleBar").classList.remove("visible");
+
+        // 5. Update Image tab — show rendered PNG
+        const renderedDiv = document.getElementById("csRenderedImage");
+        document.getElementById("csRenderedImg").src = csComposedImageUrl;
+        renderedDiv.style.display = "block";
+
+        // 6. Update SMS tab
+        document.getElementById("csSmsPreviewText").textContent = data.smsPreview || "(No SMS body)";
+        const smsLen = (data.smsPreview || "").length;
+        const badgeEl = document.getElementById("csCarrierBadge");
+        badgeEl.style.display = "block";
+        badgeEl.innerHTML = smsLen <= 160
+          ? '<span class="carrier-badge">1 segment &bull; MMS verified</span>'
+          : `<span class="carrier-badge">${Math.ceil(smsLen / 153)} segments &bull; MMS verified</span>`;
+
+        // 7. Update Package tab
+        const sizeKb = (pngBlob.size / 1024).toFixed(1);
+        document.getElementById("csPackageInfo").innerHTML = `
+          <div><strong>Template:</strong> Split Panel Promo (1080×566)</div>
+          <div><strong>Image:</strong> ${sizeKb} KB PNG</div>
+          <div><strong>CTA:</strong> ${esc(data.resolvedCta?.ctaText || "")} → ${esc(data.resolvedCta?.destinationUrl || "")}</div>
+          <div><strong>SMS Length:</strong> ${smsLen} chars (${smsLen <= 160 ? "1 segment" : Math.ceil(smsLen / 153) + " segments"})</div>
+          ${data.warnings?.length ? '<div style="color:var(--orange);margin-top:6px;">' + data.warnings.map(w => esc(w)).join("<br>") + '</div>' : ""}
+        `;
+
+        // 8. Enable test/save buttons
+        document.getElementById("btnCsSendTest").disabled = false;
+        document.getElementById("btnCsSave").disabled = false;
+
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate Preview";
+      }
+    };
+
+    // ─── CS: Send Test ───────────────────────────────────────
+    document.getElementById("csTestPhone").addEventListener("input", function() {
+      const pos = this.selectionStart;
+      const before = this.value.length;
+      this.value = formatPhone(this.value);
+      const after = this.value.length;
+      this.setSelectionRange(pos + (after - before), pos + (after - before));
+    });
+
+    document.getElementById("btnCsSendTest").addEventListener("click", async () => {
+      const errEl = document.getElementById("csTestError");
+      const successEl = document.getElementById("csTestSuccess");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      const phone = document.getElementById("csTestPhone").value.trim();
+      if (!phone) { errEl.textContent = "Enter a phone number."; errEl.style.display = "block"; return; }
+      if (!csLastPreview) { errEl.textContent = "Generate a preview first."; errEl.style.display = "block"; return; }
+
+      const btn = document.getElementById("btnCsSendTest");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+
+      try {
+        const testPayload = {
+          phone,
+          body: csLastPreview.smsPreview || "",
+          image_url: csComposedImageUrl,
+        };
+
+        const resp = await fetch(`${WORKER_BASE}/admin/send-test`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(testPayload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Failed to send test.");
+        successEl.textContent = "Test sent! Check your phone.";
+        successEl.style.display = "block";
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Test";
+      }
+    });
+
+    // ─── CS: Save Creative ───────────────────────────────────
+    document.getElementById("btnCsSave").addEventListener("click", async () => {
+      const errEl = document.getElementById("csSaveError");
+      const successEl = document.getElementById("csSaveSuccess");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      if (!csLastPreview) { errEl.textContent = "Generate a preview first."; errEl.style.display = "block"; return; }
+      if (csPreviewStale) { errEl.textContent = "Preview is stale. Click Generate Preview to refresh."; errEl.style.display = "block"; return; }
+
+      const name = document.getElementById("csCreativeName").value.trim();
+      if (!name) { errEl.textContent = "Enter a name for this creative."; errEl.style.display = "block"; return; }
+
+      const btn = document.getElementById("btnCsSave");
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      try {
+        const savePayload = {
+          name,
+          imageContent: {
+            regularPrice: document.getElementById("csRegularPrice").value.trim() || undefined,
+            salePrice: document.getElementById("csSalePrice").value.trim(),
+            unit: document.getElementById("csUnit").value.trim() || undefined,
+            productName: document.getElementById("csProductName").value.trim(),
+            saleText: document.getElementById("csSaleText").value.trim() || undefined,
+            ctaBadgeLabel: document.getElementById("csCtaBadgeLabel").value.trim() || undefined,
+          },
+          smsContent: {
+            body: document.getElementById("csSmsBody").value.trim() || undefined,
+          },
+          cta: {
+            type: document.getElementById("csCtaType").value,
+            destinationOverride: document.getElementById("csCtaDestination").value.trim() || undefined,
+          },
+          media: {
+            source: csMediaSource,
+            napaUrl: document.getElementById("csNapaUrl").value.trim() || undefined,
+            imageUrl: csProductImageUrl || undefined,
+          },
+          composedImageUrl: csComposedImageUrl,
+        };
+
+        const resp = await fetch(`${WORKER_BASE}/admin/creative/save`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(savePayload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Failed to save.");
+        successEl.textContent = `Creative saved! (ID: ${data.id})`;
+        successEl.style.display = "block";
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Creative";
+      }
+    });
+
+    // Initialize CTA destination
+    csResolveCtaDestination();
+    csUpdateLivePreview();
 
     // ─── Phone formatting ──────────────────────────────────────
     function formatPhone(value) {

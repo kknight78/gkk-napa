@@ -21,6 +21,9 @@ TWILIO_PHONE_NUMBER = "+12174419077"
 #   TWILIO_AUTH_TOKEN
 #   RESEND_API_KEY
 
+[triggers]
+crons = ["*/5 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "gkk-napa-sms"
