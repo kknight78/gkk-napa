@@ -45,6 +45,7 @@ function getCorsHeaders(request) {
 }
 
 const VALID_LOCATIONS = ["danville-il", "cayuga-in", "rockville-in", "covington-in"];
+const VALID_STATUSES = ["new", "reviewed", "interview", "hired", "rejected", "archived"];
 
 const LOCATION_DISPLAY = {
   "danville-il": "Danville, IL",
@@ -208,20 +209,39 @@ export default {
       });
     }
 
+    // ─── Admin: GET /admin/applications/positions (distinct positions) ───
+    if (request.method === "GET" && path === "/admin/applications/positions") {
+      if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+      const result = await env.DB.prepare(
+        "SELECT DISTINCT position FROM applications ORDER BY position ASC"
+      ).all();
+      const positions = result.results.map(r => r.position);
+      return new Response(JSON.stringify(positions), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ─── Admin: GET /admin/applications ───
     if (request.method === "GET" && path === "/admin/applications") {
       if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
       const status = url.searchParams.get("status");
-      let result;
+      const position = url.searchParams.get("position");
+      const ORDER = `ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'reviewed' THEN 1 WHEN 'interview' THEN 2 WHEN 'hired' THEN 3 WHEN 'rejected' THEN 4 WHEN 'archived' THEN 5 ELSE 6 END ASC, id DESC`;
+      const conditions = [];
+      const binds = [];
       if (status) {
-        result = await env.DB.prepare(
-          "SELECT * FROM applications WHERE status = ? ORDER BY id DESC"
-        ).bind(status).all();
+        conditions.push("status = ?");
+        binds.push(status);
       } else {
-        result = await env.DB.prepare(
-          "SELECT * FROM applications ORDER BY id DESC"
-        ).all();
+        // "All" excludes archived
+        conditions.push("status != 'archived'");
       }
+      if (position) {
+        conditions.push("position = ?");
+        binds.push(position);
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      const result = await env.DB.prepare(`SELECT * FROM applications ${where} ${ORDER}`).bind(...binds).all();
       return new Response(JSON.stringify(result.results), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -235,7 +255,10 @@ export default {
         const body = await request.json();
         const updates = [];
         const values = [];
-        if (body.status !== undefined) { updates.push("status = ?"); values.push(body.status); }
+        if (body.status !== undefined) {
+          if (!VALID_STATUSES.includes(body.status)) return jsonError(corsHeaders, "Invalid status.", 400);
+          updates.push("status = ?"); values.push(body.status);
+        }
         if (body.notes !== undefined) { updates.push("notes = ?"); values.push(body.notes); }
         if (updates.length === 0) return jsonError(corsHeaders, "Nothing to update.", 400);
         values.push(id);
@@ -259,9 +282,58 @@ export default {
         "DELETE FROM applications WHERE id = ?"
       ).bind(id).run();
       if (result.meta.changes === 0) return jsonError(corsHeaders, "Application not found.", 404);
+      // Clean up KV resume if exists
+      try { await env.POSITIONS_KV.delete("resume:" + id); } catch { /* ignore */ }
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ─── Admin: GET /admin/applications/:id/resume ───
+    if (request.method === "GET" && path.match(/^\/admin\/applications\/\d+\/resume$/)) {
+      if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+      const id = parseInt(path.split("/")[3]);
+      const { value, metadata } = await env.POSITIONS_KV.getWithMetadata("resume:" + id, "arrayBuffer");
+      if (!value) return jsonError(corsHeaders, "Resume not found.", 404);
+      return new Response(value, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": metadata?.contentType || "application/octet-stream",
+          "Content-Disposition": `inline; filename="${metadata?.filename || "resume"}"`,
+        },
+      });
+    }
+
+    // ─── Admin: POST /admin/applications/bulk-update ───
+    if (request.method === "POST" && path === "/admin/applications/bulk-update") {
+      if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+      try {
+        const body = await request.json();
+        const { ids } = body;
+        if (!Array.isArray(ids) || ids.length === 0) return jsonError(corsHeaders, "ids array is required.", 400);
+        if (ids.length > 100) return jsonError(corsHeaders, "Maximum 100 items per request.", 400);
+        for (const id of ids) {
+          if (!Number.isInteger(id) || id <= 0) return jsonError(corsHeaders, "All IDs must be positive integers.", 400);
+        }
+        if (body.delete) {
+          // Delete applications and their KV resumes
+          const placeholders = ids.map(() => "?").join(",");
+          await env.DB.prepare(`DELETE FROM applications WHERE id IN (${placeholders})`).bind(...ids).run();
+          await Promise.allSettled(ids.map(id => env.POSITIONS_KV.delete("resume:" + id)));
+        } else if (body.status) {
+          if (!VALID_STATUSES.includes(body.status)) return jsonError(corsHeaders, "Invalid status.", 400);
+          const placeholders = ids.map(() => "?").join(",");
+          await env.DB.prepare(`UPDATE applications SET status = ? WHERE id IN (${placeholders})`).bind(body.status, ...ids).run();
+        } else {
+          return jsonError(corsHeaders, "Provide status or delete.", 400);
+        }
+        return new Response(JSON.stringify({ success: true, count: ids.length }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        if (e instanceof SyntaxError) return jsonError(corsHeaders, "Invalid request body.", 400);
+        throw e;
+      }
     }
 
     // ─── Public: POST /submit-application ───
@@ -393,6 +465,8 @@ async function handleSubmitApplication(request, env, corsHeaders) {
     // ── Resume file validation ──
     let resumeBase64 = null;
     let resumeFilename = null;
+    let resumeBuffer = null;
+    let resumeContentType = null;
 
     if (isResumePath && resumeFile) {
       const ext = (resumeFile.name || "").split(".").pop().toLowerCase();
@@ -407,9 +481,10 @@ async function handleSubmitApplication(request, env, corsHeaders) {
         return jsonError(corsHeaders, "Resume file must be under 5 MB.", 400);
       }
 
-      const buffer = await resumeFile.arrayBuffer();
-      resumeBase64 = arrayBufferToBase64(buffer);
+      resumeBuffer = await resumeFile.arrayBuffer();
+      resumeBase64 = arrayBufferToBase64(resumeBuffer);
       resumeFilename = trimmedName.replace(/\s+/g, "_") + "_Resume." + ext;
+      resumeContentType = mime || "application/octet-stream";
     }
 
     // ── Manual path: work history validation ──
@@ -443,15 +518,17 @@ async function handleSubmitApplication(request, env, corsHeaders) {
     const locationDisplay = locations.map(s => LOCATION_DISPLAY[s] || s).join(", ");
 
     // ── Save to D1 ──
+    let insertedId = null;
     try {
       const workHistory = isResumePath ? null : JSON.stringify(
         hasWH2 ? [work_history_1, work_history_2] : [work_history_1]
       );
-      await env.DB.prepare(
+      const row = await env.DB.prepare(
         `INSERT INTO applications
          (full_name, phone, email, address, position, locations, availability, schedule,
           submission_type, work_history, references_text, additional, resume_filename, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
+         RETURNING id`
       ).bind(
         trimmedName, trimmedPhone, trimmedEmail || null, trimmedAddress,
         position, JSON.stringify(locations), availability, trimmedSchedule || null,
@@ -459,9 +536,21 @@ async function handleSubmitApplication(request, env, corsHeaders) {
         workHistory, trimmedReferences || null, trimmedAdditional || null,
         resumeFilename || null,
         new Date().toISOString()
-      ).run();
+      ).first();
+      insertedId = row?.id;
     } catch (e) {
       console.error(JSON.stringify({ tag: "D1_INSERT_ERROR", error: e.message }));
+    }
+
+    // ── Store resume in KV ──
+    if (insertedId && isResumePath && resumeBuffer) {
+      try {
+        await env.POSITIONS_KV.put("resume:" + insertedId, resumeBuffer, {
+          metadata: { filename: resumeFilename, contentType: resumeContentType },
+        });
+      } catch (e) {
+        console.error(JSON.stringify({ tag: "KV_RESUME_STORE_ERROR", error: e.message }));
+      }
     }
 
     // ── Send manager notification email ──

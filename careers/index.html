@@ -565,12 +565,17 @@
 
         const jobPostings = positions.map(p => {
           const locs = (!p.locations || p.locations.includes("all")) ? ALL_LOCATION_KEYS : p.locations;
+          const posted = p.created ? p.created.split("T")[0] : new Date().toISOString().split("T")[0];
+          const validDate = new Date(posted);
+          validDate.setDate(validDate.getDate() + 60);
           return {
             "@context": "https://schema.org/",
             "@type": "JobPosting",
             title: p.title,
             description: p.description || `${p.title} position at G&KK NAPA Auto Parts.`,
-            datePosted: p.created ? p.created.split("T")[0] : new Date().toISOString().split("T")[0],
+            datePosted: posted,
+            validThrough: validDate.toISOString().split("T")[0],
+            employmentType: "FULL_TIME",
             hiringOrganization: {
               "@type": "Organization",
               name: "G&KK NAPA Auto Parts",

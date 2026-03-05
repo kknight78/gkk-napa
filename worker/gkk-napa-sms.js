@@ -793,6 +793,12 @@ export default {
         return handleNapaLookup(request, env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/napa-part-search ──
+      if (request.method === "POST" && path === "/admin/napa-part-search") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleNapaPartSearch(request, env, corsHeaders);
+      }
+
       // ── Admin: GET /admin/promo/assets ──
       if (request.method === "GET" && path === "/admin/promo/assets") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -2434,6 +2440,45 @@ async function handlePromoEvents(url, env, corsHeaders) {
   ).bind(parseInt(campaignId)).all();
 
   return jsonOk(corsHeaders, events.results);
+}
+
+async function handleNapaPartSearch(request, env, corsHeaders) {
+  const body = await request.json();
+  const { partNumber } = body;
+  if (!partNumber || !partNumber.trim()) return jsonError(corsHeaders, "Part number is required.", 400);
+
+  const clean = partNumber.trim().replace(/\s+/g, "");
+  try {
+    // Try direct product page first: /en/p/PARTNUMBER
+    const directUrl = `https://www.napaonline.com/en/p/${encodeURIComponent(clean)}`;
+    const directResp = await fetch(directUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+      redirect: "follow",
+    });
+    if (directResp.ok) {
+      const meta = await fetchNapaMeta(directUrl);
+      if (meta.image) return jsonOk(corsHeaders, meta);
+    }
+
+    // Fallback: search page
+    const searchUrl = `https://www.napaonline.com/en/search?text=${encodeURIComponent(clean)}`;
+    const searchResp = await fetch(searchUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+      redirect: "follow",
+    });
+    if (!searchResp.ok) throw new Error(`Search failed: HTTP ${searchResp.status}`);
+    const html = await searchResp.text();
+
+    // Find first product link in search results
+    const linkMatch = html.match(/href="(\/en\/p\/[^"]+)"/i);
+    if (!linkMatch) return jsonError(corsHeaders, "No results found for part number.", 404);
+
+    const productUrl = `https://www.napaonline.com${linkMatch[1]}`;
+    const meta = await fetchNapaMeta(productUrl);
+    return jsonOk(corsHeaders, meta);
+  } catch (e) {
+    return jsonError(corsHeaders, e.message, 400);
+  }
 }
 
 async function handleNapaLookup(request, env, corsHeaders) {

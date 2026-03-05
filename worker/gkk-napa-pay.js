@@ -544,9 +544,9 @@ G&KK NAPA Auto Parts - Automated notification`;
   },
 
   // Cron trigger handler — configure in Cloudflare Dashboard > Worker > Triggers > Cron
-  // Recommended: "0 13 * * 1" = every Monday 7am Central (13:00 UTC)
+  // Recommended: "0 13 1 * *" = 1st of each month, 7am Central (13:00 UTC)
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(handleSendSummary(env, "week"));
+    ctx.waitUntil(handleSendSummary(env, "month"));
   },
 };
 

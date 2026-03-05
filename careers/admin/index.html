@@ -183,6 +183,36 @@
     .badge-rejected { background: rgba(255,107,107,.15); color: #ffb0b0; }
 
     .app-count { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 12px; }
+    .badge-archived { background: rgba(160,160,160,.2); color: #b0b0b0; }
+
+    /* Position filter */
+    .position-filter { margin-bottom: 12px; }
+    .position-filter select {
+      width: 100%; padding: 8px 12px; font-size: 13px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.18); color: var(--white);
+      font-family: inherit;
+    }
+
+    /* App card checkbox */
+    .app-card { display: flex; align-items: flex-start; gap: 10px; }
+    .app-check { flex-shrink: 0; margin-top: 2px; width: 20px; height: 20px; cursor: pointer; accent-color: var(--napa-yellow); }
+    .app-card-body { flex: 1; min-width: 0; }
+
+    /* Bulk action bar */
+    .bulk-bar {
+      position: sticky; top: 0; z-index: 10;
+      background: #1a1a5a; border: 1px solid var(--napa-yellow); border-radius: 12px;
+      padding: 10px 14px; margin-bottom: 12px;
+      display: none; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar .bulk-count { font-size: 13px; font-weight: 700; color: var(--napa-yellow); margin-right: auto; }
+    .bulk-bar button { padding: 6px 14px; font-size: 12px; }
+
+    /* Resume link */
+    .resume-link { color: var(--napa-yellow); cursor: pointer; text-decoration: underline; }
+    .resume-link:hover { color: #ffe08a; }
+    .resume-na { color: rgba(255,255,255,.4); font-style: italic; }
   </style>
 </head>
 <body>
@@ -255,6 +285,11 @@
 
       <!-- ════ Applications Tab ════ -->
       <div class="tab-panel" id="tab-applications">
+        <div class="position-filter">
+          <select id="positionFilter">
+            <option value="">All Positions</option>
+          </select>
+        </div>
         <div class="status-filters">
           <button class="filter-btn active" data-status="">All</button>
           <button class="filter-btn" data-status="new">New</button>
@@ -262,6 +297,14 @@
           <button class="filter-btn" data-status="interview">Interview</button>
           <button class="filter-btn" data-status="hired">Hired</button>
           <button class="filter-btn" data-status="rejected">Rejected</button>
+          <button class="filter-btn" data-status="archived">Archived</button>
+        </div>
+        <div class="bulk-bar" id="bulkBar">
+          <span class="bulk-count" id="bulkCount">0 selected</span>
+          <button class="btn-primary" onclick="printSelected()">Print</button>
+          <button class="btn-secondary" onclick="archiveSelected()">Archive</button>
+          <button class="btn-danger" onclick="deleteSelected()">Delete</button>
+          <button class="btn-secondary" onclick="deselectAll()">Deselect All</button>
         </div>
         <div class="app-count" id="appCount"></div>
         <div id="applicationsList"></div>
@@ -315,6 +358,7 @@
         document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
         if (btn.dataset.tab === "applications" && !applicationsLoaded) {
           applicationsLoaded = true;
+          loadPositionFilters();
           loadApplications();
         }
       });
@@ -504,6 +548,12 @@
     // ══════ Applications ══════
 
     let currentFilter = "";
+    let currentPositionFilter = "";
+    let allAppsData = [];
+    const selectedIds = new Set();
+    const positionFilter = document.getElementById("positionFilter");
+    const bulkBar = document.getElementById("bulkBar");
+    const bulkCount = document.getElementById("bulkCount");
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -514,11 +564,37 @@
       });
     });
 
+    positionFilter.addEventListener("change", () => {
+      currentPositionFilter = positionFilter.value;
+      loadApplications();
+    });
+
+    async function loadPositionFilters() {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/applications/positions`, { headers: authHeaders() });
+        const positions = await resp.json();
+        positionFilter.innerHTML = '<option value="">All Positions</option>';
+        positions.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p;
+          opt.textContent = p;
+          if (p === currentPositionFilter) opt.selected = true;
+          positionFilter.appendChild(opt);
+        });
+      } catch { /* ignore */ }
+    }
+
     async function loadApplications() {
       try {
-        const qs = currentFilter ? `?status=${currentFilter}` : "";
+        const params = new URLSearchParams();
+        if (currentFilter) params.set("status", currentFilter);
+        if (currentPositionFilter) params.set("position", currentPositionFilter);
+        const qs = params.toString() ? `?${params}` : "";
         const resp = await fetch(`${WORKER_BASE}/admin/applications${qs}`, { headers: authHeaders() });
         const apps = await resp.json();
+        allAppsData = apps;
+        selectedIds.clear();
+        updateBulkBar();
         renderApplications(apps);
       } catch {
         applicationsList.innerHTML = '<div class="error">Failed to load applications.</div>';
@@ -530,6 +606,16 @@
       const s = (status || "new").toLowerCase();
       const label = s.charAt(0).toUpperCase() + s.slice(1);
       return `<span class="badge badge-${s}">${label}</span>`;
+    }
+
+    function updateBulkBar() {
+      const n = selectedIds.size;
+      if (n > 0) {
+        bulkBar.classList.add("visible");
+        bulkCount.textContent = `${n} selected`;
+      } else {
+        bulkBar.classList.remove("visible");
+      }
     }
 
     function renderApplications(apps) {
@@ -545,9 +631,14 @@
         try { locs = JSON.parse(a.locations); } catch { locs = []; }
         const locDisplay = formatLocations(locs);
 
+        // Resume section
         let workSection = "";
         if (a.submission_type === "resume") {
-          workSection = `<dt>Resume</dt><dd>${esc(a.resume_filename || "Attached (sent via email)")}</dd>`;
+          if (a.resume_filename) {
+            workSection = `<dt>Resume</dt><dd><span class="resume-link" onclick="event.stopPropagation(); viewResume(${a.id}, '${esc(a.resume_filename)}')">${esc(a.resume_filename)}</span></dd>`;
+          } else {
+            workSection = `<dt>Resume</dt><dd><span class="resume-na">Sent via email only</span></dd>`;
+          }
         } else if (a.work_history) {
           let wh;
           try { wh = JSON.parse(a.work_history); } catch { wh = []; }
@@ -559,46 +650,169 @@ Reason for leaving: ${esc(w.reason_for_leaving || "")}</dd>
           `).join("");
         }
 
+        const checked = selectedIds.has(a.id) ? "checked" : "";
+
         return `
         <div class="app-card" data-id="${a.id}">
-          <div class="app-header" onclick="toggleApp(${a.id})">
-            <div>
-              <div class="app-name">${esc(a.full_name)} ${statusBadge(a.status)}</div>
-              <div class="app-summary">${esc(a.position)} &middot; ${locDisplay}</div>
-              <div class="app-date">${new Date(a.created_at).toLocaleDateString()} ${new Date(a.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</div>
-            </div>
-          </div>
-          <div class="app-details" id="app-detail-${a.id}">
-            <dl>
-              <dt>Phone</dt><dd>${esc(a.phone)}</dd>
-              ${a.email ? `<dt>Email</dt><dd>${esc(a.email)}</dd>` : ""}
-              <dt>Address</dt><dd>${esc(a.address || "")}</dd>
-              <dt>Availability</dt><dd>${esc(a.availability || "")}</dd>
-              ${a.schedule ? `<dt>Schedule</dt><dd>${esc(a.schedule)}</dd>` : ""}
-              ${workSection}
-              ${a.references_text ? `<dt>References</dt><dd>${esc(a.references_text)}</dd>` : ""}
-              ${a.additional ? `<dt>Additional Info</dt><dd>${esc(a.additional)}</dd>` : ""}
-            </dl>
-            <div class="app-actions">
+          <input type="checkbox" class="app-check" data-app-id="${a.id}" ${checked} onclick="event.stopPropagation(); toggleSelect(${a.id}, this.checked)">
+          <div class="app-card-body">
+            <div class="app-header" onclick="toggleApp(${a.id})">
               <div>
-                <label style="font-size:12px;">Status</label>
-                <select id="status-${a.id}" onchange="updateApp(${a.id})">
-                  ${["new","reviewed","interview","hired","rejected"].map(s =>
-                    `<option value="${s}" ${a.status === s ? "selected" : ""}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
-                  ).join("")}
-                </select>
+                <div class="app-name">${esc(a.full_name)} ${statusBadge(a.status)}</div>
+                <div class="app-summary">${esc(a.position)} &middot; ${locDisplay}</div>
+                <div class="app-date">${new Date(a.created_at).toLocaleDateString()} ${new Date(a.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</div>
               </div>
-              <div class="notes-wrap">
-                <label>Notes</label>
-                <textarea id="notes-${a.id}" placeholder="Add notes...">${esc(a.notes || "")}</textarea>
+            </div>
+            <div class="app-details" id="app-detail-${a.id}">
+              <dl>
+                <dt>Phone</dt><dd>${esc(a.phone)}</dd>
+                ${a.email ? `<dt>Email</dt><dd>${esc(a.email)}</dd>` : ""}
+                <dt>Address</dt><dd>${esc(a.address || "")}</dd>
+                <dt>Availability</dt><dd>${esc(a.availability || "")}</dd>
+                ${a.schedule ? `<dt>Schedule</dt><dd>${esc(a.schedule)}</dd>` : ""}
+                ${workSection}
+                ${a.references_text ? `<dt>References</dt><dd>${esc(a.references_text)}</dd>` : ""}
+                ${a.additional ? `<dt>Additional Info</dt><dd>${esc(a.additional)}</dd>` : ""}
+              </dl>
+              <div class="app-actions">
+                <div>
+                  <label style="font-size:12px;">Status</label>
+                  <select id="status-${a.id}" onchange="updateApp(${a.id})">
+                    ${["new","reviewed","interview","hired","rejected","archived"].map(s =>
+                      `<option value="${s}" ${a.status === s ? "selected" : ""}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
+                    ).join("")}
+                  </select>
+                </div>
+                <div class="notes-wrap">
+                  <label>Notes</label>
+                  <textarea id="notes-${a.id}" placeholder="Add notes...">${esc(a.notes || "")}</textarea>
+                </div>
+                <button class="btn-primary btn-save" onclick="updateApp(${a.id})">Save</button>
+                <button class="btn-danger btn-del" onclick="deleteApp(${a.id}, '${esc(a.full_name)}')">Delete</button>
               </div>
-              <button class="btn-primary btn-save" onclick="updateApp(${a.id})">Save</button>
-              <button class="btn-danger btn-del" onclick="deleteApp(${a.id}, '${esc(a.full_name)}')">Delete</button>
             </div>
           </div>
         </div>`;
       }).join("");
     }
+
+    // ── Selection ──
+    window.toggleSelect = function(id, checked) {
+      if (checked) selectedIds.add(id);
+      else selectedIds.delete(id);
+      updateBulkBar();
+    };
+
+    window.deselectAll = function() {
+      selectedIds.clear();
+      document.querySelectorAll(".app-check").forEach(cb => cb.checked = false);
+      updateBulkBar();
+    };
+
+    // ── Resume viewer ──
+    window.viewResume = async function(id, filename) {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/applications/${id}/resume`, {
+          headers: { "Authorization": `Bearer ${authToken}` },
+        });
+        if (!resp.ok) {
+          if (resp.status === 404) { alert("Resume not available — it was submitted before file storage was enabled."); return; }
+          alert("Failed to load resume."); return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+      } catch {
+        alert("Failed to load resume.");
+      }
+    };
+
+    // ── Bulk actions ──
+    window.archiveSelected = async function() {
+      const ids = [...selectedIds];
+      if (ids.length === 0) return;
+      if (!confirm(`Archive ${ids.length} application${ids.length !== 1 ? "s" : ""}?`)) return;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/applications/bulk-update`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ ids, status: "archived" }),
+        });
+        if (!resp.ok) { const d = await resp.json(); alert(d.error || "Failed."); return; }
+        loadApplications();
+      } catch { alert("Failed to archive."); }
+    };
+
+    window.deleteSelected = async function() {
+      const ids = [...selectedIds];
+      if (ids.length === 0) return;
+      if (!confirm(`Permanently delete ${ids.length} application${ids.length !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/applications/bulk-update`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ ids, delete: true }),
+        });
+        if (!resp.ok) { const d = await resp.json(); alert(d.error || "Failed."); return; }
+        loadApplications();
+      } catch { alert("Failed to delete."); }
+    };
+
+    // ── Print selected ──
+    window.printSelected = function() {
+      const ids = [...selectedIds];
+      if (ids.length === 0) return;
+      const apps = allAppsData.filter(a => ids.includes(a.id));
+      if (apps.length === 0) return;
+
+      const pages = apps.map(a => {
+        let locs;
+        try { locs = JSON.parse(a.locations); } catch { locs = []; }
+        const locDisplay = formatLocations(locs);
+
+        let workHtml = "";
+        if (a.submission_type === "resume") {
+          workHtml = `<p><strong>Resume:</strong> ${esc(a.resume_filename || "Sent via email")}</p>`;
+        } else if (a.work_history) {
+          let wh;
+          try { wh = JSON.parse(a.work_history); } catch { wh = []; }
+          workHtml = wh.map((w, i) => `
+            <p><strong>${i === 0 ? "Most Recent Employer" : "Previous Employer"}:</strong> ${esc(w.employer || "")} &mdash; ${esc(w.title || "")}<br>
+            Duration: ${esc(w.duration || "")} | Reason for leaving: ${esc(w.reason_for_leaving || "")}</p>
+          `).join("");
+        }
+
+        return `
+          <div class="page">
+            <h2>${esc(a.full_name)}</h2>
+            <p><strong>Position:</strong> ${esc(a.position)} &mdash; ${locDisplay}</p>
+            <p><strong>Status:</strong> ${(a.status || "new").charAt(0).toUpperCase() + (a.status || "new").slice(1)}</p>
+            <p><strong>Date:</strong> ${new Date(a.created_at).toLocaleDateString()} ${new Date(a.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</p>
+            <hr>
+            <p><strong>Phone:</strong> ${esc(a.phone)}</p>
+            ${a.email ? `<p><strong>Email:</strong> ${esc(a.email)}</p>` : ""}
+            <p><strong>Address:</strong> ${esc(a.address || "")}</p>
+            <p><strong>Availability:</strong> ${esc(a.availability || "")}</p>
+            ${a.schedule ? `<p><strong>Schedule:</strong> ${esc(a.schedule)}</p>` : ""}
+            ${workHtml}
+            ${a.references_text ? `<p><strong>References:</strong><br>${esc(a.references_text).replace(/\n/g, "<br>")}</p>` : ""}
+            ${a.additional ? `<p><strong>Additional Info:</strong><br>${esc(a.additional).replace(/\n/g, "<br>")}</p>` : ""}
+            ${a.notes ? `<p><strong>Notes:</strong><br>${esc(a.notes).replace(/\n/g, "<br>")}</p>` : ""}
+          </div>`;
+      }).join("");
+
+      const printWin = window.open("", "_blank");
+      printWin.document.write(`<!DOCTYPE html><html><head><title>Applications</title><style>
+        body { font-family: system-ui, sans-serif; color: #111; margin: 0; padding: 20px; }
+        .page { page-break-after: always; padding: 20px 0; }
+        .page:last-child { page-break-after: auto; }
+        h2 { margin: 0 0 8px; }
+        hr { border: none; border-top: 1px solid #ccc; margin: 12px 0; }
+        p { margin: 6px 0; font-size: 14px; line-height: 1.5; }
+      </style></head><body>${pages}</body></html>`);
+      printWin.document.close();
+      printWin.print();
+    };
 
     window.toggleApp = function(id) {
       const el = document.getElementById("app-detail-" + id);

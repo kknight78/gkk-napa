@@ -638,147 +638,343 @@
       font-weight: 700;
       font-display: swap;
     }
+    /* Condensed family */
+    @font-face {
+      font-family: 'NAPA Sans Cn';
+      src: url('/assets/fonts/NAPASANS-LtCn.woff2') format('woff2');
+      font-weight: 300;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'NAPA Sans Cn';
+      src: url('/assets/fonts/NAPASANS-DbCn.woff2') format('woff2');
+      font-weight: 600;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'NAPA Sans Cn';
+      src: url('/assets/fonts/NAPASANS-BdCn.woff2') format('woff2');
+      font-weight: 700;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'NAPA Sans Cn';
+      src: url('/assets/fonts/NAPASANS-BlkCn.woff2') format('woff2');
+      font-weight: 900;
+      font-display: swap;
+    }
 
-    /* ─── Creative Studio Layout ─── */
+
+    /* ─── Creative Studio v4 ─── */
     .cs-layout {
       display: grid;
-      grid-template-columns: 2fr 3fr;
+      grid-template-columns: 320px 1fr;
       gap: 16px;
       align-items: start;
     }
-    .cs-controls { min-width: 0; }
+    .cs-controls {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
     .cs-preview {
       position: sticky;
       top: 20px;
-      max-height: calc(100vh - 40px);
-      overflow-y: auto;
     }
-
-    /* ─── MMS Image Preview (HTML/CSS) ─── */
-    .mms-canvas {
-      width: 100%;
-      aspect-ratio: 1080 / 566;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      border-radius: 12px;
-      overflow: hidden;
-      font-family: 'NAPA Sans', system-ui, sans-serif;
+    .cs-step {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
     }
-    /* All mms-* sizes use cqi (container query inline) so the preview
-       scales proportionally regardless of how wide the container is.
-       1cqi ≈ 1% of the .mms-canvas width. At 1080px real render,
-       the canvas is ~540px per panel, so font sizes are tuned to that. */
-    .mms-canvas { container-type: inline-size; }
-    .mms-left {
-      background: #fff;
-      color: #111;
-      padding: 6% 5%;
+    .cs-step.hidden { display: none; }
+    .cs-step-header {
       display: flex;
-      flex-direction: column;
-      justify-content: center;
       align-items: center;
-      text-align: center;
-      gap: 1.5%;
-    }
-    .mms-right {
-      background: #0A0094;
-      color: #fff;
-      padding: 3% 5% 4%;
-      display: flex;
-      flex-direction: column;
       justify-content: space-between;
+      padding: 12px 14px;
+      cursor: pointer;
+      user-select: none;
     }
-    .mms-logo-area {
-      text-align: center;
-      padding: 0 2%;
-    }
-    .mms-price-line {
-      display: flex;
-      align-items: baseline;
-      gap: 2px;
-      justify-content: center;
-    }
-    .mms-price-sale {
-      color: #0A0094;
-      font-size: 6cqi;
-      font-weight: 700;
-      line-height: 1.1;
-    }
-    .mms-price-unit {
-      color: #333;
-      font-size: 2.6cqi;
-      font-weight: 400;
-    }
-    .mms-price-regular {
-      color: #d0021b;
-      font-size: 2.4cqi;
-      text-decoration: line-through;
-      font-weight: 400;
-    }
-    .mms-product-img {
-      max-width: 90%;
-      max-height: 55%;
-      object-fit: contain;
-      flex: 1;
-      min-height: 0;
-    }
-    .mms-logo {
-      width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-    .mms-product-name {
-      font-weight: 700;
-      font-size: 2.8cqi;
-      line-height: 1.25;
-    }
-    .mms-sale-text {
-      color: #FBC421;
-      font-size: 2.1cqi;
-      font-weight: 400;
-      line-height: 1.35;
-      margin-top: 2%;
-    }
-    .mms-cta-badge {
-      background: #FBC421;
-      color: #111;
-      padding: 3.5% 6%;
-      border-radius: 6px;
-      font-weight: 700;
-      text-align: center;
-      font-size: 2.2cqi;
-      align-self: stretch;
-    }
-    .mms-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--dim);
+    .cs-step-header h3 {
+      margin: 0;
       font-size: 13px;
-      width: 80%;
-      flex: 1;
-      min-height: 0;
-      background: rgba(0,0,0,.05);
-      border-radius: 8px;
-      border: 2px dashed rgba(0,0,0,.12);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--napa-yellow);
     }
-
-    /* ─── Generate Preview button ─── */
-    .cs-generate-row {
+    .cs-step-header .cs-step-check {
+      font-size: 14px;
+      color: #4ade80;
+      display: none;
+    }
+    .cs-step.completed .cs-step-check { display: inline; }
+    .cs-step-body {
+      padding: 0 14px 14px;
+    }
+    .cs-step.collapsed .cs-step-body { display: none; }
+    .cs-step.collapsed .cs-step-header { padding-bottom: 12px; }
+    .cs-color-toggle {
       display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 12px;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .cs-color-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 2px solid rgba(255,255,255,.15);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .cs-color-btn[data-color="blue"] { background: #2B2F84; color: #fff; }
+    .cs-color-btn[data-color="black"] { background: #111; color: #D8AC4B; }
+    .cs-color-btn.active { border-color: var(--napa-yellow); box-shadow: 0 0 8px rgba(249,200,66,.4); }
+    .cs-graphic-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+    .cs-graphic-thumb {
+      aspect-ratio: 640 / 800;
+      border: 2px solid rgba(255,255,255,.15);
+      border-radius: 5px;
+      overflow: hidden;
+      cursor: pointer;
+      background: #e8e8e8;
+      transition: border-color .15s;
+    }
+    .cs-graphic-thumb img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
+    .cs-graphic-thumb[data-pos="top"] img { object-position: top; }
+    .cs-graphic-thumb[data-pos="bottom"] img { object-position: bottom; }
+    .cs-graphic-thumb:hover { border-color: rgba(255,255,255,.4); }
+    .cs-graphic-thumb.active { border-color: var(--napa-yellow); box-shadow: 0 0 6px rgba(249,200,66,.5); }
+    .cs-bg-options { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .cs-bg-swatch {
+      width: 48px; height: 48px;
+      border-radius: 8px;
+      border: 3px solid rgba(255,255,255,.15);
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .cs-bg-swatch:hover { border-color: rgba(255,255,255,.4); }
+    .cs-bg-swatch.active { border-color: var(--napa-yellow); box-shadow: 0 0 6px rgba(249,200,66,.5); }
+    .cs-bg-upload-btn {
+      width: 48px; height: 48px;
+      border-radius: 8px;
+      border: 2px dashed rgba(255,255,255,.3);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.5);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      transition: all .15s;
+    }
+    .cs-bg-upload-btn:hover { border-color: rgba(255,255,255,.5); color: #fff; }
+    .cs-bg-upload-btn.active { border-color: var(--napa-yellow); color: var(--napa-yellow); }
+    .cs-offer-types {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .cs-offer-type-btn {
+      padding: 8px 4px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.15);
+      color: rgba(255,255,255,.6);
+      font-size: 10px;
+      text-align: center;
+      cursor: pointer;
+      line-height: 1.3;
+      transition: all .15s;
+    }
+    .cs-offer-type-btn:hover { border-color: rgba(255,255,255,.3); color: #fff; }
+    .cs-offer-type-btn.active { border-color: var(--napa-yellow); background: rgba(249,200,66,.08); color: #fff; }
+    .cs-offer-visual-btn {
+      padding: 4px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,.12);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .cs-offer-visual-btn:hover { border-color: rgba(255,255,255,.3); }
+    .cs-offer-visual-btn.active { border-color: var(--napa-yellow); }
+    .cs-canvas-wrap { width: 640px; max-width: 640px; margin: 0 auto; }
+    .cs-canvas {
+      width: 640px; height: 800px;
+      position: relative; overflow: hidden;
+      background: #444;
+      isolation: isolate;
+      font-family: 'NAPA Sans Cn', 'NAPA Sans', system-ui, sans-serif;
+      user-select: none;
+      container-type: inline-size;
+    }
+    .cs-prev-bg {
+      position: absolute; inset: 0; z-index: 1;
+      background-size: cover; background-position: center;
+    }
+    .cs-prev-graphic { position: absolute; z-index: 2; pointer-events: none; }
+    .cs-prev-offer-bar {
+      position: absolute; z-index: 5; left: 0; right: 0;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: space-between;
+      box-sizing: border-box;
+    }
+    .cs-prev-offer-bar input {
+      border: none; outline: none; background: transparent;
+      font-family: inherit; color: inherit; font-weight: inherit;
+      padding: 0; margin: 0;
+    }
+    .cs-prev-title-bar {
+      position: absolute; z-index: 4; left: 0; right: 0;
+      background: #000;
+      box-sizing: border-box;
+      padding: 22px 25px;
+      font-size: 38px;
+      line-height: 1;
+      overflow: hidden;
+    }
+    #csPrevTitleText, #csPrevRulesText {
+      display: block; width: 100%; border: none; outline: none;
+      background: transparent; padding: 0; margin: 0;
+      font-family: inherit; line-height: inherit;
+    }
+    #csPrevTitleText { color: #F9C842; font-weight: 700; font-size: 38px; text-transform: uppercase; }
+    #csPrevRulesText { color: #fff; font-weight: 600; font-size: 38px; }
+    .cs-prev-body {
+      position: absolute; z-index: 3;
+      left: 0; right: 0;
+      height: 353px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; flex-wrap: wrap; padding: 8px;
+      box-sizing: border-box;
+    }
+    .cs-editable {
+      cursor: text; outline: none;
+      border: 1px solid transparent;
+      border-radius: 2px;
+      padding: 1px 3px; margin: -1px -3px;
+      display: inline-block;
+    }
+    .cs-editable:hover { border-color: rgba(255,255,255,.25); }
+    .cs-editable:focus { border-color: #F9C842; background: rgba(0,0,0,.15); }
+    .cs-canvas-placeholder {
+      position: absolute; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.4); font-size: 14px; text-align: center; padding: 20px;
+    }
+    .cs-actions-row { display: flex; gap: 8px; margin-top: 12px; }
+    .cs-actions-row button { flex: 1; padding: 12px; font-size: 14px; }
+    .cs-rendered { margin-top: 12px; }
+    .cs-rendered img { width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); }
+    .cs-texture-blue {
+      background-image: linear-gradient(135deg,
+        transparent 62%, rgba(43,47,132,.5) 62%, rgba(43,47,132,.5) 63%, transparent 63%,
+        transparent 66%, rgba(43,47,132,.7) 66%, rgba(43,47,132,.7) 67.5%, transparent 67.5%,
+        transparent 72%, rgba(43,47,132,.2) 72%, rgba(43,47,132,.2) 73%, transparent 73%);
+    }
+    .cs-texture-black {
+      background-image: linear-gradient(135deg,
+        transparent 62%, rgba(0,0,0,.5) 62%, rgba(0,0,0,.5) 63%, transparent 63%,
+        transparent 66%, rgba(0,0,0,.7) 66%, rgba(0,0,0,.7) 67.5%, transparent 67.5%,
+        transparent 72%, rgba(0,0,0,.2) 72%, rgba(0,0,0,.2) 73%, transparent 73%);
+    }
+    /* ── Image Cropper Modal ── */
+    .cs-cropper-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,.85); align-items: center; justify-content: center; flex-direction: column;
+    }
+    .cs-cropper-overlay.open { display: flex; }
+    .cs-cropper-frame {
+      position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,.3);
+      cursor: grab; touch-action: none; background: #111;
+    }
+    .cs-cropper-frame:active { cursor: grabbing; }
+    .cs-cropper-frame img {
+      position: absolute; top: 0; left: 0; pointer-events: none;
+      transform-origin: 0 0; will-change: transform;
+    }
+    .cs-cropper-controls {
+      display: flex; gap: 12px; margin-top: 16px; align-items: center;
+    }
+    .cs-cropper-controls button {
+      padding: 10px 28px; font-size: 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600;
+    }
+    .cs-cropper-save { background: var(--napa-yellow); color: #000; }
+    .cs-cropper-cancel { background: rgba(255,255,255,.15); color: #fff; }
+    .cs-cropper-zoom {
+      display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.6); font-size: 12px;
+    }
+    .cs-cropper-zoom input[type=range] { width: 120px; accent-color: var(--napa-yellow); }
+
+    /* ── 1-Item Layout Toggle ── */
+    .cs-layout-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
+    .cs-layout-toggle button {
+      flex: 1; padding: 8px 10px; font-size: 12px; font-weight: 600;
+      border: 1px solid rgba(255,255,255,.15); border-radius: 4px;
+      background: rgba(255,255,255,.05); color: var(--dim); cursor: pointer;
+      transition: all .15s;
+    }
+    .cs-layout-toggle button.active {
+      background: var(--napa-yellow); color: #000; border-color: var(--napa-yellow);
     }
 
-    @media (max-width: 600px) {
-      .cs-layout {
-        grid-template-columns: 1fr;
-      }
-      .cs-preview {
-        position: static;
-        order: -1;
-      }
+    /* ── Template Selector Buttons ── */
+    .cs-template-btns { display: flex; gap: 8px; margin-top: 10px; }
+    .cs-template-btn {
+      flex: 1; padding: 14px 10px; border: 2px solid rgba(255,255,255,.15); border-radius: 8px;
+      background: rgba(255,255,255,.05); color: var(--dim); cursor: pointer;
+      font-size: 13px; font-weight: 600; text-align: center; transition: all .15s;
+    }
+    .cs-template-btn:hover { border-color: rgba(255,255,255,.3); color: #fff; }
+    .cs-template-btn.active { border-color: var(--napa-yellow); background: rgba(249,200,66,.08); color: #fff; }
+    .cs-template-btn .cs-tmpl-icon { font-size: 28px; margin-bottom: 4px; }
+
+    /* ── Clickable Preview Items ── */
+    .cs-prev-body-clickable { cursor: pointer; transition: outline .15s; outline: 2px solid transparent; }
+    .cs-prev-body-clickable:hover { outline-color: var(--napa-yellow); }
+
+    /* ── Product Edit Overlay ── */
+    .cs-product-edit-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9998;
+      background: rgba(0,0,0,.85); align-items: center; justify-content: center; flex-direction: column;
+    }
+    .cs-product-edit-overlay.open { display: flex; }
+    .cs-product-edit-panel {
+      background: #1a1a4a; border: 1px solid rgba(255,255,255,.2); border-radius: 12px;
+      padding: 24px; width: 90%; max-width: 420px; color: #fff;
+    }
+    .cs-product-edit-panel h3 { margin: 0 0 16px; font-size: 16px; color: var(--napa-yellow); text-transform: uppercase; }
+    .cs-product-edit-panel label { display: block; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); margin: 12px 0 4px; }
+    .cs-product-edit-panel label:first-of-type { margin-top: 0; }
+    .cs-product-edit-panel input[type="text"],
+    .cs-product-edit-panel input[type="file"] {
+      width: 100%; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.2);
+      color: #fff; font-size: 14px; box-sizing: border-box;
+    }
+    .cs-product-edit-panel input[type="file"] { font-size: 12px; padding: 8px; }
+    .cs-product-edit-img-preview {
+      width: 100%; max-height: 160px; object-fit: contain; border-radius: 6px;
+      background: #fff; margin-top: 8px; cursor: pointer;
+    }
+    .cs-product-edit-img-placeholder {
+      width: 100%; height: 120px; border-radius: 6px; margin-top: 8px;
+      background: rgba(255,255,255,.06); border: 2px dashed rgba(255,255,255,.2);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.4); font-size: 13px; cursor: pointer;
+    }
+    .cs-product-edit-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .cs-product-edit-actions button { flex: 1; padding: 12px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+
+    @media (max-width: 700px) {
+      .cs-layout { grid-template-columns: 1fr; }
+      .cs-preview { position: static; order: -1; }
     }
 
     @media (max-width: 600px) {
@@ -1014,265 +1210,148 @@
 
         <!-- ── Creative Studio Mode ── -->
         <div id="sendModeCreative" style="display:none;">
-
           <div class="cs-layout">
-            <!-- ═══ LEFT COLUMN: Controls ═══ -->
+
+            <!-- ═══ LEFT: Wizard Steps ═══ -->
             <div class="cs-controls">
 
-              <!-- Template -->
-              <div class="ob-section">
-                <h3>Template</h3>
-                <div style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,200,54,.06);border:1px solid rgba(255,200,54,.2);border-radius:8px;">
-                  <div style="font-size:20px;">📐</div>
-                  <div>
-                    <div style="font-weight:700;font-size:13px;">Split Panel Promo</div>
-                    <div style="font-size:11px;color:var(--dim);">1080×566 • Product left, branding right</div>
+              <!-- Step 1: Brand Graphic -->
+              <div class="cs-step" id="csStepGraphic">
+                <div class="cs-step-header" onclick="csToggleStep('csStepGraphic')">
+                  <h3>Brand Graphic</h3>
+                  <span class="cs-step-check">&#10003;</span>
+                </div>
+                <div class="cs-step-body">
+                  <div class="cs-color-toggle">
+                    <button class="cs-color-btn active" data-color="blue" onclick="csSelectColor('blue')">Blue</button>
+                    <button class="cs-color-btn" data-color="black" onclick="csSelectColor('black')">Black</button>
                   </div>
+                  <div class="cs-graphic-grid" id="csGraphicGrid"></div>
                 </div>
               </div>
 
-              <!-- Pricing -->
-              <div class="ob-section">
-                <h3>Pricing</h3>
-                <div style="display:flex;gap:12px;">
-                  <div style="flex:1;">
-                    <label for="csRegularPrice">Regular Price <span class="field-help">(optional)</span></label>
-                    <input id="csRegularPrice" type="text" placeholder="29.99" />
-                    <div id="csRegularPriceWarn" class="price-warning" style="display:none;"></div>
-                  </div>
-                  <div style="flex:1;">
-                    <label for="csSalePrice">Sale Price <span class="field-help">(required)</span></label>
-                    <input id="csSalePrice" type="text" placeholder="24.99" />
-                    <div id="csSalePriceWarn" class="price-warning" style="display:none;"></div>
-                  </div>
+              <!-- Step 2: Background -->
+              <div class="cs-step hidden" id="csStepBackground">
+                <div class="cs-step-header" onclick="csToggleStep('csStepBackground')">
+                  <h3>Background</h3>
+                  <span class="cs-step-check">&#10003;</span>
                 </div>
-                <label for="csUnit">Unit Label <span class="field-help">(optional)</span></label>
-                <input id="csUnit" type="text" placeholder="/ each" maxlength="30" value="/ each" />
+                <div class="cs-step-body">
+                  <div class="cs-bg-options" id="csBgOptions"></div>
+                  <input type="file" id="csBgFileInput" accept="image/*" style="display:none;" />
+                </div>
               </div>
 
-              <!-- Product Image -->
-              <div class="ob-section">
-                <h3>Product Image</h3>
-                <div class="media-source-group">
-                  <div class="media-source-card active" data-source="partnum" onclick="csToggleMediaSource('partnum')">
-                    Part #
-                  </div>
-                  <div class="media-source-card" data-source="napa" onclick="csToggleMediaSource('napa')">
-                    NAPA URL
-                  </div>
-                  <div class="media-source-card" data-source="url" onclick="csToggleMediaSource('url')">
-                    Image URL
-                  </div>
-                  <div class="media-source-card" data-source="upload" onclick="csToggleMediaSource('upload')">
-                    Upload
+              <!-- Step 3: Offer -->
+              <div class="cs-step hidden" id="csStepOffer">
+                <div class="cs-step-header" onclick="csToggleStep('csStepOffer')">
+                  <h3>Offer</h3>
+                  <span class="cs-step-check">&#10003;</span>
+                </div>
+                <div class="cs-step-body">
+
+                <h4 style="margin:0 0 6px;font-size:14px;font-weight:700;">Text</h4>
+                <div class="cs-offer-visual-btn" data-offer="text" onclick="csSelectOfferVisual('text')">
+                  <div style="background:rgba(0,0,0,.45);border-radius:4px;padding:10px;text-align:center;color:#fff;font-weight:900;font-size:18px;line-height:1.2;">Huge Discounts on all Motor Oil Brands!!</div>
+                </div>
+
+                <h4 style="margin:12px 0 6px;font-size:14px;font-weight:700;">Numeric</h4>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                  <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" id="csOfferBadgeToggle" checked onchange="csUpdateOfferFromVisual()"> Include badge?
+                  </label>
+                  <div style="display:flex;gap:6px;margin-left:auto;" id="csBadgeColorPicker">
+                    <div class="cs-badge-color-opt active" data-badge="yellow" onclick="csSelectBadgeColor('yellow')" style="width:22px;height:22px;border-radius:50%;background:#FBC421;border:2px solid var(--napa-yellow);cursor:pointer;"></div>
+                    <div class="cs-badge-color-opt" data-badge="blue" onclick="csSelectBadgeColor('blue')" style="width:22px;height:22px;border-radius:50%;background:#1D3489;border:2px solid transparent;cursor:pointer;"></div>
                   </div>
                 </div>
 
-                <!-- Part Number panel -->
-                <div id="csMediaPartnum">
-                  <div style="display:flex;gap:8px;align-items:flex-end;">
-                    <div style="flex:1;">
-                      <label for="csPartNumber" style="margin-top:0;">NAPA Part Number</label>
-                      <input id="csPartNumber" type="text" placeholder="e.g. GRT 48880279 or NOL75521" />
+                <div class="cs-offer-visual-btn" data-offer="price" onclick="csSelectOfferVisual('price')" style="margin-bottom:6px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-radius:4px;padding:8px 12px;">
+                    <div style="color:#fff;font-weight:900;line-height:1;">
+                      <span style="font-size:16px;">$</span><span style="font-size:30px;">34</span><span style="font-size:18px;vertical-align:top;">99</span><span style="font-size:10px;font-weight:300;">/5 qt.</span>
                     </div>
-                    <button class="btn-primary" id="btnCsPartFetch" style="padding:12px 16px;margin-bottom:0;">Fetch</button>
-                  </div>
-                  <div class="error" id="csPartFetchError" style="display:none;font-size:13px;"></div>
-                  <div id="csPartResults" class="napa-results">
-                    <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px;">FETCHED FROM NAPA:</div>
-                    <div id="csPartResultBody"></div>
+                    <img id="csOfferPreviewBadge1" src="/assets/offer-example-yellow-save.svg" style="height:56px;" />
                   </div>
                 </div>
 
-                <!-- NAPA URL panel -->
-                <div id="csMediaNapa" style="display:none;">
-                  <div style="display:flex;gap:8px;align-items:flex-end;">
-                    <div style="flex:1;">
-                      <label for="csNapaUrl" style="margin-top:0;">NAPA Product URL</label>
-                      <input id="csNapaUrl" type="url" placeholder="https://www.napaonline.com/en/p/..." />
+                <div class="cs-offer-visual-btn" data-offer="starting" onclick="csSelectOfferVisual('starting')">
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-radius:4px;padding:8px 12px;">
+                    <div style="color:#fff;font-weight:900;line-height:1;">
+                      <div style="font-size:10px;text-transform:uppercase;">Starting At</div>
+                      <span style="font-size:16px;">$</span><span style="font-size:30px;">34</span><span style="font-size:18px;vertical-align:top;">99</span><span style="font-size:10px;font-weight:300;">/each</span>
                     </div>
-                    <button class="btn-primary" id="btnCsNapaFetch" style="padding:12px 16px;margin-bottom:0;">Fetch</button>
-                  </div>
-                  <div class="error" id="csNapaFetchError" style="display:none;font-size:13px;"></div>
-                  <div id="csNapaResults" class="napa-results">
-                    <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px;">FETCHED FROM NAPA:</div>
-                    <div id="csNapaResultBody"></div>
+                    <img id="csOfferPreviewBadge2" src="/assets/offer-example-yellow-save-up-to.svg" style="height:56px;" />
                   </div>
                 </div>
-
-                <!-- URL panel -->
-                <div id="csMediaUrl" style="display:none;">
-                  <label for="csImageUrl" style="margin-top:0;">Image URL</label>
-                  <input id="csImageUrl" type="url" placeholder="https://example.com/product.png" />
-                </div>
-
-                <!-- Upload panel -->
-                <div id="csMediaUpload" style="display:none;">
-                  <label style="margin-top:0;">Upload Image</label>
-                  <input type="file" id="csImageFile" accept="image/*" style="font-size:13px;" />
-                </div>
-
-                <div id="csImagePreview" style="margin-top:10px;"></div>
-              </div>
-
-              <!-- Sale Info -->
-              <div class="ob-section">
-                <h3>Sale Info</h3>
-                <label for="csProductName">Product Name <span class="field-help">(required — white on navy)</span></label>
-                <input id="csProductName" type="text" placeholder="NAPA Motor Oil 5W30 Full Synthetic 5 qt (US)" maxlength="80" />
-
-                <label for="csSaleText">Sale Text <span class="field-help">(optional — yellow on navy)</span></label>
-                <textarea id="csSaleText" placeholder="On sale at Danville location while supplies last" maxlength="200" style="min-height:50px;"></textarea>
-              </div>
-
-              <!-- CTA Badge -->
-              <div class="ob-section">
-                <h3>CTA Badge</h3>
-                <label for="csCtaBadgeLabel">Badge Label <span class="field-help">(shown on image)</span></label>
-                <input id="csCtaBadgeLabel" type="text" placeholder="All Locations" maxlength="30" value="All Locations" />
-              </div>
-
-              <!-- SMS Text -->
-              <div class="ob-section">
-                <h3>SMS Text</h3>
-                <label for="csSmsBody">Message Body</label>
-                <textarea id="csSmsBody" placeholder="Motor oil on sale! {{sale_price_line}}&#10;&#10;{{cta_text}}: {{cta_url}}" maxlength="1500" style="min-height:100px;"></textarea>
-                <div style="font-size:11px;color:var(--dim);margin-top:4px;">
-                  Variables: <code>{{sale_price_line}}</code> <code>{{product_name}}</code> <code>{{cta_text}}</code> <code>{{cta_url}}</code><br>
-                  Links and timing info go here, not on the image. "Reply STOP" appended automatically.
-                </div>
-                <div id="csSmsLivePreview" style="margin-top:8px;padding:10px 12px;background:rgba(0,0,0,.18);border-radius:8px;font-size:13px;color:rgba(255,255,255,.7);white-space:pre-wrap;line-height:1.5;display:none;">
-                  <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">Preview:</div>
-                  <div id="csSmsLiveText"></div>
                 </div>
               </div>
 
-              <!-- CTA & Destination -->
-              <div class="ob-section">
-                <h3>CTA & Destination</h3>
-                <label for="csCtaType">CTA Type</label>
-                <select id="csCtaType">
-                  <option value="all_locations">All Locations (gkk-napa.com)</option>
-                  <option value="get_directions">Get Directions (Google Maps)</option>
-                  <option value="call_store">Call Store</option>
-                  <option value="view_product">View Product (NAPA URL)</option>
-                  <option value="shop_online">Shop Online (napaonline.com)</option>
-                </select>
-
-                <label for="csStoreContext">Preview Store Context</label>
-                <select id="csStoreContext">
-                  <option value="">All Stores</option>
-                  <option value="danville" selected>Danville, IL</option>
-                  <option value="cayuga">Cayuga, IN</option>
-                  <option value="rockville">Rockville, IN</option>
-                  <option value="covington">Covington, IN</option>
-                </select>
-
-                <div style="margin-top:8px;">
-                  <label for="csCtaDestination">Destination <span class="field-help">(auto-filled, editable)</span></label>
-                  <input id="csCtaDestination" type="text" placeholder="Auto-resolved from CTA type" />
-                  <div id="csCtaResolvedPreview" class="destination-preview"></div>
+              <!-- Step 4: Products -->
+              <div class="cs-step hidden" id="csStepBody">
+                <div class="cs-step-header" onclick="csToggleStep('csStepBody')">
+                  <h3>Products</h3>
+                  <span class="cs-step-check">&#10003;</span>
                 </div>
-              </div>
-
-              <!-- Test Send -->
-              <div class="ob-section">
-                <h3>Test Send</h3>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <input id="csTestPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
-                  <button class="btn-secondary" id="btnCsSendTest" style="flex-shrink:0;padding:10px 16px;" disabled>Send SMS</button>
+                <div class="cs-step-body">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(0)">None</button>
+                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(1)">1 Item</button>
+                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(4)">4 Items</button>
+                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(6)">6 Items</button>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-                  <input id="csTestEmail" type="email" placeholder="email@example.com" style="flex:1;padding:10px 12px;font-size:14px;" />
-                  <button class="btn-secondary" id="btnCsSendTestEmail" style="flex-shrink:0;padding:10px 16px;" disabled>Send Email</button>
+                <div id="csBodySourceRow" style="display:none;margin-top:10px;">
+                  <h4 style="margin:0 0 6px;font-size:14px;font-weight:700;">Image Source</h4>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="cs-offer-type-btn" onclick="csSelectBodySource('upload')">Upload Photos</button>
+                    <button class="cs-offer-type-btn" onclick="csSelectBodySource('napa')">NAPA Online</button>
+                  </div>
                 </div>
-                <div class="error" id="csTestError" style="display:none;font-size:13px;"></div>
-                <div class="success" id="csTestSuccess" style="display:none;font-size:13px;"></div>
-                <div style="font-size:11px;color:var(--dim);margin-top:4px;">Generate preview first to enable test sends.</div>
-              </div>
-
-              <!-- Save Creative -->
-              <div class="ob-section">
-                <h3>Save Creative</h3>
-                <label for="csCreativeName">Creative Name</label>
-                <input id="csCreativeName" type="text" placeholder="e.g., Feb Motor Oil Promo" maxlength="100" />
-                <div style="margin-top:10px;">
-                  <button class="btn-primary" id="btnCsSave" style="width:100%;padding:12px;font-size:14px;" disabled>Save Creative</button>
+                <div id="csTemplateRow" style="display:none;margin-top:10px;">
+                  <h4 style="margin:0 0 6px;font-size:14px;font-weight:700;">Template</h4>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button class="cs-offer-type-btn" style="width:100%;text-align:left;" onclick="csSelectTemplate('image-only', this)">Photo Only</button>
+                    <button class="cs-offer-type-btn" style="width:100%;text-align:left;" onclick="csSelectTemplate('text-image', this)">Photo with Product Details</button>
+                  </div>
                 </div>
-                <div class="error" id="csSaveError" style="display:none;font-size:13px;"></div>
-                <div class="success" id="csSaveSuccess" style="display:none;font-size:13px;"></div>
+                <div id="csBodyHint" style="display:none;margin-top:8px;font-size:12px;color:rgba(255,255,255,.5);font-style:italic;">Click items in the preview to edit</div>
+                </div>
               </div>
 
             </div>
 
-            <!-- ═══ RIGHT COLUMN: Preview ═══ -->
+            <!-- ═══ RIGHT: Live Preview ═══ -->
             <div class="cs-preview">
-
-              <!-- Generate Preview button + stale banner -->
-              <div class="cs-generate-row">
-                <button class="btn-primary" id="btnCsPreview" style="flex:1;padding:12px;font-size:14px;" onclick="csGeneratePreview()">Generate Preview</button>
-              </div>
-
-              <div id="csStaleBar" class="stale-banner">
-                Form changed since last preview. <button class="btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="csGeneratePreview()">Refresh</button>
-              </div>
-
-              <!-- Preview Tabs -->
-              <div class="preview-tabs">
-                <div class="preview-tab active" data-pane="image" onclick="csSwitchPreviewTab('image')">Image</div>
-                <div class="preview-tab" data-pane="sms" onclick="csSwitchPreviewTab('sms')">SMS</div>
-                <div class="preview-tab" data-pane="package" onclick="csSwitchPreviewTab('package')">Package</div>
-              </div>
-
-              <!-- Pane: Image -->
-              <div id="csPaneImage" class="preview-pane active">
-                <div id="csLivePreview">
-                  <div class="mms-canvas" id="csMmsCanvas">
-                    <div class="mms-left">
-                      <div class="mms-price-line">
-                        <div class="mms-price-sale" id="csPrevSalePrice">$24.99</div>
-                        <div class="mms-price-unit" id="csPrevUnit">/ each</div>
-                      </div>
-                      <div class="mms-price-regular" id="csPrevRegPrice" style="display:none;"></div>
-                      <div class="mms-placeholder" id="csPrevImgPlaceholder">Product Image</div>
-                      <img id="csPrevProductImg" class="mms-product-img" style="display:none;" />
-                    </div>
-                    <div class="mms-right">
-                      <div class="mms-logo-area">
-                        <img src="/assets/napa-auto-parts-g+kk-combo.svg" class="mms-logo" alt="G&KK NAPA" />
-                      </div>
-                      <div>
-                        <div class="mms-product-name" id="csPrevProductName">Product Name</div>
-                        <div class="mms-sale-text" id="csPrevSaleText">Sale details here</div>
-                      </div>
-                      <div class="mms-cta-badge" id="csPrevCtaBadge">All Locations</div>
-                    </div>
+              <div class="cs-canvas-wrap">
+                <div class="cs-canvas" id="csCanvas">
+                  <div class="cs-canvas-placeholder" id="csPlaceholder">Select a brand graphic to start building</div>
+                  <div class="cs-prev-bg" id="csPrevBg"></div>
+                  <img class="cs-prev-graphic" id="csPrevGraphic" style="display:none;" />
+                  <div class="cs-prev-title-bar" id="csPrevTitleBar" style="display:none;">
+                    <input type="text" id="csPrevTitleText" maxlength="32" value="SALE EVENT" />
+                    <input type="text" id="csPrevRulesText" value="In store only, while supplies last" />
                   </div>
-                </div>
-
-                <!-- Rendered image (shown after generate) -->
-                <div id="csRenderedImage" style="display:none;margin-top:12px;">
-                  <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:6px;">RENDERED PNG (sent via MMS):</div>
-                  <img id="csRenderedImg" style="width:100%;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
-                </div>
-              </div>
-
-              <!-- Pane: SMS -->
-              <div id="csPaneSms" class="preview-pane">
-                <div id="csSmsPreviewText" style="font-size:14px;color:var(--dim);white-space:pre-wrap;line-height:1.6;background:rgba(0,0,0,.18);border-radius:10px;padding:14px;">Generate preview to see final SMS text...</div>
-                <div id="csCarrierBadge" style="text-align:center;display:none;">
-                  <span class="carrier-badge">MMS verified</span>
+                  <div class="cs-prev-offer-bar" id="csPrevOfferBar" style="display:none;">
+                    <div id="csPrevOfferLeft"></div>
+                    <div id="csPrevOfferRight"></div>
+                  </div>
+                  <div class="cs-prev-body" id="csPrevBody" style="display:none;"></div>
                 </div>
               </div>
 
-              <!-- Pane: Package -->
-              <div id="csPanePackage" class="preview-pane">
-                <div id="csPackageInfo" style="font-size:13px;color:var(--dim);line-height:1.8;">Generate preview to see package details...</div>
+              <div class="cs-actions-row" id="csActions" style="display:none;">
+                <button class="btn-primary" onclick="csGenerate()">Generate Image</button>
+                <button class="btn-secondary" onclick="csReset()">Reset</button>
               </div>
 
+              <div class="cs-rendered" id="csRendered" style="display:none;">
+                <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:6px;">RENDERED IMAGE:</div>
+                <img id="csRenderedImg" />
+                <div style="margin-top:8px;font-size:12px;color:var(--dim);" id="csRenderInfo"></div>
+              </div>
             </div>
-          </div>
 
+          </div>
         </div>
 
       </div>
@@ -1280,6 +1359,45 @@
       <!-- ═══ Tab 4: History ═══ -->
       <div class="tab-content" id="tab-history">
         <div id="campaignList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Image Cropper Modal ═══ -->
+  <div class="cs-cropper-overlay" id="csCropperOverlay">
+    <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;" id="csCropperLabel">Drag to position, scroll to zoom</div>
+    <div class="cs-cropper-frame" id="csCropperFrame">
+      <img id="csCropperImg" />
+    </div>
+    <div class="cs-cropper-controls">
+      <div class="cs-cropper-zoom">
+        <span>-</span>
+        <input type="range" id="csCropperZoomSlider" min="100" max="400" value="100" />
+        <span>+</span>
+      </div>
+      <button class="cs-cropper-save" onclick="csCropperSave()">Save</button>
+      <button class="cs-cropper-cancel" onclick="csCropperCancel()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ═══ Product Edit Overlay ═══ -->
+  <div class="cs-product-edit-overlay" id="csProductEditOverlay">
+    <div class="cs-product-edit-panel">
+      <h3 id="csProductEditTitle">Edit Product</h3>
+      <div id="csProductEditUploadRow">
+        <label>Image</label>
+        <input type="file" accept="image/*" id="csProductEditFile" />
+        <div id="csProductEditImgWrap">
+          <div class="cs-product-edit-img-placeholder" id="csProductEditPlaceholder" onclick="document.getElementById('csProductEditFile').click()">Click to add image</div>
+        </div>
+      </div>
+      <div id="csProductEditPartRow" style="display:none;">
+        <label>NAPA Part #</label>
+        <input type="text" id="csProductEditPartNum" placeholder="e.g. LMP H6054NVLEDN" />
+      </div>
+      <div class="cs-product-edit-actions">
+        <button class="btn-primary" onclick="csProductEditSave()">Save</button>
+        <button class="btn-secondary" onclick="csProductEditCancel()">Cancel</button>
       </div>
     </div>
   </div>
@@ -1854,7 +1972,7 @@ Occasional deals &amp; promotions</textarea>
             </div>
             <div class="customer-detail">${esc(c.phone)}${c.store ? " &middot; " + (STORE_NAMES[c.store] || c.store) : ""}</div>
             ${c.email ? `<div class="customer-detail">${esc(c.email)}</div>` : ""}
-            ${c.notes ? `<div class="customer-detail" style="font-style:italic;">${esc(c.notes)}</div>` : ""}
+            ${c.notes ? `<div class="customer-detail" style="">${esc(c.notes)}</div>` : ""}
           </div>
           <div class="customer-actions">
             ${c.sms_status === "none" || c.sms_status === "invited" ? `<button class="btn-success" onclick="inviteOne(${c.id})" ${!c.email ? "disabled title='No email'" : "title='Send invite email'"}>Invite</button>` : ""}
@@ -2521,431 +2639,939 @@ Occasional deals &amp; promotions</textarea>
     });
 
     // ═══════════════════════════════════════════════════════════
-    // Creative Studio v3
+    // Creative Studio v4 — Guided MMS Image Builder
     // ═══════════════════════════════════════════════════════════
 
-    let csMediaSource = "partnum";
-    let csProductImageUrl = null;   // URL of the product image (for canvas)
-    let csLastPreview = null;       // cached preview response
-    let csPreviewStale = false;
-    let csNapaFetched = null;       // cached NAPA fetch result
-    let csComposedImageUrl = null;  // Cloudinary URL of rendered PNG
-    let csNapaSansLoaded = false;   // font load status
+    const CS_BRAND_GRAPHICS = [
+      // Blue — file defaults to id if not set
+      { id: 'blue-top-chevron',    color: 'blue',  position: 'top',    allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
+      { id: 'blue-bottom-chevron', color: 'blue',  position: 'bottom', allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
+      { id: 'blue-top-half',       color: 'blue',  position: 'top',    allowsImage: false, allowsTexture: false, w: 598, h: 800, x: 0, y: 0 },
+      { id: 'blue-top-ramp',       color: 'blue',  position: 'top',    allowsImage: true,  allowsTexture: false, w: 640, h: 336, x: 0, y: 0 },
+      { id: 'blue-bottom-dip',     color: 'blue',  position: 'bottom', allowsImage: true,  allowsTexture: false, w: 640, h: 306, x: 0, y: 494 },
+      { id: 'blue-top-badge',      color: 'blue',  position: 'top',    allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 0, file: 'blue-both-badge' },
+      { id: 'blue-bottom-badge',   color: 'blue',  position: 'bottom', allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 669, file: 'blue-both-badge' },
+      { id: 'blue-top-corner',     color: 'blue',  position: 'top',    allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'blue-bottom-corner',  color: 'blue',  position: 'bottom', allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
+      // Black
+      { id: 'black-top-chevron',    color: 'black', position: 'top',    allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-bottom-chevron', color: 'black', position: 'bottom', allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-top-half',       color: 'black', position: 'top',    allowsImage: false, allowsTexture: false, w: 598, h: 800, x: 0, y: 0 },
+      { id: 'black-top-ramp',       color: 'black', position: 'top',    allowsImage: true,  allowsTexture: false, w: 640, h: 336, x: 0, y: 0 },
+      { id: 'black-bottom-dip',     color: 'black', position: 'bottom', allowsImage: true,  allowsTexture: false, w: 640, h: 306, x: 0, y: 494 },
+      { id: 'black-top-badge',      color: 'black', position: 'top',    allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 0, file: 'black-both-badge' },
+      { id: 'black-bottom-badge',   color: 'black', position: 'bottom', allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 669, file: 'black-both-badge' },
+      { id: 'black-top-corner',     color: 'black', position: 'top',    allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-bottom-corner',  color: 'black', position: 'bottom', allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
+    ];
 
-    // CTA type → destination map (mirrors worker CTA_TYPES)
-    const CS_CTA_DEFAULTS = {
-      all_locations:  "https://gkk-napa.com/#locations",
-      get_directions: "https://gkk-napa.com/#locations",
-      call_store:     "https://gkk-napa.com/#locations",
-      view_product:   "",
-      shop_online:    "https://www.napaonline.com/",
-    };
-    const CS_CTA_BADGE_DEFAULTS = {
-      all_locations:  "All Locations",
-      get_directions: "Get Directions",
-      call_store:     "Call Us",
-      view_product:   "View Product",
-      shop_online:    "Shop Online",
-    };
-    const CS_STORE_PHONES = { danville: "(217) 446-9067", cayuga: "(765) 492-3292", rockville: "(765) 569-3100", covington: "(765) 793-4693" };
-    const CS_STORE_MAPS = {
-      danville: "https://maps.google.com/?q=G%26KK+NAPA+Danville+IL",
-      cayuga: "https://maps.google.com/?q=G%26KK+NAPA+Cayuga+IN",
-      rockville: "https://maps.google.com/?q=G%26KK+NAPA+Rockville+IN",
-      covington: "https://maps.google.com/?q=G%26KK+NAPA+Covington+IN",
+    const CS_COLORS = {
+      blue:  { primary: '#2B2F84', yellow: '#F9C842', gray: '#D1D3D4' },
+      black: { primary: '#000000', gold: '#D8AC4B' },
     };
 
-    // ─── Send Mode Toggle ────────────────────────────────────
+    const CS_OFFER_TYPES = {
+      'price-save-yellow':    { hasPrice: true, hasStartingAt: false, badge: 'yellow-save-badge',        badgeLabel: 'SAVE' },
+      'price-save-blue':      { hasPrice: true, hasStartingAt: false, badge: 'blue-save-badge',          badgeLabel: 'SAVE' },
+      'starting-save-yellow': { hasPrice: true, hasStartingAt: true,  badge: 'yellow-save-up-to-badge',  badgeLabel: 'SAVE UP TO' },
+      'starting-save-blue':   { hasPrice: true, hasStartingAt: true,  badge: 'blue-save-up-to-badge',    badgeLabel: 'SAVE UP TO' },
+      'text-only':            { hasPrice: false, hasStartingAt: false, badge: null, badgeLabel: null },
+    };
+
+    // State
+    let csState = {
+      color: 'blue',
+      graphicId: null,
+      bgType: null,
+      bgValue: null,
+      bgImageData: null,
+      offerType: null,
+      offerMode: null,       // 'text' | 'price' | 'starting'
+      offerHasBadge: true,
+      offerBadgeColor: 'yellow',
+      offerDollars: '',
+      offerCents: '',
+      offerUnit: '',
+      offerSave: '',
+      offerText: '',
+      titleText: 'SALE EVENT',
+      rulesText: 'In store only, while supplies last',
+      bodyCount: null,
+      bodySource: null,
+      bodyItems: [],
+    };
+
+    // Preloaded images for canvas
+    const csImageCache = {};
+
+    // ─── Send Mode Toggle ───
     window.setSendMode = function(mode) {
       document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
       document.getElementById("sendModeManual").style.display = mode === "manual" ? "block" : "none";
       document.getElementById("sendModeCreative").style.display = mode === "creative" ? "block" : "none";
     };
 
-    // ─── CS: Media Source Toggle ─────────────────────────────
-    window.csToggleMediaSource = function(source) {
-      csMediaSource = source;
-      // Only update cards inside #sendModeCreative
-      document.querySelectorAll("#sendModeCreative .media-source-card").forEach(c => c.classList.toggle("active", c.dataset.source === source));
-      document.getElementById("csMediaPartnum").style.display = source === "partnum" ? "block" : "none";
-      document.getElementById("csMediaNapa").style.display = source === "napa" ? "block" : "none";
-      document.getElementById("csMediaUrl").style.display = source === "url" ? "block" : "none";
-      document.getElementById("csMediaUpload").style.display = source === "upload" ? "block" : "none";
-      csMarkPreviewStale();
+    // ─── Color Selection ───
+    window.csSelectColor = function(color) {
+      csState.color = color;
+      csState.graphicId = null;
+      csState.bgType = null;
+      csState.bgValue = null;
+      document.querySelectorAll('.cs-color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === color));
+      csRebuildGraphicGrid();
+      csHideStepsAfter('csStepGraphic');
+      csUpdatePreview();
     };
 
-    // ─── CS: Preview Tab Switcher ────────────────────────────
-    window.csSwitchPreviewTab = function(pane) {
-      document.querySelectorAll("#sendModeCreative .preview-tab").forEach(t => t.classList.toggle("active", t.dataset.pane === pane));
-      document.getElementById("csPaneImage").classList.toggle("active", pane === "image");
-      document.getElementById("csPaneSms").classList.toggle("active", pane === "sms");
-      document.getElementById("csPanePackage").classList.toggle("active", pane === "package");
+    // ─── Graphic Grid ───
+    function csRebuildGraphicGrid() {
+      const grid = document.getElementById('csGraphicGrid');
+      const graphics = CS_BRAND_GRAPHICS.filter(g => g.color === csState.color);
+      grid.innerHTML = graphics.map(g => {
+        const svgFile = g.file || g.id;
+        const pos = g.position;
+        return '<div class="cs-graphic-thumb' + (csState.graphicId === g.id ? ' active' : '') + '" data-id="' + g.id + '" data-pos="' + pos + '" onclick="csSelectGraphic(\'' + g.id + '\')">' +
+          '<img src="/assets/mms/brand-graphics/' + svgFile + '.svg" alt="' + g.id + '" />' +
+        '</div>';
+      }).join('');
+    }
+
+    // ─── Graphic Selection ───
+    window.csSelectGraphic = function(id) {
+      csState.graphicId = id;
+      csState.bgImageData = null;
+      // Highlight
+      document.querySelectorAll('.cs-graphic-thumb').forEach(t => t.classList.toggle('active', t.dataset.id === id));
+      csRebuildBgOptions();
+      document.getElementById('csStepGraphic').classList.add('completed');
+      csShowStep('csStepBackground');
+      // Hide placeholder
+      document.getElementById('csPlaceholder').style.display = 'none';
+      csUpdatePreview();
     };
 
-    // ─── CS: CTA → auto-resolve destination + badge ──────────
-    function csResolveCtaDestination() {
-      const ctaType = document.getElementById("csCtaType").value;
-      const store = document.getElementById("csStoreContext").value;
-      const destEl = document.getElementById("csCtaDestination");
-      const previewEl = document.getElementById("csCtaResolvedPreview");
-      const badgeEl = document.getElementById("csCtaBadgeLabel");
+    // ─── Background Options ───
+    function csRebuildBgOptions() {
+      const g = CS_BRAND_GRAPHICS.find(gr => gr.id === csState.graphicId);
+      const c = csState.color;
+      const container = document.getElementById('csBgOptions');
+      let html = '';
 
-      let dest = CS_CTA_DEFAULTS[ctaType] || "";
-      let hint = "";
-
-      if (ctaType === "get_directions" && store && CS_STORE_MAPS[store]) {
-        dest = CS_STORE_MAPS[store];
-        hint = "Google Maps link for selected store";
-      } else if (ctaType === "call_store" && store && CS_STORE_PHONES[store]) {
-        dest = `tel:${CS_STORE_PHONES[store].replace(/\D/g, "")}`;
-        hint = `Will show "Call ${CS_STORE_PHONES[store]}" in message`;
-      } else if (ctaType === "view_product") {
-        const napaUrl = document.getElementById("csNapaUrl").value.trim();
-        dest = napaUrl || "https://www.napaonline.com/";
-        hint = napaUrl ? "From NAPA product URL" : "Enter a NAPA URL or set manually";
-      }
-
-      destEl.value = dest;
-      previewEl.textContent = hint;
-      // Auto-fill badge label from CTA type
-      badgeEl.value = CS_CTA_BADGE_DEFAULTS[ctaType] || "All Locations";
-      csUpdateLivePreview();
-      csUpdateSmsLivePreview();
-      csMarkPreviewStale();
-    }
-
-    document.getElementById("csCtaType").addEventListener("change", csResolveCtaDestination);
-    document.getElementById("csStoreContext").addEventListener("change", csResolveCtaDestination);
-
-    // ─── CS: Price Warning ───────────────────────────────────
-    function csCheckPriceWarning(inputId, warnId) {
-      const val = document.getElementById(inputId).value.trim();
-      const warnEl = document.getElementById(warnId);
-      if (!val) { warnEl.style.display = "none"; return; }
-      const cleaned = val.replace(/[$,\s]/g, "");
-      const num = parseFloat(cleaned);
-      if (isNaN(num)) { warnEl.textContent = "Enter a valid price (e.g., 19.99)"; warnEl.style.display = "block"; return; }
-      if (!cleaned.includes(".") && num > 999) {
-        warnEl.textContent = `Did you mean $${(num / 100).toFixed(2)}? Add a decimal to be sure.`;
-        warnEl.style.display = "block";
-        return;
-      }
-      warnEl.style.display = "none";
-    }
-
-    // ─── CS: Format price for display ────────────────────────
-    function csFormatPrice(input) {
-      if (!input || typeof input !== "string") return null;
-      const cleaned = input.replace(/[$,\s]/g, "");
-      const num = parseFloat(cleaned);
-      if (isNaN(num)) return null;
-      return "$" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // ─── CS: Live Preview Update ─────────────────────────────
-    function csUpdateLivePreview() {
-      const salePrice = csFormatPrice(document.getElementById("csSalePrice").value);
-      const regularPrice = csFormatPrice(document.getElementById("csRegularPrice").value);
-      const unit = document.getElementById("csUnit").value.trim();
-      const productName = document.getElementById("csProductName").value.trim();
-      const saleText = document.getElementById("csSaleText").value.trim();
-      const ctaBadge = document.getElementById("csCtaBadgeLabel").value.trim();
-
-      // Left panel
-      const regEl = document.getElementById("csPrevRegPrice");
-      if (regularPrice && regularPrice !== salePrice) {
-        regEl.textContent = "was " + regularPrice;
-        regEl.style.display = "block";
+      // Color swatches
+      const activeVal = csState.bgValue;
+      if (c === 'blue') {
+        html += '<div class="cs-bg-swatch' + (activeVal === '#F9C842' ? ' active' : '') + '" style="background:#F9C842;" data-bg="solid" data-val="#F9C842" onclick="csSelectBg(\'solid\',\'#F9C842\')" title="Yellow"></div>';
+        html += '<div class="cs-bg-swatch' + (activeVal === '#D1D3D4' ? ' active' : '') + '" style="background:#D1D3D4;" data-bg="solid" data-val="#D1D3D4" onclick="csSelectBg(\'solid\',\'#D1D3D4\')" title="Silver"></div>';
       } else {
-        regEl.style.display = "none";
-      }
-      document.getElementById("csPrevSalePrice").textContent = salePrice || "$0.00";
-      document.getElementById("csPrevUnit").textContent = unit || "";
-
-      // Product image
-      const imgEl = document.getElementById("csPrevProductImg");
-      const placeholderEl = document.getElementById("csPrevImgPlaceholder");
-      if (csProductImageUrl) {
-        imgEl.src = csProductImageUrl;
-        imgEl.style.display = "block";
-        placeholderEl.style.display = "none";
-      } else {
-        imgEl.style.display = "none";
-        placeholderEl.style.display = "flex";
+        html += '<div class="cs-bg-swatch' + (activeVal === '#D8AC4B' ? ' active' : '') + '" style="background:#D8AC4B;" data-bg="solid" data-val="#D8AC4B" onclick="csSelectBg(\'solid\',\'#D8AC4B\')" title="Gold"></div>';
       }
 
-      // Right panel
-      document.getElementById("csPrevProductName").textContent = productName || "Product Name";
-      document.getElementById("csPrevSaleText").textContent = saleText || "Sale details here";
-      document.getElementById("csPrevCtaBadge").textContent = ctaBadge || "All Locations";
+      // Texture (only for corner shapes)
+      if (g && g.allowsTexture) {
+        const texColor = c === 'blue' ? '#F9C842' : '#D8AC4B';
+        html += '<div class="cs-bg-swatch cs-texture-' + c + '" style="background-color:' + texColor + ';" data-bg="texture" onclick="csSelectBg(\'texture\',\'' + texColor + '\')" title="Texture"></div>';
+      }
+
+      // Upload (only for shapes that allow image)
+      if (g && g.allowsImage) {
+        html += '<div class="cs-bg-upload-btn" onclick="document.getElementById(\'csBgFileInput\').click()" title="Upload Photo">+</div>';
+      }
+
+      container.innerHTML = html;
     }
 
-    // ─── CS: Wire up live preview inputs ─────────────────────
-    ["csSalePrice", "csRegularPrice", "csUnit", "csProductName", "csSaleText", "csCtaBadgeLabel"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener("input", () => { csUpdateLivePreview(); csUpdateSmsLivePreview(); csMarkPreviewStale(); });
-    });
-
-    document.getElementById("csSalePrice").addEventListener("input", () => csCheckPriceWarning("csSalePrice", "csSalePriceWarn"));
-    document.getElementById("csRegularPrice").addEventListener("input", () => csCheckPriceWarning("csRegularPrice", "csRegularPriceWarn"));
-
-    // ─── CS: Live SMS Variable Preview ─────────────────────
-    function csUpdateSmsLivePreview() {
-      const body = document.getElementById("csSmsBody").value;
-      const previewDiv = document.getElementById("csSmsLivePreview");
-      const textDiv = document.getElementById("csSmsLiveText");
-      if (!body || !body.includes("{{")) {
-        previewDiv.style.display = "none";
-        return;
-      }
-
-      const salePrice = csFormatPrice(document.getElementById("csSalePrice").value);
-      const regularPrice = csFormatPrice(document.getElementById("csRegularPrice").value);
-      const productName = document.getElementById("csProductName").value.trim() || "[product name]";
-      const ctaBadge = document.getElementById("csCtaBadgeLabel").value.trim() || "All Locations";
-      const ctaDest = document.getElementById("csCtaDestination").value.trim() || "[link]";
-
-      let salePriceLine = "";
-      if (salePrice) {
-        salePriceLine = (regularPrice && regularPrice !== salePrice)
-          ? `was ${regularPrice}, now ${salePrice}`
-          : `now ${salePrice}`;
-      }
-
-      let resolved = body
-        .replace(/\{\{sale_price_line\}\}/g, salePriceLine || "[sale price]")
-        .replace(/\{\{product_name\}\}/g, productName)
-        .replace(/\{\{sale_price\}\}/g, salePrice || "[price]")
-        .replace(/\{\{regular_price\}\}/g, regularPrice || "[price]")
-        .replace(/\{\{cta_text\}\}/g, ctaBadge)
-        .replace(/\{\{cta_url\}\}/g, ctaDest);
-
-      textDiv.textContent = resolved + "\n\nReply STOP to opt out.";
-      previewDiv.style.display = "block";
-    }
-
-    // Wire SMS live preview to all relevant inputs
-    document.getElementById("csSmsBody").addEventListener("input", () => { csUpdateSmsLivePreview(); csMarkPreviewStale(); });
-
-    // Stale on CTA destination / creative name changes
-    ["csCtaDestination", "csCreativeName"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener("input", csMarkPreviewStale);
-    });
-
-    // ─── CS: Stale Detection ─────────────────────────────────
-    function csMarkPreviewStale() {
-      if (!csLastPreview) return;
-      csPreviewStale = true;
-      document.getElementById("csStaleBar").classList.add("visible");
-      document.getElementById("btnCsSendTest").disabled = true;
-      document.getElementById("btnCsSendTestEmail").disabled = true;
-      document.getElementById("btnCsSave").disabled = true;
-    }
-
-    // ─── CS: NAPA Fetch ──────────────────────────────────────
-    // ─── CS: Part Number Fetch ──────────────────────────────
-    document.getElementById("btnCsPartFetch").addEventListener("click", async () => {
-      const raw = document.getElementById("csPartNumber").value.trim();
-      const errEl = document.getElementById("csPartFetchError");
-      const resultsEl = document.getElementById("csPartResults");
-      errEl.style.display = "none";
-      resultsEl.classList.remove("visible");
-
-      if (!raw) { errEl.textContent = "Enter a NAPA part number."; errEl.style.display = "block"; return; }
-
-      // Strip "Part #:" prefix if pasted, remove spaces → e.g. "GRT 48880279" → "GRT48880279"
-      const partNum = raw.replace(/^part\s*#\s*:?\s*/i, "").replace(/\s+/g, "").toUpperCase();
-      if (!partNum) { errEl.textContent = "Invalid part number."; errEl.style.display = "block"; return; }
-
-      const napaUrl = `https://www.napaonline.com/en/p/${partNum}`;
-      const btn = document.getElementById("btnCsPartFetch");
-      btn.disabled = true;
-      btn.textContent = "Fetching...";
-
-      try {
-        const resp = await fetch(`${WORKER_BASE}/admin/napa-lookup`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({ url: napaUrl }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Lookup failed.");
-        csNapaFetched = data;
-
-        let html = "";
-        if (data.title) {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:13px;">${esc(data.title)}</span>
-            <button class="napa-use-btn" onclick="csUseNapaField('title')">Use as Name</button>
-          </div>`;
-        }
-        if (data.price) {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:13px;">Price: $${esc(data.price)}</span>
-            <button class="napa-use-btn" onclick="csUseNapaField('price')">Use as Sale Price</button>
-          </div>`;
-        }
-        if (data.image) {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;">
-            <img src="${esc(data.image)}" style="max-width:80px;max-height:60px;border-radius:6px;border:1px solid rgba(255,255,255,.14);" />
-            <button class="napa-use-btn" onclick="csUseNapaField('image')">Use Image</button>
-          </div>`;
-        }
-        if (!html) html = '<div style="font-size:13px;color:var(--dim);">No product data found for that part number.</div>';
-
-        document.getElementById("csPartResultBody").innerHTML = html;
-        resultsEl.classList.add("visible");
-
-        // Also populate the NAPA URL field + CTA destination
-        document.getElementById("csNapaUrl").value = napaUrl;
-        if (document.getElementById("csCtaType").value === "view_product") {
-          document.getElementById("csCtaDestination").value = napaUrl;
-        }
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Fetch";
-      }
-    });
-
-    document.getElementById("csPartNumber").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); document.getElementById("btnCsPartFetch").click(); }
-    });
-
-    // ─── CS: NAPA URL Fetch ───────────────────────────────────
-    document.getElementById("btnCsNapaFetch").addEventListener("click", async () => {
-      const napaUrl = document.getElementById("csNapaUrl").value.trim();
-      const errEl = document.getElementById("csNapaFetchError");
-      const resultsEl = document.getElementById("csNapaResults");
-      errEl.style.display = "none";
-      resultsEl.classList.remove("visible");
-
-      if (!napaUrl) { errEl.textContent = "Enter a NAPA product URL."; errEl.style.display = "block"; return; }
-
-      const btn = document.getElementById("btnCsNapaFetch");
-      btn.disabled = true;
-      btn.textContent = "Fetching...";
-
-      try {
-        const resp = await fetch(`${WORKER_BASE}/admin/napa-lookup`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({ url: napaUrl }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Lookup failed.");
-        csNapaFetched = data;
-
-        let html = "";
-        if (data.title) {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:13px;">${esc(data.title)}</span>
-            <button class="napa-use-btn" onclick="csUseNapaField('title')">Use as Name</button>
-          </div>`;
-        }
-        if (data.price) {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:13px;">Price: $${esc(data.price)}</span>
-            <button class="napa-use-btn" onclick="csUseNapaField('price')">Use as Sale Price</button>
-          </div>`;
-        }
-        if (data.image) {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;">
-            <img src="${esc(data.image)}" style="max-width:80px;max-height:60px;border-radius:6px;border:1px solid rgba(255,255,255,.14);" />
-            <button class="napa-use-btn" onclick="csUseNapaField('image')">Use Image</button>
-          </div>`;
-        }
-        if (!html) html = '<div style="font-size:13px;color:var(--dim);">No product data found.</div>';
-
-        document.getElementById("csNapaResultBody").innerHTML = html;
-        resultsEl.classList.add("visible");
-
-        if (document.getElementById("csCtaType").value === "view_product") {
-          document.getElementById("csCtaDestination").value = napaUrl;
-        }
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Fetch";
-      }
-    });
-
-    // "Use" buttons for NAPA fetched data
-    window.csUseNapaField = function(field) {
-      if (!csNapaFetched) return;
-      if (field === "title" && csNapaFetched.title) {
-        document.getElementById("csProductName").value = csNapaFetched.title.slice(0, 80);
-      } else if (field === "price" && csNapaFetched.price) {
-        document.getElementById("csSalePrice").value = csNapaFetched.price;
-        csCheckPriceWarning("csSalePrice", "csSalePriceWarn");
-      } else if (field === "image" && csNapaFetched.image) {
-        csProductImageUrl = csNapaFetched.image;
-        document.getElementById("csImagePreview").innerHTML = `<img src="${esc(csNapaFetched.image)}" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
-      }
-      csUpdateLivePreview();
-      csMarkPreviewStale();
-    };
-
-    // ─── CS: Image URL input ─────────────────────────────────
-    document.getElementById("csImageUrl").addEventListener("input", function() {
-      const url = this.value.trim();
-      if (url) {
-        csProductImageUrl = url;
-        document.getElementById("csImagePreview").innerHTML = `<img src="${esc(url)}" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
-      } else {
-        csProductImageUrl = null;
-        document.getElementById("csImagePreview").innerHTML = "";
-      }
-      csUpdateLivePreview();
-      csMarkPreviewStale();
-    });
-
-    // ─── CS: Image Upload ────────────────────────────────────
-    document.getElementById("csImageFile").addEventListener("change", function() {
+    // File upload handler
+    document.getElementById('csBgFileInput').addEventListener('change', function() {
       const file = this.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        csProductImageUrl = e.target.result;
-        document.getElementById("csImagePreview").innerHTML = `<img src="${esc(e.target.result)}" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
-        csUpdateLivePreview();
-        csMarkPreviewStale();
+        csState.bgType = 'upload';
+        csState.bgValue = null;
+        csState.bgImageData = e.target.result;
+        // Highlight upload button
+        document.querySelectorAll('.cs-bg-swatch').forEach(s => s.classList.remove('active'));
+        document.querySelector('.cs-bg-upload-btn').classList.add('active');
+        csShowStep('csStepOffer');
+        csUpdatePreview();
       };
       reader.readAsDataURL(file);
     });
 
-    // ─── CS: Canvas Rendering ────────────────────────────────
-    // Pre-load the NAPA logo
-    const csLogoImg = new Image();
-    csLogoImg.crossOrigin = "anonymous";
-    csLogoImg.src = "/assets/napa-auto-parts-g+kk-combo.svg";
+    // ─── Background Selection ───
+    window.csSelectBg = function(type, value) {
+      csState.bgType = type;
+      csState.bgValue = value;
+      csState.bgImageData = null;
+      // Highlight
+      document.querySelectorAll('#csBgOptions .cs-bg-swatch, #csBgOptions .cs-bg-upload-btn').forEach(s => s.classList.remove('active'));
+      const sel = document.querySelector('#csBgOptions [data-bg="' + type + '"]' + (type === 'solid' ? '[data-val="' + value + '"]' : ''));
+      if (sel) sel.classList.add('active');
+      document.getElementById('csStepBackground').classList.add('completed');
+      csShowStep('csStepOffer');
+      csUpdatePreview();
+    };
 
-    // Load NAPA Sans font for canvas
-    (async function loadNapaSans() {
-      try {
-        const regular = new FontFace("NAPA Sans", "url(/assets/fonts/NAPASANS-Roman.woff2)", { weight: "400" });
-        const bold = new FontFace("NAPA Sans", "url(/assets/fonts/NAPASANS-Bd.woff2)", { weight: "700" });
-        await Promise.all([regular.load(), bold.load()]);
-        document.fonts.add(regular);
-        document.fonts.add(bold);
-        csNapaSansLoaded = true;
-      } catch (e) {
-        console.warn("NAPA Sans font load failed, using fallback:", e);
+    // ─── Offer Selection (visual) ───
+    function csUpdateOfferFromVisual() {
+      csState.offerHasBadge = document.getElementById('csOfferBadgeToggle').checked;
+      if (csState.offerMode === 'text') {
+        csState.offerType = 'text-only';
+      } else if (csState.offerMode) {
+        const prefix = csState.offerMode === 'starting' ? 'starting-save' : 'price-save';
+        csState.offerType = prefix + '-' + csState.offerBadgeColor;
       }
-    })();
+      csBuildOfferBar();
+      csUpdatePreview();
+    }
 
-    // Word-wrap helper for canvas
-    function csWrapText(ctx, text, maxWidth) {
-      const words = text.split(" ");
+    window.csSelectOfferVisual = function(mode) {
+      csState.offerMode = mode;
+      document.querySelectorAll('.cs-offer-visual-btn').forEach(b => b.classList.toggle('active', b.dataset.offer === mode));
+      csUpdateOfferFromVisual();
+      document.getElementById('csStepOffer').classList.add('completed');
+      csShowStep('csStepBody');
+      document.getElementById('csActions').style.display = 'flex';
+    };
+
+    window.csSelectBadgeColor = function(color) {
+      csState.offerBadgeColor = color;
+      document.querySelectorAll('.cs-badge-color-opt').forEach(b => {
+        b.style.borderColor = b.dataset.badge === color ? 'var(--napa-yellow)' : 'transparent';
+      });
+      // Update preview badge images in the offer step
+      document.getElementById('csOfferPreviewBadge1').src = '/assets/offer-example-' + color + '-save.svg';
+      document.getElementById('csOfferPreviewBadge2').src = '/assets/offer-example-' + color + '-save-up-to.svg';
+      if (csState.offerMode && csState.offerMode !== 'text') csUpdateOfferFromVisual();
+    };
+
+
+    // ─── Body Selection ───
+    window.csSelectBodyCount = function(count) {
+      csState.bodyCount = count;
+      csState.bodySource = null;
+      csState.bodyItems = [];
+      // Highlight count buttons only
+      document.querySelectorAll('#csStepBody .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      // Reset sub-rows
+      document.getElementById('csTemplateRow').style.display = 'none';
+      document.getElementById('csBodyHint').style.display = 'none';
+      if (count === 0) {
+        document.getElementById('csBodySourceRow').style.display = 'none';
+        document.getElementById('csStepBody').classList.add('completed');
+        csHideStepsAfter('csStepBody');
+        document.getElementById('csActions').style.display = 'flex';
+      } else {
+        document.getElementById('csBodySourceRow').style.display = 'block';
+        // Clear source highlight
+        document.querySelectorAll('#csBodySourceRow .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
+      }
+      csUpdatePreview();
+    };
+
+    window.csSelectBodySource = function(source) {
+      csState.bodySource = source;
+      csState.bodyItems = Array.from({ length: csState.bodyCount }, () => ({ name: '', image: null, partNum: '', layout: 'text-image', price: '' }));
+      // Highlight
+      document.querySelectorAll('#csBodySourceRow .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // For 1-item: show template selector
+      if (csState.bodyCount === 1) {
+        document.getElementById('csTemplateRow').style.display = 'block';
+        document.querySelectorAll('#csTemplateRow .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
+      } else {
+        // Multi-item: auto-select default template and complete
+        document.getElementById('csTemplateRow').style.display = 'none';
+        csState.bodyItems.forEach(item => { item.layout = 'text-image'; });
+        document.getElementById('csStepBody').classList.add('completed');
+        document.getElementById('csBodyHint').style.display = 'block';
+        document.getElementById('csActions').style.display = 'flex';
+        csUpdatePreview();
+      }
+    };
+
+    // ─── Template Selection ───
+    window.csSelectTemplate = function(template, btn) {
+      csState.bodyItems[0].layout = template;
+      csState.bodyItems[0].priceHidden = false;
+      // Highlight
+      document.querySelectorAll('#csTemplateRow .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      // Complete the step
+      document.getElementById('csStepBody').classList.add('completed');
+      document.getElementById('csBodyHint').style.display = 'block';
+      document.getElementById('csActions').style.display = 'flex';
+      csUpdatePreview();
+    };
+
+    // ─── Product Edit Overlay ───
+    let csEditIndex = -1;
+    let csEditTempImage = null;
+
+    window.csDismissPrice = function() {
+      if (csState.bodyItems[0]) {
+        csState.bodyItems[0].priceHidden = true;
+        csUpdatePreview(true);
+      }
+    };
+
+    window.csShowPrice = function() {
+      if (csState.bodyItems[0]) {
+        csState.bodyItems[0].priceHidden = false;
+        if (!csState.bodyItems[0].price) csState.bodyItems[0].price = '$XX.99';
+        csUpdatePreview(true);
+      }
+    };
+
+    window.csEditBodyItem = function(index) {
+      csEditIndex = index;
+      const item = csState.bodyItems[index];
+      const overlay = document.getElementById('csProductEditOverlay');
+      const isNapa = csState.bodySource === 'napa';
+
+      // Title
+      document.getElementById('csProductEditTitle').textContent = item.image ? 'Edit Image' : 'Add Image';
+
+      // Show/hide upload vs part# row
+      document.getElementById('csProductEditUploadRow').style.display = isNapa ? 'none' : 'block';
+      document.getElementById('csProductEditPartRow').style.display = isNapa ? 'block' : 'none';
+
+      // Populate fields
+      if (isNapa) {
+        document.getElementById('csProductEditPartNum').value = item.partNum || '';
+      }
+
+      // Image preview
+      csEditTempImage = item.image || null;
+      csProductEditUpdateImgPreview();
+
+      // File input reset
+      document.getElementById('csProductEditFile').value = '';
+
+      overlay.classList.add('open');
+    };
+
+    function csProductEditUpdateImgPreview() {
+      const wrap = document.getElementById('csProductEditImgWrap');
+      const placeholder = document.getElementById('csProductEditPlaceholder');
+      if (csEditTempImage) {
+        wrap.innerHTML = '<img class="cs-product-edit-img-preview" src="' + csEditTempImage + '" onclick="document.getElementById(\'csProductEditFile\').click()" title="Click to change image" />';
+      } else {
+        wrap.innerHTML = '<div class="cs-product-edit-img-placeholder" onclick="document.getElementById(\'csProductEditFile\').click()">Click to add image</div>';
+      }
+    }
+
+    // File upload in overlay → open cropper
+    document.getElementById('csProductEditFile').addEventListener('change', function() {
+      const file = this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Open cropper with the image
+        csCropperOpen(e.target.result, csEditIndex);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Part # lookup in overlay
+    document.getElementById('csProductEditPartNum').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        csProductEditLookupPart();
+      }
+    });
+    document.getElementById('csProductEditPartNum').addEventListener('blur', function() {
+      csProductEditLookupPart();
+    });
+
+    function csProductEditLookupPart() {
+      const partNum = document.getElementById('csProductEditPartNum').value.trim();
+      if (!partNum || (csState.bodyItems[csEditIndex] && csState.bodyItems[csEditIndex].partNum === partNum)) return;
+      csLookupPart(csEditIndex, partNum);
+    }
+
+    window.csProductEditSave = function() {
+      const item = csState.bodyItems[csEditIndex];
+      const isNapa = csState.bodySource === 'napa';
+
+      // Save image (may have been updated via cropper)
+      if (csEditTempImage) item.image = csEditTempImage;
+
+      if (isNapa) {
+        item.partNum = document.getElementById('csProductEditPartNum').value;
+      }
+
+      document.getElementById('csProductEditOverlay').classList.remove('open');
+      csUpdatePreview();
+    };
+
+    window.csProductEditCancel = function() {
+      document.getElementById('csProductEditOverlay').classList.remove('open');
+    };
+
+    window.csUploadBodyImage = function(index, input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        csCropperOpen(e.target.result, index);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    // ─── Image Cropper ───
+    const csCropper = { imgEl: null, scale: 1, minScale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, frameW: 0, frameH: 0, natW: 0, natH: 0, index: -1, lastDist: 0 };
+
+    function csCropperOpen(dataUrl, index) {
+      const item = csState.bodyItems[index];
+      const layout = item.layout || 'text-image';
+      csCropper.frameW = layout === 'image-only' ? 590 : 317;
+      csCropper.frameH = 352;
+      csCropper.index = index;
+
+      const overlay = document.getElementById('csCropperOverlay');
+      const frame = document.getElementById('csCropperFrame');
+      const img = document.getElementById('csCropperImg');
+      const slider = document.getElementById('csCropperZoomSlider');
+
+      frame.style.width = csCropper.frameW + 'px';
+      frame.style.height = csCropper.frameH + 'px';
+
+      img.onload = function() {
+        csCropper.natW = img.naturalWidth;
+        csCropper.natH = img.naturalHeight;
+        // Scale to cover
+        const scaleX = csCropper.frameW / csCropper.natW;
+        const scaleY = csCropper.frameH / csCropper.natH;
+        csCropper.minScale = Math.max(scaleX, scaleY);
+        csCropper.scale = csCropper.minScale;
+        // Center
+        csCropper.x = (csCropper.frameW - csCropper.natW * csCropper.scale) / 2;
+        csCropper.y = (csCropper.frameH - csCropper.natH * csCropper.scale) / 2;
+        slider.min = Math.round(csCropper.minScale * 100);
+        slider.max = Math.round(csCropper.minScale * 400);
+        slider.value = Math.round(csCropper.scale * 100);
+        csCropperApply();
+      };
+      img.src = dataUrl;
+      overlay.classList.add('open');
+    }
+
+    function csCropperApply() {
+      const img = document.getElementById('csCropperImg');
+      // Clamp position so no empty space
+      const scaledW = csCropper.natW * csCropper.scale;
+      const scaledH = csCropper.natH * csCropper.scale;
+      csCropper.x = Math.min(0, Math.max(csCropper.frameW - scaledW, csCropper.x));
+      csCropper.y = Math.min(0, Math.max(csCropper.frameH - scaledH, csCropper.y));
+      img.style.transform = 'translate(' + csCropper.x + 'px,' + csCropper.y + 'px) scale(' + csCropper.scale + ')';
+    }
+
+    // Mouse drag
+    document.addEventListener('DOMContentLoaded', function() {
+      const frame = document.getElementById('csCropperFrame');
+      frame.addEventListener('mousedown', function(e) { csCropper.dragging = true; csCropper.startX = e.clientX - csCropper.x; csCropper.startY = e.clientY - csCropper.y; e.preventDefault(); });
+      window.addEventListener('mousemove', function(e) { if (!csCropper.dragging) return; csCropper.x = e.clientX - csCropper.startX; csCropper.y = e.clientY - csCropper.startY; csCropperApply(); });
+      window.addEventListener('mouseup', function() { csCropper.dragging = false; });
+
+      // Scroll zoom
+      frame.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        const rect = frame.getBoundingClientRect();
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        const oldScale = csCropper.scale;
+        csCropper.scale *= e.deltaY < 0 ? 1.08 : 0.926;
+        csCropper.scale = Math.max(csCropper.minScale, csCropper.scale);
+        const ratio = csCropper.scale / oldScale;
+        csCropper.x = mx - (mx - csCropper.x) * ratio;
+        csCropper.y = my - (my - csCropper.y) * ratio;
+        document.getElementById('csCropperZoomSlider').value = Math.round(csCropper.scale * 100);
+        csCropperApply();
+      }, { passive: false });
+
+      // Touch pan + pinch zoom
+      frame.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) { csCropper.dragging = true; csCropper.startX = e.touches[0].clientX - csCropper.x; csCropper.startY = e.touches[0].clientY - csCropper.y; }
+        if (e.touches.length === 2) { csCropper.lastDist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY); }
+        e.preventDefault();
+      }, { passive: false });
+      frame.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1 && csCropper.dragging) { csCropper.x = e.touches[0].clientX - csCropper.startX; csCropper.y = e.touches[0].clientY - csCropper.startY; csCropperApply(); }
+        if (e.touches.length === 2) {
+          const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+          if (csCropper.lastDist) {
+            const rect = frame.getBoundingClientRect();
+            const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+            const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+            const oldScale = csCropper.scale;
+            csCropper.scale *= dist / csCropper.lastDist;
+            csCropper.scale = Math.max(csCropper.minScale, csCropper.scale);
+            const ratio = csCropper.scale / oldScale;
+            csCropper.x = cx - (cx - csCropper.x) * ratio;
+            csCropper.y = cy - (cy - csCropper.y) * ratio;
+            document.getElementById('csCropperZoomSlider').value = Math.round(csCropper.scale * 100);
+            csCropperApply();
+          }
+          csCropper.lastDist = dist;
+        }
+        e.preventDefault();
+      }, { passive: false });
+      frame.addEventListener('touchend', function() { csCropper.dragging = false; csCropper.lastDist = 0; });
+
+      // Zoom slider
+      document.getElementById('csCropperZoomSlider').addEventListener('input', function() {
+        const rect = document.getElementById('csCropperFrame').getBoundingClientRect();
+        const cx = csCropper.frameW / 2, cy = csCropper.frameH / 2;
+        const oldScale = csCropper.scale;
+        csCropper.scale = Math.max(csCropper.minScale, parseInt(this.value) / 100);
+        const ratio = csCropper.scale / oldScale;
+        csCropper.x = cx - (cx - csCropper.x) * ratio;
+        csCropper.y = cy - (cy - csCropper.y) * ratio;
+        csCropperApply();
+      });
+    });
+
+    window.csCropperSave = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = csCropper.frameW;
+      canvas.height = csCropper.frameH;
+      const ctx = canvas.getContext('2d');
+      const img = document.getElementById('csCropperImg');
+      // Source rect: map frame viewport back to source image coordinates
+      const sx = -csCropper.x / csCropper.scale;
+      const sy = -csCropper.y / csCropper.scale;
+      const sw = csCropper.frameW / csCropper.scale;
+      const sh = csCropper.frameH / csCropper.scale;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, csCropper.frameW, csCropper.frameH);
+      const croppedData = canvas.toDataURL('image/jpeg', 0.92);
+      document.getElementById('csCropperOverlay').classList.remove('open');
+
+      // If product edit overlay is open, update temp image there
+      if (document.getElementById('csProductEditOverlay').classList.contains('open')) {
+        csEditTempImage = croppedData;
+        csProductEditUpdateImgPreview();
+      } else {
+        csState.bodyItems[csCropper.index].image = croppedData;
+        csUpdatePreview();
+      }
+    };
+
+    window.csCropperCancel = function() {
+      document.getElementById('csCropperOverlay').classList.remove('open');
+    };
+
+    window.csLookupPart = function(index, input) {
+      const partNum = typeof input === 'string' ? input : (input.value || '').trim();
+      if (!partNum) return;
+      // Prevent double-fetch if value hasn't changed
+      if (csState.bodyItems[index].partNum === partNum) return;
+      csState.bodyItems[index].partNum = partNum;
+
+      fetch(`${WORKER_BASE}/admin/napa-part-search`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partNumber: partNum })
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.title) {
+            let title = data.title.split(/\s*[\|]\s*/)[0].replace(/\s*-\s*NAPA.*$/i, '').trim();
+            csState.bodyItems[index].name = title;
+          }
+          if (data.image) {
+            const proxyUrl = `${WORKER_BASE}/admin/proxy-image?url=` + encodeURIComponent(data.image);
+            // Remove white bg, then update
+            csRemoveBg(proxyUrl).then(function(cleanUrl) {
+              csState.bodyItems[index].image = cleanUrl;
+              csUpdatePreview(true);
+              if (document.getElementById('csProductEditOverlay').classList.contains('open') && csEditIndex === index) {
+                csEditTempImage = cleanUrl;
+                csProductEditUpdateImgPreview();
+              }
+            });
+          }
+          csUpdatePreview(true);
+        })
+        .catch(err => {
+          console.warn('Part lookup failed', err);
+        });
+    };
+
+    // ─── Step Visibility ───
+    function csShowStep(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden');
+      // Accordion: collapse all other steps, expand this one
+      document.querySelectorAll('.cs-step:not(.hidden)').forEach(s => {
+        if (s.id !== id) s.classList.add('collapsed');
+      });
+      el.classList.remove('collapsed');
+      // Scroll into view
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    window.csToggleStep = function(id) {
+      const el = document.getElementById(id);
+      if (el.classList.contains('collapsed')) {
+        // Expand this, collapse others
+        document.querySelectorAll('.cs-step:not(.hidden)').forEach(s => s.classList.add('collapsed'));
+        el.classList.remove('collapsed');
+      } else {
+        el.classList.add('collapsed');
+      }
+    };
+    function csHideStepsAfter(id) {
+      const steps = ['csStepGraphic', 'csStepBackground', 'csStepOffer', 'csStepBody'];
+      let found = false;
+      steps.forEach(s => {
+        if (found) {
+          document.getElementById(s).classList.add('hidden');
+        }
+        if (s === id) found = true;
+      });
+      document.getElementById('csActions').style.display = 'none';
+      document.getElementById('csRendered').style.display = 'none';
+    }
+
+    // ─── Build Offer Bar (called once per offer type selection) ───
+    function csBuildOfferBar() {
+      const prevOfferBar = document.getElementById('csPrevOfferBar');
+      if (!csState.offerType) return;
+      const cfg = CS_OFFER_TYPES[csState.offerType];
+
+      if (cfg.hasPrice) {
+        // Restore left/right containers
+        prevOfferBar.innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
+        const leftEl = document.getElementById('csPrevOfferLeft');
+        const rightEl = document.getElementById('csPrevOfferRight');
+
+        const big = !cfg.hasStartingAt;
+        const i = 'border:0;outline:0;background:transparent;padding:0;margin:0;border-radius:0;font-family:inherit;font-weight:inherit;color:inherit;';
+        const startAt = cfg.hasStartingAt ? '<div style="color:#fff;font-weight:900;font-size:30px;text-transform:uppercase;line-height:1;">STARTING AT</div>' : '';
+        leftEl.innerHTML = startAt +
+          '<div style="display:flex;align-items:flex-start;line-height:1;font-weight:900;color:#fff;">' +
+            '<span style="font-size:' + (big ? 59 : 49) + 'px;">$</span>' +
+            '<input id="csInlineDollars" type="text" value="' + (csState.offerDollars || '') + '" placeholder="0" maxlength="3" inputmode="numeric" style="' + i + 'font-size:' + (big ? 101 : 84) + 'px;line-height:.9;width:' + Math.max(1, (csState.offerDollars || '').length) + 'ch;height:.9em;" />' +
+            '<span style="display:inline-flex;flex-direction:column;line-height:1;">' +
+              '<input id="csInlineCents" type="text" value="' + (csState.offerCents || '') + '" placeholder="99" maxlength="2" inputmode="numeric" style="' + i + 'font-size:' + (big ? 60 : 50) + 'px;width:2ch;height:1em;" />' +
+              '<input id="csInlineUnit" type="text" value="' + (csState.offerUnit || '') + '" placeholder="/each" maxlength="10" style="' + i + 'font-weight:300;font-size:' + (big ? 28 : 23) + 'px;line-height:1;width:5ch;height:1em;" />' +
+            '</span>' +
+          '</div>';
+
+        // Badge (optional)
+        if (csState.offerHasBadge && cfg.badge) {
+          const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#fff';
+          const isUpTo = cfg.hasStartingAt;
+          const numTop = isUpTo ? '70%' : '61%';
+          const numSize = isUpTo ? 65 : 78;
+          const pctSize = isUpTo ? 32 : 34;
+          const pctTop = isUpTo ? '14px' : '18px';
+          rightEl.innerHTML =
+            '<div style="position:relative;width:171px;height:151px;">' +
+              '<img src="/assets/mms/offer-badges/' + cfg.badge + '.svg" style="width:100%;height:100%;" />' +
+              '<div style="position:absolute;top:' + numTop + ';left:0;right:0;transform:translateY(-50%);color:' + badgeTextColor + ';font-weight:900;line-height:1;text-align:center;">' +
+                '<span style="position:relative;font-size:' + numSize + 'px;letter-spacing:-.5px;">' +
+                  '<input id="csInlineSave" type="text" value="' + (csState.offerSave || '') + '" placeholder="0" maxlength="2" inputmode="numeric" style="' + i + 'font-size:inherit;width:2ch;height:1em;text-align:center;color:inherit;letter-spacing:inherit;" />' +
+                  '<span style="position:absolute;left:100%;top:' + pctTop + ';font-size:' + pctSize + 'px;">%</span>' +
+                '</span>' +
+              '</div>' +
+            '</div>';
+          document.getElementById('csInlineSave').addEventListener('input', function() { csState.offerSave = this.value; });
+        } else {
+          rightEl.innerHTML = '';
+        }
+
+        // Bind inline input listeners (state only, no re-render)
+        document.getElementById('csInlineDollars').addEventListener('input', function() {
+          csState.offerDollars = this.value;
+          this.style.width = Math.max(1, this.value.length) + 'ch';
+        });
+        document.getElementById('csInlineCents').addEventListener('input', function() { csState.offerCents = this.value; });
+        document.getElementById('csInlineUnit').addEventListener('input', function() { csState.offerUnit = this.value; });
+      } else {
+        // Text-only — built in csUpdatePreview since it needs bg color context
+      }
+    }
+
+    // ─── Preview Update ───
+    function csUpdatePreview(skipCapture) {
+      // Capture inline-editable body text before rebuilding (skip when state was just set programmatically)
+      if (!skipCapture) {
+        var priceEl = document.getElementById('csPrevBodyPrice');
+        var nameEl = document.getElementById('csPrevBodyName');
+        if (priceEl && csState.bodyItems[0]) csState.bodyItems[0].price = priceEl.textContent;
+        if (nameEl && csState.bodyItems[0]) csState.bodyItems[0].name = nameEl.textContent;
+      }
+
+      const g = CS_BRAND_GRAPHICS.find(gr => gr.id === csState.graphicId);
+      const prevBg = document.getElementById('csPrevBg');
+      const prevGraphic = document.getElementById('csPrevGraphic');
+      const prevTitleBar = document.getElementById('csPrevTitleBar');
+      const prevOfferBar = document.getElementById('csPrevOfferBar');
+      const canvas = document.getElementById('csCanvas');
+
+      // ── Background (always update, even without graphic) ──
+      prevBg.className = 'cs-prev-bg';
+      prevBg.style.backgroundImage = '';
+      if (csState.bgType === 'solid') {
+        prevBg.style.backgroundColor = csState.bgValue;
+      } else if (csState.bgType === 'texture') {
+        // Use the actual pattern SVG as background
+        const patternFile = csState.color === 'blue' ? 'yellow-pattern-bg-full' : 'gold-pattern-bg-full';
+        prevBg.style.backgroundImage = 'url(/assets/mms/' + patternFile + '.svg)';
+        prevBg.style.backgroundSize = '100% 100%';
+        prevBg.style.backgroundColor = csState.bgValue;
+      } else if (csState.bgType === 'upload' && csState.bgImageData) {
+        prevBg.style.backgroundImage = 'url(' + csState.bgImageData + ')';
+        prevBg.style.backgroundColor = '#333';
+      } else {
+        prevBg.style.backgroundColor = '#ddd';
+      }
+
+      if (!g) {
+        prevGraphic.style.display = 'none';
+        prevTitleBar.style.display = 'none';
+        prevOfferBar.style.display = 'none';
+        document.getElementById('csPrevBody').style.display = 'none';
+        return;
+      }
+
+      // ── Brand Graphic SVG ──
+      const svgFile = g.file || g.id;
+      prevGraphic.src = '/assets/mms/brand-graphics/' + svgFile + '.svg';
+      prevGraphic.style.display = 'block';
+      // Position the graphic
+      const pctX = (g.x / 640 * 100).toFixed(2);
+      const pctY = (g.y / 800 * 100).toFixed(2);
+      const pctW = (g.w / 640 * 100).toFixed(2);
+      const pctH = (g.h / 800 * 100).toFixed(2);
+      prevGraphic.style.left = pctX + '%';
+      prevGraphic.style.top = pctY + '%';
+      prevGraphic.style.width = pctW + '%';
+      prevGraphic.style.height = pctH + '%';
+
+      // ── Title/Rules Bar ──
+      if (g.position === 'top') {
+        prevTitleBar.style.top = 'auto';
+        prevTitleBar.style.bottom = '0';
+      } else {
+        prevTitleBar.style.top = '0';
+        prevTitleBar.style.bottom = 'auto';
+      }
+      prevTitleBar.style.display = 'block';
+
+      // ── Offer Bar ──
+      if (csState.offerType) {
+        const cfg = CS_OFFER_TYPES[csState.offerType];
+        prevOfferBar.style.display = 'flex';
+
+        // Position: near the brand graphic/logo, not the title bar
+        if (g.position === 'top') {
+          prevOfferBar.style.top = '16.375%';
+          prevOfferBar.style.bottom = 'auto';
+        } else {
+          prevOfferBar.style.top = 'auto';
+          prevOfferBar.style.bottom = '16.375%';
+        }
+        prevOfferBar.style.height = '18.875%';
+        prevOfferBar.style.padding = '0 3.9%';
+
+        if (!cfg.hasPrice) {
+          // Text-only offer — rebuild each time (needs bg color context)
+          const txt = csState.offerText || 'Huge Discounts on all Motor Oil Brands!!';
+          const isGrayBg = csState.bgValue === '#D1D3D4';
+          const textColor = isGrayBg ? '#F9C842' : '#fff';
+          prevOfferBar.innerHTML = '<div style="width:100%;text-align:center;color:' + textColor + ';font-weight:900;font-size:60px;line-height:1.2;" class="cs-editable" contenteditable="true" id="csPrevOfferTextEdit">' + txt + '</div>';
+          const el = document.getElementById('csPrevOfferTextEdit');
+          if (el) {
+            let offerLastGood = txt;
+            el.addEventListener('input', function() {
+              if (this.scrollHeight > 146) {
+                this.textContent = offerLastGood;
+              } else {
+                offerLastGood = this.textContent;
+              }
+            });
+            el.addEventListener('blur', function() {
+              csState.offerText = this.textContent;
+            });
+          }
+        }
+        // Price types: HTML already built by csBuildOfferBar(), just position
+      } else {
+        prevOfferBar.style.display = 'none';
+      }
+
+      // ── Body ──
+      const prevBody = document.getElementById('csPrevBody');
+      if (csState.bodyCount > 0 && csState.bodyItems.length > 0) {
+        // Position: centered between offer bar and title bar
+        if (g.position === 'top') {
+          prevBody.style.top = (298 / 800 * 100).toFixed(2) + '%';
+        } else {
+          prevBody.style.top = (149 / 800 * 100).toFixed(2) + '%';
+        }
+        prevBody.style.display = 'flex';
+        prevBody.style.background = '';  // reset inline bg from previous render
+
+        // Placeholder helpers
+        const placeholderImg = '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:13px;gap:6px;"><span style="font-size:32px;">&#128247;</span>Click to add image</div>';
+        const placeholderImgSmall = '<div style="width:100%;height:70%;background:rgba(255,255,255,.1);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:11px;gap:4px;"><span style="font-size:20px;">&#128247;</span>Click</div>';
+
+        // 1-item layouts
+        if (csState.bodyCount === 1) {
+          const item = csState.bodyItems[0];
+          const layout = item.layout || 'text-image';
+          const isNapa = csState.bodySource === 'napa';
+          const fit = isNapa ? 'contain' : 'cover';
+          prevBody.style.padding = '0';
+          prevBody.style.gap = '0';
+          prevBody.style.flexWrap = 'nowrap';
+          prevBody.style.alignItems = 'stretch';
+          prevBody.style.justifyContent = 'flex-start';
+
+
+          if (layout === 'text-image') {
+            const showPrice = !item.priceHidden;
+            const priceHtml = showPrice
+              ? '<div style="position:relative;flex-shrink:0;">' +
+                  '<div class="cs-editable cs-body-price" contenteditable="true" id="csPrevBodyPrice" style="color:#D0021B;font-weight:700;font-size:40px;line-height:1.1;text-decoration:line-through;padding-right:28px;">' + (item.price || '$XX.99') + '</div>' +
+                  '<span onclick="csDismissPrice()" style="position:absolute;top:-4px;right:0;cursor:pointer;color:rgba(255,255,255,.6);font-size:20px;font-weight:700;line-height:1;padding:4px;background:rgba(0,0,0,.4);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;" title="Remove cut price">&times;</span>' +
+                '</div>'
+              : '<div onclick="csShowPrice()" style="cursor:pointer;color:rgba(255,255,255,.45);font-size:14px;padding:4px 0;flex-shrink:0;"><span style="font-size:16px;">+</span> Add cut price</div>';
+            if (isNapa) {
+              // NAPA: 25px padding each side, two 295px halves
+              prevBody.style.background = 'rgba(0,0,0,.3)';
+              prevBody.innerHTML =
+                '<div style="display:flex;width:100%;height:352px;padding:0 25px;box-sizing:border-box;">' +
+                  '<div style="width:295px;min-width:295px;display:flex;flex-direction:column;padding:16px 10px 16px 0;box-sizing:border-box;overflow:hidden;">' +
+                    priceHtml +
+                    '<div class="cs-editable cs-body-name" contenteditable="true" id="csPrevBodyName" style="color:#fff;font-weight:600;font-size:40px;line-height:1.2;flex:1;overflow:hidden;word-break:break-word;">' + (item.name || 'Product Name') + '</div>' +
+                  '</div>' +
+                  '<div class="cs-prev-body-clickable" style="width:295px;min-width:295px;height:352px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="csEditBodyItem(0)">' +
+                    (item.image ? '<img src="' + item.image + '" style="max-width:295px;max-height:352px;object-fit:contain;" />' : placeholderImg) +
+                  '</div>' +
+                '</div>';
+            } else {
+              // Upload: edge-to-edge, 323px text + 317px image
+              prevBody.innerHTML =
+                '<div style="display:flex;width:100%;height:352px;">' +
+                  '<div style="width:323px;display:flex;flex-direction:column;padding:16px 20px;box-sizing:border-box;background:rgba(0,0,0,.3);overflow:hidden;">' +
+                    priceHtml +
+                    '<div class="cs-editable cs-body-name" contenteditable="true" id="csPrevBodyName" style="color:#fff;font-weight:600;font-size:40px;line-height:1.2;flex:1;overflow:hidden;word-break:break-word;">' + (item.name || 'Product Name') + '</div>' +
+                  '</div>' +
+                  '<div class="cs-prev-body-clickable" style="width:317px;min-width:317px;height:352px;background:rgba(0,0,0,.3);overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="csEditBodyItem(0)">' +
+                    (item.image ? '<img src="' + item.image + '" style="width:100%;height:100%;object-fit:cover;" />' : placeholderImg) +
+                  '</div>' +
+                '</div>';
+            }
+            // Bind blur to save editable text back to state
+            var priceEl = document.getElementById('csPrevBodyPrice');
+            var nameEl = document.getElementById('csPrevBodyName');
+            if (priceEl) priceEl.addEventListener('blur', function() { csState.bodyItems[0].price = this.textContent; });
+            if (nameEl) nameEl.addEventListener('blur', function() { csState.bodyItems[0].name = this.textContent; });
+          } else {
+            // Image only: 590x352 centered (25px padding each side) — clickable
+            prevBody.style.justifyContent = 'center';
+            prevBody.style.padding = '0 25px';
+            prevBody.style.background = 'rgba(0,0,0,.3)';
+            prevBody.innerHTML =
+              '<div class="cs-prev-body-clickable" style="width:590px;height:352px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="csEditBodyItem(0)">' +
+                (item.image ? '<img src="' + item.image + '" style="max-width:100%;max-height:100%;object-fit:' + fit + ';" />' : placeholderImg) +
+              '</div>';
+          }
+        } else {
+          // Multi-item generic layout (4, 6, etc.) — each cell clickable
+          prevBody.style.padding = '8px';
+          prevBody.style.gap = '8px';
+          prevBody.style.flexWrap = 'wrap';
+          prevBody.style.alignItems = 'center';
+          prevBody.style.justifyContent = 'center';
+          prevBody.innerHTML = csState.bodyItems.map((item, i) =>
+            '<div class="cs-prev-body-clickable" style="' + csBodyItemStyle(csState.bodyCount) + 'cursor:pointer;" onclick="csEditBodyItem(' + i + ')">' +
+              (item.image ? '<img src="' + item.image + '" style="width:100%;height:70%;object-fit:contain;background:#fff;border-radius:4px;" />' : placeholderImgSmall) +
+              '<div style="color:#fff;font-size:11px;text-align:center;margin-top:4px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (item.name || '') + '</div>' +
+            '</div>'
+          ).join('');
+        }
+      } else {
+        prevBody.style.display = 'none';
+        prevBody.innerHTML = '';
+      }
+    }
+
+    function csBodyItemStyle(count) {
+      if (count === 4) return 'width:22%;text-align:center;';
+      if (count === 6) return 'width:30%;text-align:center;';
+      return 'width:60%;text-align:center;';
+    }
+
+    // ─── Editable Text Handlers ───
+    // Rules: auto-shrink font to fit one line
+    function csAutoShrinkRules() {
+      const el = document.getElementById('csPrevRulesText');
+      if (!el) return;
+      let size = 38;
+      el.style.fontSize = size + 'px';
+      while (el.scrollWidth > el.clientWidth && size > 16) {
+        size -= 1;
+        el.style.fontSize = size + 'px';
+      }
+    }
+    document.getElementById('csPrevRulesText').addEventListener('input', csAutoShrinkRules);
+    document.getElementById('csPrevTitleText').addEventListener('input', function() {
+      csState.titleText = this.value;
+    });
+    document.getElementById('csPrevRulesText').addEventListener('input', function() {
+      csState.rulesText = this.value;
+    });
+
+    // ─── Canvas Rendering ───
+    function csLoadImage(src) {
+      if (csImageCache[src]) return Promise.resolve(csImageCache[src]);
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { csImageCache[src] = img; resolve(img); };
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    // Remove near-white background from product images → returns a data URL with transparency
+    const csNoBgCache = {};
+    function csRemoveBg(imgSrc) {
+      if (csNoBgCache[imgSrc]) return Promise.resolve(csNoBgCache[imgSrc]);
+      return csLoadImage(imgSrc).then(function(img) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        const cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0);
+        const d = cx.getImageData(0, 0, c.width, c.height);
+        const px = d.data;
+        for (let i = 0; i < px.length; i += 4) {
+          // If pixel is near-white/light-gray, make transparent
+          if (px[i] > 200 && px[i+1] > 200 && px[i+2] > 200) {
+            px[i+3] = 0;
+          }
+        }
+        cx.putImageData(d, 0, 0);
+        const url = c.toDataURL('image/png');
+        csNoBgCache[imgSrc] = url;
+        return url;
+      });
+    }
+
+    function csWrapText(ctx, text, font, maxWidth) {
+      ctx.font = font;
+      const words = text.split(' ');
       const lines = [];
-      let line = "";
+      let line = '';
       for (const word of words) {
-        const test = line ? line + " " + word : word;
+        const test = line ? line + ' ' + word : word;
         if (ctx.measureText(test).width > maxWidth && line) {
           lines.push(line);
           line = word;
@@ -2957,423 +3583,353 @@ Occasional deals &amp; promotions</textarea>
       return lines;
     }
 
-    async function csRenderToCanvas() {
-      const W = 1080, H = 566;
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d");
-
-      const halfW = W / 2;
-      const font = csNapaSansLoaded ? "NAPA Sans" : "system-ui";
-
-      // === Left panel (white) ===
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, halfW, H);
-
-      const salePrice = csFormatPrice(document.getElementById("csSalePrice").value) || "$0.00";
-      const regularPrice = csFormatPrice(document.getElementById("csRegularPrice").value);
-      const unit = document.getElementById("csUnit").value.trim();
-
-      let leftY = 60;
-
-      // Sale price + unit on same baseline (large, bold, navy)
-      ctx.font = `700 64px ${font}`;
-      ctx.fillStyle = "#0A0094";
-      const salePriceW = ctx.measureText(salePrice).width;
-      let lineW = salePriceW;
-      let unitW = 0;
-      if (unit) {
-        ctx.font = `400 28px ${font}`;
-        unitW = ctx.measureText(unit).width;
-        lineW += 8 + unitW; // 8px gap
-      }
-      const lineX = (halfW - lineW) / 2;
-      ctx.font = `700 64px ${font}`;
-      ctx.fillStyle = "#0A0094";
-      ctx.fillText(salePrice, lineX, leftY + 64);
-      if (unit) {
-        ctx.font = `400 28px ${font}`;
-        ctx.fillStyle = "#333333";
-        ctx.fillText(unit, lineX + salePriceW + 8, leftY + 64);
-      }
-      leftY += 80;
-
-      // "was $X.XX" below (smaller, red, strikethrough)
-      if (regularPrice && regularPrice !== salePrice) {
-        ctx.font = `400 26px ${font}`;
-        ctx.fillStyle = "#d0021b";
-        const regText = "was " + regularPrice;
-        const regW = ctx.measureText(regText).width;
-        const regX = (halfW - regW) / 2;
-        ctx.fillText(regText, regX, leftY + 26);
-        // Strikethrough line
-        ctx.strokeStyle = "#d0021b";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(regX, leftY + 18);
-        ctx.lineTo(regX + regW, leftY + 18);
-        ctx.stroke();
-        leftY += 42;
-      }
-
-      // Product image — fill remaining left panel space
-      if (csProductImageUrl) {
-        try {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          // Use proxy for external images to avoid CORS tainting
-          const proxyUrl = csProductImageUrl.startsWith("http") && !csProductImageUrl.startsWith(location.origin)
-            ? `${WORKER_BASE}/admin/proxy-image?url=${encodeURIComponent(csProductImageUrl)}`
-            : csProductImageUrl;
-          img.src = proxyUrl;
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = () => { console.warn("Proxy image failed:", proxyUrl); reject(); };
-          });
-          const maxImgW = halfW * 0.85;
-          const maxImgH = H - leftY - 16;
-          const scale = Math.min(maxImgW / img.width, maxImgH / img.height);
-          const imgW = img.width * scale;
-          const imgH = img.height * scale;
-          ctx.drawImage(img, (halfW - imgW) / 2, leftY + (H - leftY - imgH) / 2, imgW, imgH);
-        } catch {
-          // Skip image if proxy fails
-        }
-      }
-
-      // === Right panel (navy) ===
-      ctx.fillStyle = "#0A0094";
-      ctx.fillRect(halfW, 0, halfW, H);
-
-      // Logo (centered, generous size)
-      let rightY = 20;
-      if (csLogoImg.complete && csLogoImg.naturalWidth > 0) {
-        const logoMaxW = halfW * 0.8;
-        const logoMaxH = 130;
-        const logoScale = Math.min(logoMaxW / csLogoImg.width, logoMaxH / csLogoImg.height, 1);
-        const logoW = csLogoImg.width * logoScale;
-        const logoH = csLogoImg.height * logoScale;
-        ctx.drawImage(csLogoImg, halfW + (halfW - logoW) / 2, rightY, logoW, logoH);
-        rightY += logoH + 16;
-      }
-
-      // Product name (white, bold, word-wrapped)
-      const productName = document.getElementById("csProductName").value.trim() || "Product Name";
-      ctx.font = `700 30px ${font}`;
-      ctx.fillStyle = "#ffffff";
-      const nameLines = csWrapText(ctx, productName, halfW - 60);
-      const nameX = halfW + 30;
-      for (const line of nameLines) {
-        ctx.fillText(line, nameX, rightY + 30);
-        rightY += 36;
-      }
-      rightY += 10;
-
-      // Sale text (yellow, regular, word-wrapped)
-      const saleText = document.getElementById("csSaleText").value.trim();
-      if (saleText) {
-        ctx.font = `400 22px ${font}`;
-        ctx.fillStyle = "#FBC421";
-        const saleLines = csWrapText(ctx, saleText, halfW - 60);
-        for (const line of saleLines) {
-          ctx.fillText(line, nameX, rightY + 22);
-          rightY += 28;
-        }
-      }
-
-      // CTA badge (yellow rect at bottom)
-      const ctaBadge = document.getElementById("csCtaBadgeLabel").value.trim() || "All Locations";
-      const badgeH = 50;
-      const badgeY = H - badgeH - 25;
-      const badgeX = halfW + 25;
-      const badgeW = halfW - 50;
-      ctx.fillStyle = "#FBC421";
-      // Rounded rect
-      const r = 8;
-      ctx.beginPath();
-      ctx.moveTo(badgeX + r, badgeY);
-      ctx.lineTo(badgeX + badgeW - r, badgeY);
-      ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + r);
-      ctx.lineTo(badgeX + badgeW, badgeY + badgeH - r);
-      ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - r, badgeY + badgeH);
-      ctx.lineTo(badgeX + r, badgeY + badgeH);
-      ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - r);
-      ctx.lineTo(badgeX, badgeY + r);
-      ctx.quadraticCurveTo(badgeX, badgeY, badgeX + r, badgeY);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.font = `700 24px ${font}`;
-      ctx.fillStyle = "#111111";
-      const badgeTextW = ctx.measureText(ctaBadge).width;
-      ctx.fillText(ctaBadge, badgeX + (badgeW - badgeTextW) / 2, badgeY + 33);
-
-      return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-    }
-
-    // ─── CS: Generate Preview Flow ───────────────────────────
-    window.csGeneratePreview = async function() {
-      const btn = document.getElementById("btnCsPreview");
-      const errEl = document.getElementById("csSaveError");
-      errEl.style.display = "none";
-
-      // Validate
-      const salePrice = document.getElementById("csSalePrice").value.trim();
-      const productName = document.getElementById("csProductName").value.trim();
-      if (!salePrice) { errEl.textContent = "Sale price is required."; errEl.style.display = "block"; return; }
-      if (!productName) { errEl.textContent = "Product name is required."; errEl.style.display = "block"; return; }
-
+    window.csGenerate = async function() {
+      const btn = document.querySelector('.cs-actions-row .btn-primary');
+      btn.textContent = 'Generating...';
       btn.disabled = true;
-      btn.textContent = "Generating...";
 
       try {
-        // 1. Call worker for SMS preview + CTA resolution
-        const payload = {
-          imageContent: {
-            regularPrice: document.getElementById("csRegularPrice").value.trim() || undefined,
-            salePrice,
-            unit: document.getElementById("csUnit").value.trim() || undefined,
-            productName,
-            saleText: document.getElementById("csSaleText").value.trim() || undefined,
-            ctaBadgeLabel: document.getElementById("csCtaBadgeLabel").value.trim() || undefined,
-          },
-          smsContent: {
-            body: document.getElementById("csSmsBody").value.trim() || undefined,
-          },
-          cta: {
-            type: document.getElementById("csCtaType").value,
-            destinationOverride: document.getElementById("csCtaDestination").value.trim() || undefined,
-          },
-          media: {
-            napaUrl: document.getElementById("csNapaUrl").value.trim() || undefined,
-            imageUrl: csProductImageUrl || undefined,
-          },
-          storeContext: document.getElementById("csStoreContext").value || undefined,
-        };
+        const g = CS_BRAND_GRAPHICS.find(gr => gr.id === csState.graphicId);
+        if (!g) throw new Error('No graphic selected');
 
-        const resp = await fetch(`${WORKER_BASE}/admin/creative/preview`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify(payload),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Preview failed.");
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 800;
+        const ctx = canvas.getContext('2d');
 
-        // 2. Render Canvas → PNG blob
-        btn.textContent = "Rendering...";
-        const pngBlob = await csRenderToCanvas();
+        // 1. Background
+        if (csState.bgType === 'upload' && csState.bgImageData) {
+          const bgImg = await csLoadImage(csState.bgImageData);
+          // Cover fill
+          const scale = Math.max(640 / bgImg.width, 800 / bgImg.height);
+          const sw = bgImg.width * scale;
+          const sh = bgImg.height * scale;
+          ctx.drawImage(bgImg, (640 - sw) / 2, (800 - sh) / 2, sw, sh);
+        } else if (csState.bgType === 'texture') {
+          // Use the actual pattern SVG
+          const patternFile = csState.color === 'blue' ? 'yellow-pattern-bg-full' : 'gold-pattern-bg-full';
+          try {
+            const patImg = await csLoadImage('/assets/mms/' + patternFile + '.svg');
+            ctx.drawImage(patImg, 0, 0, 640, 800);
+          } catch (e) {
+            ctx.fillStyle = csState.bgValue;
+            ctx.fillRect(0, 0, 640, 800);
+          }
+        } else {
+          ctx.fillStyle = csState.bgValue || '#ddd';
+          ctx.fillRect(0, 0, 640, 800);
+        }
 
-        // 3. Upload PNG to Cloudinary (unsigned)
-        btn.textContent = "Uploading...";
-        const formData = new FormData();
-        formData.append("file", pngBlob, "creative.png");
-        formData.append("upload_preset", "gkk_napa_mms");
-        const uploadResp = await fetch("https://api.cloudinary.com/v1_1/dtpqxuwby/image/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const uploadData = await uploadResp.json();
-        if (!uploadResp.ok) throw new Error(uploadData.error?.message || "Cloudinary upload failed.");
-        csComposedImageUrl = uploadData.secure_url;
+        // 2. Brand graphic SVG (drawn early so offer/body render on top)
+        try {
+          const gFile = g.file || g.id;
+          const gImg = await csLoadImage('/assets/mms/brand-graphics/' + gFile + '.svg');
+          ctx.drawImage(gImg, g.x, g.y, g.w, g.h);
+        } catch (e) { console.warn('Graphic load failed', e); }
 
-        // 4. Store preview data
-        csLastPreview = {
-          ...data,
-          composedImageUrl: csComposedImageUrl,
-          imageBytes: pngBlob.size,
-        };
-        csPreviewStale = false;
-        document.getElementById("csStaleBar").classList.remove("visible");
+        // 3. Offer bar
+        if (csState.offerType) {
+          const cfg = CS_OFFER_TYPES[csState.offerType];
+          const offerY = g.position === 'top' ? 131 : (800 - 131 - 151);
+          ctx.fillStyle = 'rgba(0,0,0,0.45)';
+          ctx.fillRect(0, offerY, 640, 151);
 
-        // 5. Update Image tab — show rendered PNG
-        const renderedDiv = document.getElementById("csRenderedImage");
-        document.getElementById("csRenderedImg").src = csComposedImageUrl;
-        renderedDiv.style.display = "block";
+          // Load NAPA Sans
+          await document.fonts.ready;
 
-        // 6. Update SMS tab
-        document.getElementById("csSmsPreviewText").textContent = data.smsPreview || "(No SMS body)";
-        const smsLen = (data.smsPreview || "").length;
-        const badgeEl = document.getElementById("csCarrierBadge");
-        badgeEl.style.display = "block";
-        badgeEl.innerHTML = smsLen <= 160
-          ? '<span class="carrier-badge">1 segment &bull; MMS verified</span>'
-          : `<span class="carrier-badge">${Math.ceil(smsLen / 153)} segments &bull; MMS verified</span>`;
+          if (cfg.hasPrice) {
+            const dollars = csState.offerDollars || '0';
+            const cents = csState.offerCents || '99';
+            const unit = csState.offerUnit || '/each';
+            const yBase = offerY + 75;
 
-        // 7. Update Package tab
-        const sizeKb = (pngBlob.size / 1024).toFixed(1);
-        document.getElementById("csPackageInfo").innerHTML = `
-          <div><strong>Template:</strong> Split Panel Promo (1080×566)</div>
-          <div><strong>Image:</strong> ${sizeKb} KB PNG</div>
-          <div><strong>CTA:</strong> ${esc(data.resolvedCta?.ctaText || "")} → ${esc(data.resolvedCta?.destinationUrl || "")}</div>
-          <div><strong>SMS Length:</strong> ${smsLen} chars (${smsLen <= 160 ? "1 segment" : Math.ceil(smsLen / 153) + " segments"})</div>
-          ${data.warnings?.length ? '<div style="color:var(--orange);margin-top:6px;">' + data.warnings.map(w => esc(w)).join("<br>") + '</div>' : ""}
-        `;
+            const big = !cfg.hasStartingAt;
+            const szDollarSign = big ? 59 : 49;
+            const szDollars = big ? 101 : 84;
+            const szCents = big ? 60 : 50;
+            const szUnit = big ? 28 : 23;
 
-        // 8. Enable test/save buttons
-        document.getElementById("btnCsSendTest").disabled = false;
-        document.getElementById("btnCsSendTestEmail").disabled = false;
-        document.getElementById("btnCsSave").disabled = false;
+            ctx.save();
+            ctx.translate(25, 0);
+            let priceTop = offerY + (big ? 20 : 30);
+            if (cfg.hasStartingAt) {
+              ctx.fillStyle = '#fff';
+              ctx.font = '900 30px "NAPA Sans Cn", system-ui';
+              ctx.fillText('STARTING AT', 0, priceTop);
+              priceTop += 6;
+            }
+            // $ sign
+            ctx.fillStyle = '#fff';
+            ctx.font = '900 ' + szDollarSign + 'px "NAPA Sans Cn", system-ui';
+            const dollarSignW = ctx.measureText('$').width;
+            ctx.fillText('$', 0, priceTop + szDollars * 0.9);
+            // Dollars
+            ctx.font = '900 ' + szDollars + 'px "NAPA Sans Cn", system-ui';
+            ctx.fillText(dollars, dollarSignW, priceTop + szDollars * 0.9);
+            const dollarsW = dollarSignW + ctx.measureText(dollars).width;
+            // Cents + unit stacked
+            ctx.font = '900 ' + szCents + 'px "NAPA Sans Cn", system-ui';
+            ctx.fillText(cents, dollarsW, priceTop + szCents);
+            ctx.font = '300 ' + szUnit + 'px "NAPA Sans Cn", system-ui';
+            ctx.fillText(unit, dollarsW, priceTop + szCents + szUnit);
+            ctx.restore();
+
+            // Badge
+            if (cfg.badge) {
+              try {
+                const badgeImg = await csLoadImage('/assets/mms/offer-badges/' + cfg.badge + '.svg');
+                const bw = 171, bh = 151;
+                const bx = 640 - bw - 25;
+                ctx.drawImage(badgeImg, bx, offerY, bw, bh);
+                // Yellow badge = dark blue text, blue badge = white text
+                const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#ffffff';
+                const isUpTo = cfg.hasStartingAt;
+                const numYRatio = isUpTo ? 0.74 : 0.65;
+                const numPx = isUpTo ? 65 : 78;
+                const pctOffset = isUpTo ? -14 : -18;
+                ctx.save();
+                ctx.fillStyle = badgeTextColor;
+                const saveNum = csState.offerSave || '0';
+                const badgeCx = bx + bw / 2;
+                const badgeCy = offerY + bh * numYRatio;
+                // Center number only, % hangs off to the right
+                ctx.font = '900 ' + numPx + 'px "NAPA Sans Cn", system-ui';
+                const numW = ctx.measureText(saveNum).width;
+                ctx.textAlign = 'center';
+                ctx.fillText(saveNum, badgeCx, badgeCy);
+                // Draw % superscript after number
+                ctx.font = '900 ' + (isUpTo ? 32 : 34) + 'px "NAPA Sans Cn", system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText('%', badgeCx + numW / 2, badgeCy + pctOffset);
+                ctx.restore();
+              } catch (e) { console.warn('Badge load failed', e); }
+            }
+          } else {
+            // Text-only (word-wrapped)
+            const isGray = csState.bgValue === '#D1D3D4';
+            const offerColor = isGray ? '#F9C842' : '#fff';
+            const offerFont = '900 60px "NAPA Sans Cn", system-ui';
+            const txt = csState.offerText || 'Huge Discounts on all Motor Oil Brands!!';
+            const offerLines = csWrapText(ctx, txt, offerFont, 580);
+            ctx.fillStyle = offerColor;
+            ctx.font = offerFont;
+            ctx.textAlign = 'center';
+            const offerLineH = 68;
+            const offerTextTop = offerY + (151 - offerLines.length * offerLineH) / 2 + 50;
+            for (let li = 0; li < offerLines.length; li++) {
+              ctx.fillText(offerLines[li], 320, offerTextTop + li * offerLineH);
+            }
+            ctx.textAlign = 'start';
+          }
+        }
+
+        // 3. Body items
+        if (csState.bodyCount > 0) {
+          const bodyY = g.position === 'top' ? 298 : 149;
+          const bodyH = 352;
+
+          if (csState.bodyCount === 1) {
+            const item = csState.bodyItems[0];
+            const layout = item.layout || 'text-image';
+            const isNapa = csState.bodySource === 'napa';
+
+            if (layout === 'text-image') {
+              // NAPA: 25px pad, 295+295. Upload: 323 text + 317 image edge-to-edge.
+              const sidePad = isNapa ? 25 : 0;
+              const imgW = isNapa ? 295 : 317;
+              const textW = isNapa ? 295 : 323;
+              const imgX = sidePad + textW;
+
+              // Full-width black 30% bg
+              ctx.fillStyle = 'rgba(0,0,0,0.3)';
+              ctx.fillRect(0, bodyY, 640, bodyH);
+
+              if (item.image) {
+                try {
+                  const bodyImg = await csLoadImage(item.image);
+                  if (isNapa) {
+                    const scale = Math.min(imgW / bodyImg.width, bodyH / bodyImg.height);
+                    const dw = bodyImg.width * scale;
+                    const dh = bodyImg.height * scale;
+                    const dx = imgX + (imgW - dw) / 2;
+                    const dy = bodyY + (bodyH - dh) / 2;
+                    ctx.drawImage(bodyImg, dx, dy, dw, dh);
+                  } else {
+                    ctx.drawImage(bodyImg, imgX, bodyY, imgW, bodyH);
+                  }
+                } catch (e) { console.warn('Body image load failed', e); }
+              }
+
+              // Text on left: price at top, name at bottom. Name at top if no price.
+              await document.fonts.ready;
+              const textX = sidePad + 10;
+              const nameWeight = isNapa ? '600' : '500';
+              const lineH = 48;
+              const pad = 16;
+              const textMaxW = textW - 20;
+
+              const showPrice = item.price && !item.priceHidden;
+              const priceLines = showPrice ? csWrapText(ctx, item.price, '700 40px "NAPA Sans Cn", system-ui', textMaxW) : [];
+              let nameLines = item.name ? csWrapText(ctx, item.name, nameWeight + ' 40px "NAPA Sans Cn", system-ui', textMaxW) : [];
+              const maxNameLines = Math.max(1, (showPrice ? 5 : 7) - priceLines.length);
+              if (nameLines.length > maxNameLines) { nameLines = nameLines.slice(0, maxNameLines); nameLines[maxNameLines - 1] += '...'; }
+
+              if (showPrice) {
+                // Price at top
+                let priceY = bodyY + pad + lineH;
+                ctx.fillStyle = '#D0021B';
+                ctx.font = '700 40px "NAPA Sans Cn", system-ui';
+                for (const line of priceLines) {
+                  ctx.fillText(line, textX, priceY);
+                  const tw = ctx.measureText(line).width;
+                  ctx.fillRect(textX, priceY - 14, tw, 3);
+                  priceY += lineH;
+                }
+              }
+              if (item.name) {
+                // Name immediately after price (or at top if no price)
+                let nameY = bodyY + pad + lineH + (priceLines.length * lineH);
+                ctx.fillStyle = '#fff';
+                ctx.font = nameWeight + ' 40px "NAPA Sans Cn", system-ui';
+                for (const line of nameLines) {
+                  ctx.fillText(line, textX, nameY);
+                  nameY += lineH;
+                }
+              }
+            } else {
+              // Image only: 640 wide, 25px padding each side = 590x352 image
+              ctx.fillStyle = 'rgba(0,0,0,0.3)';
+              ctx.fillRect(0, bodyY, 640, bodyH);
+              if (item.image) {
+                try {
+                  const bodyImg = await csLoadImage(item.image);
+                  if (isNapa) {
+                    const scale = Math.min(590 / bodyImg.width, bodyH / bodyImg.height);
+                    const dw = bodyImg.width * scale;
+                    const dh = bodyImg.height * scale;
+                    const dx = 25 + (590 - dw) / 2;
+                    const dy = bodyY + (bodyH - dh) / 2;
+                    ctx.drawImage(bodyImg, dx, dy, dw, dh);
+                  } else {
+                    ctx.drawImage(bodyImg, 25, bodyY, 590, bodyH);
+                  }
+                } catch (e) { console.warn('Body image load failed', e); }
+              }
+            }
+          } else if (csState.bodyCount > 1) {
+            // Multi-item: simple grid of images + names
+            const items = csState.bodyItems;
+            const cols = csState.bodyCount <= 4 ? csState.bodyCount : 3;
+            const cellW = (640 - 20) / cols;
+            const cellH = bodyH / Math.ceil(items.length / cols);
+            for (let i = 0; i < items.length; i++) {
+              const col = i % cols;
+              const row = Math.floor(i / cols);
+              const cx = 10 + col * cellW;
+              const cy = bodyY + row * cellH;
+              if (items[i].image) {
+                try {
+                  const img = await csLoadImage(items[i].image);
+                  const imgH = cellH * 0.7;
+                  ctx.drawImage(img, cx + 4, cy + 4, cellW - 8, imgH);
+                } catch (e) {}
+              }
+              if (items[i].name) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '700 11px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(items[i].name, cx + cellW / 2, bodyY + (row + 1) * cellH - 4, cellW - 8);
+                ctx.textAlign = 'start';
+              }
+            }
+          }
+        }
+
+        // 5. Title/Rules bar (on top of everything)
+        const titleH = 22 + 38 + 38 + 22; // padding + 2 lines + padding = 120
+        const titleY = g.position === 'top' ? (800 - titleH) : 0;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, titleY, 640, titleH);
+
+        ctx.fillStyle = '#F9C842';
+        ctx.font = '700 38px "NAPA Sans Cn", system-ui';
+        ctx.fillText((csState.titleText || 'SALE EVENT').toUpperCase(), 25, titleY + 22 + 38);
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 38px "NAPA Sans Cn", system-ui';
+        ctx.fillText(csState.rulesText || 'In store only, while supplies last', 25, titleY + 22 + 38 + 38);
+
+        // 5. Export
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        let finalBlob = blob;
+        if (blob.size > 600 * 1024) {
+          finalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.75));
+        }
+        if (finalBlob.size > 600 * 1024) {
+          finalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.55));
+        }
+
+        // Show rendered image
+        const url = URL.createObjectURL(finalBlob);
+        document.getElementById('csRenderedImg').src = url;
+        document.getElementById('csRenderInfo').textContent =
+          'Size: ' + (finalBlob.size / 1024).toFixed(0) + ' KB | 640x800 JPEG';
+        document.getElementById('csRendered').style.display = 'block';
+
+        // Upload to Cloudinary
+        try {
+          const fd = new FormData();
+          fd.append('file', finalBlob, 'creative.jpg');
+          fd.append('upload_preset', 'gkk_napa_mms');
+          const resp = await fetch('https://api.cloudinary.com/v1_1/dtpqxuwby/image/upload', {
+            method: 'POST', body: fd
+          });
+          const data = await resp.json();
+          if (data.secure_url) {
+            document.getElementById('csRenderInfo').textContent +=
+              ' | Uploaded: ' + data.secure_url.split('/').pop();
+          }
+        } catch (e) { console.warn('Cloudinary upload failed', e); }
 
       } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = "block";
+        console.error('Generate failed:', e);
+        alert('Error: ' + e.message);
       } finally {
+        btn.textContent = 'Generate Image';
         btn.disabled = false;
-        btn.textContent = "Generate Preview";
       }
     };
 
-    // ─── CS: Send Test ───────────────────────────────────────
-    document.getElementById("csTestPhone").addEventListener("input", function() {
-      const pos = this.selectionStart;
-      const before = this.value.length;
-      this.value = formatPhone(this.value);
-      const after = this.value.length;
-      this.setSelectionRange(pos + (after - before), pos + (after - before));
-    });
+    // ─── Reset ───
+    window.csReset = function() {
+      csState = {
+        color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null,
+        offerType: null, offerMode: null, offerHasBadge: true, offerBadgeColor: 'yellow',
+        offerDollars: '', offerCents: '', offerUnit: '', offerSave: '', offerText: '',
+        titleText: 'SALE EVENT', rulesText: 'In store only, while supplies last',
+        bodyCount: null, bodySource: null, bodyItems: [],
+      };
+      document.querySelectorAll('.cs-color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === 'blue'));
+      document.querySelectorAll('.cs-step').forEach(s => s.classList.remove('completed', 'collapsed'));
+      csRebuildGraphicGrid();
+      csHideStepsAfter('csStepGraphic');
+      document.getElementById('csPlaceholder').style.display = 'flex';
+      document.getElementById('csPrevGraphic').style.display = 'none';
+      document.getElementById('csPrevTitleBar').style.display = 'none';
+      document.getElementById('csPrevOfferBar').style.display = 'none';
+      document.getElementById('csPrevBg').style.backgroundColor = '';
+      document.getElementById('csPrevBg').style.backgroundImage = '';
+      document.getElementById('csRendered').style.display = 'none';
+      document.getElementById('csPrevOfferBar').innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
+      document.getElementById('csPrevTitleText').value = 'SALE EVENT';
+      document.getElementById('csPrevRulesText').value = 'In store only, while supplies last';
+      document.getElementById('csTemplateRow').style.display = 'none';
+      document.getElementById('csBodyHint').style.display = 'none';
+      document.getElementById('csBodySourceRow').style.display = 'none';
+    };
 
-    document.getElementById("btnCsSendTest").addEventListener("click", async () => {
-      const errEl = document.getElementById("csTestError");
-      const successEl = document.getElementById("csTestSuccess");
-      errEl.style.display = "none";
-      successEl.style.display = "none";
+    // ─── Init ───
+    csRebuildGraphicGrid();
 
-      const phone = document.getElementById("csTestPhone").value.trim();
-      if (!phone) { errEl.textContent = "Enter a phone number."; errEl.style.display = "block"; return; }
-      if (!csLastPreview) { errEl.textContent = "Generate a preview first."; errEl.style.display = "block"; return; }
-
-      const btn = document.getElementById("btnCsSendTest");
-      btn.disabled = true;
-      btn.textContent = "Sending...";
-
-      try {
-        const testPayload = {
-          phone,
-          body: csLastPreview.smsPreview || "",
-          image_url: csComposedImageUrl,
-        };
-
-        const resp = await fetch(`${WORKER_BASE}/admin/send-test`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify(testPayload),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Failed to send test.");
-        successEl.textContent = "Test sent! Check your phone.";
-        successEl.style.display = "block";
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Send SMS";
-      }
-    });
-
-    // ─── CS: Send Test Email ──────────────────────────────────
-    document.getElementById("btnCsSendTestEmail").addEventListener("click", async () => {
-      const errEl = document.getElementById("csTestError");
-      const successEl = document.getElementById("csTestSuccess");
-      errEl.style.display = "none";
-      successEl.style.display = "none";
-
-      const email = document.getElementById("csTestEmail").value.trim();
-      if (!email || !email.includes("@")) { errEl.textContent = "Enter a valid email address."; errEl.style.display = "block"; return; }
-      if (!csLastPreview) { errEl.textContent = "Generate a preview first."; errEl.style.display = "block"; return; }
-
-      const btn = document.getElementById("btnCsSendTestEmail");
-      btn.disabled = true;
-      btn.textContent = "Sending...";
-
-      try {
-        const resp = await fetch(`${WORKER_BASE}/admin/send-test-email`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            email,
-            sms_text: csLastPreview.smsPreview || "",
-            image_url: csComposedImageUrl,
-          }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Failed to send test email.");
-        successEl.textContent = "Test email sent! Check your inbox.";
-        successEl.style.display = "block";
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Send Email";
-      }
-    });
-
-    // ─── CS: Save Creative ───────────────────────────────────
-    document.getElementById("btnCsSave").addEventListener("click", async () => {
-      const errEl = document.getElementById("csSaveError");
-      const successEl = document.getElementById("csSaveSuccess");
-      errEl.style.display = "none";
-      successEl.style.display = "none";
-
-      if (!csLastPreview) { errEl.textContent = "Generate a preview first."; errEl.style.display = "block"; return; }
-      if (csPreviewStale) { errEl.textContent = "Preview is stale. Click Generate Preview to refresh."; errEl.style.display = "block"; return; }
-
-      const name = document.getElementById("csCreativeName").value.trim();
-      if (!name) { errEl.textContent = "Enter a name for this creative."; errEl.style.display = "block"; return; }
-
-      const btn = document.getElementById("btnCsSave");
-      btn.disabled = true;
-      btn.textContent = "Saving...";
-
-      try {
-        const savePayload = {
-          name,
-          imageContent: {
-            regularPrice: document.getElementById("csRegularPrice").value.trim() || undefined,
-            salePrice: document.getElementById("csSalePrice").value.trim(),
-            unit: document.getElementById("csUnit").value.trim() || undefined,
-            productName: document.getElementById("csProductName").value.trim(),
-            saleText: document.getElementById("csSaleText").value.trim() || undefined,
-            ctaBadgeLabel: document.getElementById("csCtaBadgeLabel").value.trim() || undefined,
-          },
-          smsContent: {
-            body: document.getElementById("csSmsBody").value.trim() || undefined,
-          },
-          cta: {
-            type: document.getElementById("csCtaType").value,
-            destinationOverride: document.getElementById("csCtaDestination").value.trim() || undefined,
-          },
-          media: {
-            source: csMediaSource,
-            napaUrl: document.getElementById("csNapaUrl").value.trim() || undefined,
-            imageUrl: csProductImageUrl || undefined,
-          },
-          composedImageUrl: csComposedImageUrl,
-        };
-
-        const resp = await fetch(`${WORKER_BASE}/admin/creative/save`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify(savePayload),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Failed to save.");
-        successEl.textContent = `Creative saved! (ID: ${data.id})`;
-        successEl.style.display = "block";
-      } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Save Creative";
-      }
-    });
-
-    // Initialize CTA destination
-    csResolveCtaDestination();
-    csUpdateLivePreview();
 
     // ─── Phone formatting ──────────────────────────────────────
     function formatPhone(value) {
