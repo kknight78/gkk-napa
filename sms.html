@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SMS Program | G&KK NAPA Auto Parts</title>
-  <meta name="description" content="G&KK NAPA Auto Parts SMS program. Get order updates, store hours, and occasional deals by text. Opt in at any store checkout." />
+  <title>Savings Alerts | G&KK NAPA Auto Parts</title>
+  <meta name="description" content="Sign up for G&KK NAPA Savings Alerts. Get exclusive deals, store updates, and promotions by text from your local NAPA stores." />
   <link rel="canonical" href="https://gkk-napa.com/sms" />
   <meta name="theme-color" content="#004b8d" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="G&KK NAPA Stores" />
-  <meta property="og:title" content="SMS Program | G&KK NAPA Auto Parts" />
-  <meta property="og:description" content="Get order updates, store hours, and occasional deals by text from G&KK NAPA Auto Parts." />
+  <meta property="og:title" content="Savings Alerts | G&KK NAPA Auto Parts" />
+  <meta property="og:description" content="Sign up for exclusive deals and store updates by text from your local G&KK NAPA stores." />
   <meta property="og:url" content="https://gkk-napa.com/sms" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="SMS Program | G&KK NAPA Auto Parts" />
-  <meta name="twitter:description" content="Get order updates, store hours, and occasional deals by text from G&KK NAPA Auto Parts." />
+  <meta name="twitter:title" content="Savings Alerts | G&KK NAPA Auto Parts" />
+  <meta name="twitter:description" content="Sign up for exclusive deals and store updates by text from your local G&KK NAPA stores." />
 
   <link rel="icon" sizes="192x192" href="/assets/favicon-192.jpg" type="image/jpeg">
   <link rel="shortcut icon" href="/assets/favicon-32.jpg" type="image/jpeg">
@@ -38,6 +38,7 @@
       <nav class="nav">
         <a href="https://www.napaonline.com" target="_blank" rel="noopener">Shop</a>
         <a href="/#locations">Locations</a>
+        <a href="/sms">Savings Alerts</a>
         <a href="/careers">Careers</a>
         <a href="/#faq">FAQ</a>
       </nav>
@@ -49,52 +50,74 @@
   <main>
     <section class="section">
       <div class="container">
-        <h1 style="margin: 0 0 10px; font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">G&KK NAPA Auto Parts SMS</h1>
-        <p class="lead">Stay in the loop with text updates from your local NAPA store.</p>
+        <h1 style="margin: 0 0 10px; font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">G&KK NAPA Savings Alerts</h1>
+        <p class="lead">Get exclusive deals and updates from your local G&KK NAPA stores by text.</p>
 
         <div class="legal-content">
-          <h2>What You'll Receive</h2>
-          <p>When you opt in to SMS from G&KK Stores, you may receive:</p>
-          <ul class="bullets">
-            <li><strong>Order updates</strong> &mdash; status notifications and pickup-ready alerts</li>
-            <li><strong>Store hours &amp; closures</strong> &mdash; holiday schedules, weather closures, and hour changes</li>
-            <li><strong>Occasional deals &amp; promotions</strong> &mdash; special offers from your local store (low volume)</li>
-          </ul>
+          <!-- Subscribe form -->
+          <form id="sms-form" style="max-width: 480px;">
+            <div style="margin-bottom: 16px;">
+              <label for="name" style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Name or Business Name <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--stainless-gray);">(optional)</span></label>
+              <input type="text" id="name" name="name" autocomplete="name" placeholder="e.g. John's Auto Repair"
+                style="width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--gunmetal-gray); background: rgba(255,255,255,0.08); color: var(--white); font-size: 16px; font-family: inherit;" />
+            </div>
 
-          <h2>Disclosures</h2>
-          <p>Message frequency varies. Msg &amp; data rates may apply.</p>
-          <p>Reply <strong>STOP</strong> to opt out. Reply <strong>HELP</strong> for help.</p>
-          <p><strong>Support:</strong> <a class="link" href="mailto:napa.danville@comcastbiz.net">napa.danville@comcastbiz.net</a> or <a class="link" href="tel:+12174469067">(217) 446-9067</a></p>
+            <div style="margin-bottom: 16px;">
+              <label for="phone" style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Phone Number</label>
+              <input type="tel" id="phone" name="phone" required autocomplete="tel" placeholder="(555) 555-1234"
+                style="width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--gunmetal-gray); background: rgba(255,255,255,0.08); color: var(--white); font-size: 16px; font-family: inherit;" />
+            </div>
 
-          <h2>Consent</h2>
-          <p>Customers opt in by scanning a QR code displayed at our checkout desk and completing the <a class="link" href="/sms/subscribe">subscription form</a>. Customers can subscribe at <a class="link" href="https://gkk-napa.com/sms/subscribe">https://gkk-napa.com/sms/subscribe</a>. Consent is not a condition of purchase.</p>
+            <div style="margin-bottom: 20px;">
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--stainless-gray); line-height: 1.5;">
+                <input type="checkbox" id="consent" name="consent" required
+                  style="margin-top: 3px; flex-shrink: 0; width: 18px; height: 18px; accent-color: var(--napa-yellow);" />
+                <span>I agree to receive SMS messages from G&KK NAPA Auto Parts about order updates, store hours/closures, and occasional promotions. Message frequency varies. Msg &amp; data rates may apply. Consent is not a condition of purchase. Reply STOP to opt out, HELP for help. See <a class="link" href="/privacy.html">Privacy Policy</a> and <a class="link" href="/terms.html">Terms</a>.</span>
+              </label>
+            </div>
 
-          <div style="margin: 24px 0;">
-            <a class="button primary" href="/sms/subscribe">Subscribe via SMS</a>
+            <button type="submit" class="button primary" style="width: 100%; font-size: 16px; padding: 14px; cursor: pointer;">Subscribe</button>
+
+            <p style="margin: 14px 0 0; font-size: 13px; color: var(--stainless-gray); text-align: center;">
+              Or text <strong style="color: var(--napa-yellow);">NAPA</strong> to <strong style="color: var(--white);">(217) 441-9077</strong>
+            </p>
+          </form>
+
+          <!-- Success message (hidden by default) -->
+          <div id="sms-success" style="display: none; margin-top: 20px; max-width: 480px;">
+            <div class="notice" style="border-color: var(--napa-yellow);">
+              <strong>Thanks!</strong> You'll receive a confirmation text shortly. Reply STOP to opt out, HELP for help.
+            </div>
           </div>
 
-          <h2>How to Subscribe</h2>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 12px;">
-            <div class="store" style="text-align: center;">
-              <div style="font-size: 32px; font-weight: 800; color: var(--napa-yellow); margin-bottom: 6px;">1</div>
-              <p style="color: var(--stainless-gray); margin: 0; font-size: 14px;">Scan the QR code at checkout</p>
-            </div>
-            <div class="store" style="text-align: center;">
-              <div style="font-size: 32px; font-weight: 800; color: var(--napa-yellow); margin-bottom: 6px;">2</div>
-              <p style="color: var(--stainless-gray); margin: 0; font-size: 14px;">Enter your phone number and check the consent box</p>
-            </div>
-            <div class="store" style="text-align: center;">
-              <div style="font-size: 32px; font-weight: 800; color: var(--napa-yellow); margin-bottom: 6px;">3</div>
-              <p style="color: var(--stainless-gray); margin: 0; font-size: 14px;">Receive a confirmation text</p>
+          <!-- Error message (hidden by default) -->
+          <div id="sms-error" style="display: none; margin-top: 20px; max-width: 480px;">
+            <div class="notice" style="border-color: #ff6b6b;">
+              <strong>Something went wrong.</strong> We couldn't complete your subscription. Please try again or contact your local G&KK NAPA store for help.
             </div>
           </div>
 
-          <div style="margin: 28px 0; text-align: center;">
-            <img src="/assets/sms-qr-card.png" alt="G&KK NAPA SMS QR code - scan to subscribe" loading="lazy" style="max-width: 300px; width: 100%; height: auto; border-radius: var(--radius);" />
-          </div>
+          <!-- Compliance info below the fold -->
+          <div style="margin-top: 40px; max-width: 480px;">
+            <h2>What You'll Receive</h2>
+            <ul class="bullets">
+              <li><strong>Exclusive deals &amp; promotions</strong> &mdash; savings from your local G&KK NAPA stores</li>
+              <li><strong>Order updates</strong> &mdash; status notifications and pickup-ready alerts</li>
+              <li><strong>Store hours &amp; closures</strong> &mdash; holiday schedules, weather closures, and hour changes</li>
+            </ul>
 
-          <h2>Legal</h2>
-          <p>For full details, see our <a class="link" href="/privacy.html">Privacy Policy</a> and <a class="link" href="/terms.html">Terms of Service</a>.</p>
+            <h2>Disclosures</h2>
+            <p>Message frequency varies. Msg &amp; data rates may apply.</p>
+            <p>Reply <strong>STOP</strong> to opt out. Reply <strong>HELP</strong> for help.</p>
+            <p><strong>Support:</strong> <a class="link" href="mailto:napa.danville@comcastbiz.net">napa.danville@comcastbiz.net</a> or <a class="link" href="tel:+12174469067">(217) 446-9067</a></p>
+            <p>Carriers are not liable for delayed or undelivered messages.</p>
+
+            <h2>Consent</h2>
+            <p>Customers opt in by completing the form above, texting NAPA to (217) 441-9077, or scanning a QR code at a G&KK NAPA store. Consent is not a condition of purchase.</p>
+
+            <h2>Legal</h2>
+            <p>For full details, see our <a class="link" href="/privacy.html">Privacy Policy</a> and <a class="link" href="/terms.html">Terms of Service</a>.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -104,13 +127,80 @@
     <div class="container footer-inner">
       <div class="small">&copy; <span id="year"></span> G&KK Stores.</div>
       <div class="small">
-        <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="/sms.html">SMS Program</a>
+        <a href="/privacy.html">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;|&nbsp; <a href="/sms">SMS Program</a>
       </div>
     </div>
   </footer>
 
   <script>
+    const WORKER_BASE = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
+
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    // Phone auto-format
+    const phoneInput = document.getElementById("phone");
+    function formatPhone(value) {
+      let digits = value.replace(/\D/g, "");
+      if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+      digits = digits.slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+    phoneInput.addEventListener("input", () => {
+      const pos = phoneInput.selectionStart;
+      const before = phoneInput.value.length;
+      phoneInput.value = formatPhone(phoneInput.value);
+      const after = phoneInput.value.length;
+      phoneInput.setSelectionRange(pos + (after - before), pos + (after - before));
+    });
+
+    document.getElementById("sms-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const consent = document.getElementById("consent").checked;
+
+      if (!phone) { alert("Please enter your phone number."); return; }
+      if (!consent) { alert("Please agree to the consent terms."); return; }
+
+      const btn = this.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = "Subscribing...";
+
+      try {
+        const payload = { phone };
+        if (name) payload.name = name;
+
+        const resp = await fetch(`${WORKER_BASE}/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          if (resp.status === 404) {
+            this.style.display = "none";
+            document.getElementById("sms-error").style.display = "block";
+          } else {
+            alert(data.error || "Something went wrong. Please try again.");
+            btn.disabled = false;
+            btn.textContent = "Subscribe";
+          }
+          return;
+        }
+
+        this.style.display = "none";
+        document.getElementById("sms-success").style.display = "block";
+      } catch {
+        alert("Could not connect to the server. Please try again later.");
+        btn.disabled = false;
+        btn.textContent = "Subscribe";
+      }
+    });
   </script>
 </body>
 </html>

@@ -346,29 +346,17 @@ function buildPromoImageUrl(baseImageUrl, { headline, price, ctaText, dateLine }
 }
 
 // ─── NAPA Product Scraper ───────────────────────────────────
-async function fetchNapaMeta(url) {
-  if (!url || !url.startsWith("https://www.napaonline.com/")) {
-    throw new Error("URL must start with https://www.napaonline.com/");
-  }
-  const resp = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
-    redirect: "follow",
-  });
-  if (!resp.ok) throw new Error(`NAPA fetch failed: HTTP ${resp.status}`);
-  const html = await resp.text();
-
+function parseNapaMeta(html) {
   // Product image: prefer pdp-gallery-img data-src (actual product photo)
   // over og:image (which is often just the NAPA logo)
   let image = null;
   const galleryMatch = html.match(/class="[^"]*pdp-gallery-img[^"]*"\s+data-src="Product=([^"]+)"/i)
     || html.match(/data-src="Product=([^"]+)"\s+class="[^"]*pdp-gallery-img/i);
   if (galleryMatch) {
-    // data-src contains e.g. "GenuinePartsCompany/3213755" — use it directly
     const dataSrc = galleryMatch[1];
     image = `https://media.napaonline.com/is/image/${dataSrc}`;
   }
   if (!image) {
-    // Fallback: try og:image but skip if it's a logo/icon
     const ogMatch = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]+)"/i)
       || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:image"/i);
     if (ogMatch && ogMatch[1] && !ogMatch[1].includes("logo") && !ogMatch[1].includes("icon")) {
@@ -380,11 +368,74 @@ async function fetchNapaMeta(url) {
     || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:title"/i);
   const title = titleMatch ? titleMatch[1] : null;
 
-  const priceMatch = html.match(/"price"\s*:\s*"?([\d.]+)"?/i)
-    || html.match(/class="[^"]*price[^"]*"[^>]*>\s*\$?([\d,.]+)/i);
-  const price = priceMatch ? priceMatch[1] : null;
+  // Try multiple price sources in order of reliability
+  let price = null;
+
+  // 1. JSON-LD structured data (most reliable)
+  const ldJsonMatch = html.match(/<script\s+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+  if (ldJsonMatch) {
+    for (const block of ldJsonMatch) {
+      const jsonStr = block.replace(/<\/?script[^>]*>/gi, '');
+      try {
+        const ld = JSON.parse(jsonStr);
+        const p = ld?.offers?.price || ld?.offers?.[0]?.price || ld?.price;
+        if (p) { price = String(p); break; }
+      } catch (_) {}
+    }
+  }
+
+  // 2. product:price meta tag
+  if (!price) {
+    const metaPrice = html.match(/<meta\s+(?:property|name)="product:price:amount"\s+content="([^"]+)"/i)
+      || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="product:price:amount"/i);
+    if (metaPrice) price = metaPrice[1];
+  }
+
+  // 3. JSON in script tags (e.g. __INITIAL_STATE__, window data, etc.)
+  if (!price) {
+    const jsonPrice = html.match(/"(?:base_?price|price|salePrice|currentPrice|regularPrice)"\s*:\s*"?\$?([\d]+\.[\d]{2})"?/i);
+    if (jsonPrice) price = jsonPrice[1];
+  }
+
+  // 4. data-price attribute
+  if (!price) {
+    const dataPrice = html.match(/data-price="([\d.]+)"/i);
+    if (dataPrice) price = dataPrice[1];
+  }
+
+  // 5. NAPA-specific CSS classes
+  if (!price) {
+    const classPrice = html.match(/class="[^"]*geo-plp[^"]*price[^"]*"[^>]*>\s*\$?([\d,.]+)/i)
+      || html.match(/class="[^"]*product[_-]?price[^"]*"[^>]*>\s*\$?([\d,.]+)/i)
+      || html.match(/class="[^"]*price[^"]*"[^>]*>\s*\$?([\d,.]+)/i);
+    if (classPrice) price = classPrice[1];
+  }
+
+  if (price) price = price.replace(/,/g, '');
 
   return { title, image, price };
+}
+
+async function fetchNapaMeta(url) {
+  if (!url || !url.startsWith("https://www.napaonline.com/")) {
+    throw new Error("URL must start with https://www.napaonline.com/");
+  }
+  const resp = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+    redirect: "follow",
+  });
+  if (!resp.ok) throw new Error(`NAPA fetch failed: HTTP ${resp.status}`);
+  const html = await resp.text();
+  return parseNapaMeta(html);
+}
+
+async function fetchNapaHtml(url) {
+  const resp = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+    redirect: "follow",
+  });
+  if (!resp.ok) return null;
+  return resp.text();
 }
 
 // ─── Sale-Aware Sequence Event Generator ────────────────────
@@ -831,6 +882,12 @@ export default {
         return handleGenerateShortCodes(env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/remove-bg (Replicate AI background removal) ──
+      if (request.method === "POST" && path === "/admin/remove-bg") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleRemoveBg(request, env, corsHeaders);
+      }
+
       // ── Admin: GET /admin/proxy-image (CORS image proxy for canvas) ──
       // No auth required — URL domain is validated in handler, and CORS limits browser access
       if (request.method === "GET" && path === "/admin/proxy-image") {
@@ -875,7 +932,7 @@ export default {
 
 async function handleSubscribe(request, env, corsHeaders) {
   const body = await request.json();
-  const { phone: rawPhone, store } = body;
+  const { phone: rawPhone, store, name } = body;
 
   if (!rawPhone) return jsonError(corsHeaders, "Phone number is required.", 400);
 
@@ -895,15 +952,17 @@ async function handleSubscribe(request, env, corsHeaders) {
     if (existing.sms_status === "subscribed") {
       return jsonOk(corsHeaders, { success: true, message: "You're already subscribed!" });
     }
+    const nameUpdate = name ? ", name = ?" : "";
+    const nameBinds = name ? [now, now, name, existing.id] : [now, now, existing.id];
     await env.DB.prepare(
-      "UPDATE customers SET sms_status = 'subscribed', sms_consent_at = ?, updated_at = ? WHERE id = ?"
-    ).bind(now, now, existing.id).run();
+      `UPDATE customers SET sms_status = 'subscribed', sms_consent_at = ?, updated_at = ?${nameUpdate} WHERE id = ?`
+    ).bind(...nameBinds).run();
   } else {
     // New subscriber — create customer record
     const shortCode = generateShortCode();
     await env.DB.prepare(
-      "INSERT INTO customers (phone, store, sms_status, sms_consent_at, source, short_code, created_at, updated_at) VALUES (?, ?, 'subscribed', ?, 'web', ?, ?, ?)"
-    ).bind(phone, store || null, now, shortCode, now, now).run();
+      "INSERT INTO customers (phone, name, store, sms_status, sms_consent_at, source, short_code, created_at, updated_at) VALUES (?, ?, ?, 'subscribed', ?, 'web', ?, ?, ?)"
+    ).bind(phone, name || null, store || null, now, shortCode, now, now).run();
   }
 
   // Send confirmation SMS
@@ -2112,6 +2171,44 @@ async function handleTwilioInbound(request, env, corsHeaders) {
     return twimlResponse("G&KK NAPA Auto Parts SMS. For help call (217) 446-9067 or email napa.danville@comcastbiz.net. Reply STOP to opt out.");
   }
 
+  // Handle NAPA keyword opt-in
+  if (upperBody === "NAPA") {
+    if (customer && customer.sms_status === "subscribed") {
+      console.log(JSON.stringify({ tag: "SMS_NAPA_ALREADY", phone: from }));
+      return twimlResponse("You're already subscribed to G&KK NAPA Savings Alerts! Reply STOP to opt out.");
+    }
+
+    const now2 = new Date().toISOString();
+    if (customer) {
+      // Existing customer, not subscribed — re-subscribe
+      await env.DB.prepare(
+        "UPDATE customers SET sms_status = 'subscribed', sms_consent_at = ?, sms_stop_at = NULL, source = COALESCE(source, 'text-in'), updated_at = ? WHERE id = ?"
+      ).bind(now2, now2, customer.id).run();
+      console.log(JSON.stringify({ tag: "SMS_NAPA_RESUBSCRIBE", phone: from }));
+    } else {
+      // Brand new subscriber
+      const shortCode = generateShortCode();
+      await env.DB.prepare(
+        "INSERT INTO customers (phone, sms_status, sms_consent_at, source, short_code, created_at, updated_at) VALUES (?, 'subscribed', ?, 'text-in', ?, ?, ?)"
+      ).bind(phone, now2, shortCode, now2, now2).run();
+      console.log(JSON.stringify({ tag: "SMS_NAPA_NEW", phone: from }));
+    }
+
+    // Send welcome SMS with logo image (same as web subscribe flow)
+    const welcomeMsg = "Welcome to G&KK NAPA Savings Alerts! You'll receive exclusive deals from your local G&KK NAPA stores. Reply STOP to opt out, HELP for help. Msg&data rates may apply.";
+    const result = await sendSms(env, phone, welcomeMsg, SMS_LOGO_URL);
+
+    // Log the welcome message
+    const newCustomer = customer || await env.DB.prepare("SELECT id FROM customers WHERE phone = ?").bind(phone).first();
+    if (result.ok && newCustomer) {
+      await env.DB.prepare(
+        "INSERT INTO messages (twilio_sid, customer_id, direction, body, status, created_at, updated_at) VALUES (?, ?, 'outbound', ?, ?, ?, ?)"
+      ).bind(result.sid, newCustomer.id, welcomeMsg, result.status || "queued", now2, now2).run();
+    }
+
+    return twimlResponse("");
+  }
+
   // Unknown inbound — log it
   console.log(JSON.stringify({ tag: "SMS_INBOUND", phone: from, body }));
   return twimlResponse("");
@@ -2449,32 +2546,36 @@ async function handleNapaPartSearch(request, env, corsHeaders) {
 
   const clean = partNumber.trim().replace(/\s+/g, "");
   try {
-    // Try direct product page first: /en/p/PARTNUMBER
+    // Try direct product page first: /en/p/PARTNUMBER (reuse HTML to avoid double-fetch)
     const directUrl = `https://www.napaonline.com/en/p/${encodeURIComponent(clean)}`;
-    const directResp = await fetch(directUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
-      redirect: "follow",
-    });
-    if (directResp.ok) {
-      const meta = await fetchNapaMeta(directUrl);
-      if (meta.image) return jsonOk(corsHeaders, meta);
+    const directHtml = await fetchNapaHtml(directUrl);
+    let meta = null;
+    if (directHtml) {
+      meta = parseNapaMeta(directHtml);
+      if (!meta.image || !meta.title) meta = null; // not a real product page
     }
 
-    // Fallback: search page
+    // Fallback or supplement from search page
     const searchUrl = `https://www.napaonline.com/en/search?text=${encodeURIComponent(clean)}`;
-    const searchResp = await fetch(searchUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
-      redirect: "follow",
-    });
-    if (!searchResp.ok) throw new Error(`Search failed: HTTP ${searchResp.status}`);
-    const html = await searchResp.text();
+    if (!meta) {
+      const searchHtml = await fetchNapaHtml(searchUrl);
+      if (!searchHtml) throw new Error("Search failed");
+      const linkMatch = searchHtml.match(/href="(\/en\/p\/[^"]+)"/i);
+      if (!linkMatch) return jsonError(corsHeaders, "No results found for part number.", 404);
+      const productUrl = `https://www.napaonline.com${linkMatch[1]}`;
+      meta = await fetchNapaMeta(productUrl);
+      if (!meta.image) return jsonError(corsHeaders, "Product found but no image available.", 404);
+    }
 
-    // Find first product link in search results
-    const linkMatch = html.match(/href="(\/en\/p\/[^"]+)"/i);
-    if (!linkMatch) return jsonError(corsHeaders, "No results found for part number.", 404);
+    // If product page didn't have price, try search results page (prices often rendered in listing)
+    if (!meta.price) {
+      const searchHtml = await fetchNapaHtml(searchUrl);
+      if (searchHtml) {
+        const searchMeta = parseNapaMeta(searchHtml);
+        if (searchMeta.price) meta.price = searchMeta.price;
+      }
+    }
 
-    const productUrl = `https://www.napaonline.com${linkMatch[1]}`;
-    const meta = await fetchNapaMeta(productUrl);
     return jsonOk(corsHeaders, meta);
   } catch (e) {
     return jsonError(corsHeaders, e.message, 400);
@@ -2555,6 +2656,61 @@ async function handleGetCampaign(path, env, corsHeaders) {
 // Creative Studio
 // ═══════════════════════════════════════════════════════════════
 
+async function handleRemoveBg(request, env, corsHeaders) {
+  const { imageUrl } = await request.json();
+  if (!imageUrl) return jsonError(corsHeaders, "Missing imageUrl", 400);
+
+  // Validate hostname — only allow NAPA CDN domains
+  try {
+    const parsed = new URL(imageUrl);
+    const allowed = ["www.napaonline.com", "napaonline.com", "media.napaonline.com", "images.napaonline.com"];
+    if (!allowed.some(h => parsed.hostname === h || parsed.hostname.endsWith("." + h))) {
+      return jsonError(corsHeaders, "Host not allowed", 403);
+    }
+  } catch {
+    return jsonError(corsHeaders, "Invalid URL", 400);
+  }
+
+  try {
+    // Fetch image ourselves — NAPA blocks Replicate's servers (403)
+    const imgResp = await fetch(imageUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
+    });
+    if (!imgResp.ok) {
+      return jsonError(corsHeaders, `Image fetch failed: HTTP ${imgResp.status}`, 502);
+    }
+    const imgBuf = await imgResp.arrayBuffer();
+    const bytes = new Uint8Array(imgBuf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const b64 = btoa(binary);
+    const contentType = (imgResp.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
+    const dataUri = `data:${contentType};base64,${b64}`;
+
+    const resp = await fetch("https://api.replicate.com/v1/predictions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.REPLICATE_API_TOKEN}`,
+        "Content-Type": "application/json",
+        "Prefer": "wait",
+      },
+      body: JSON.stringify({
+        version: "95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+        input: { image: dataUri },
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.status === "failed" || !data.output) {
+      return jsonError(corsHeaders, `Replicate failed: ${data.error || data.status || JSON.stringify(data)}`, 502);
+    }
+    return new Response(JSON.stringify({ url: data.output }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return jsonError(corsHeaders, `Remove-bg error: ${err.message}`, 500);
+  }
+}
+
 async function handleProxyImage(request, corsHeaders) {
   const url = new URL(request.url);
   const imageUrl = url.searchParams.get("url");
@@ -2566,6 +2722,7 @@ async function handleProxyImage(request, corsHeaders) {
       "www.napaonline.com", "napaonline.com",
       "media.napaonline.com", "images.napaonline.com",
       "res.cloudinary.com", "cloudinary.com",
+      "replicate.delivery",
     ];
     if (!allowed.some(h => parsed.hostname === h || parsed.hostname.endsWith("." + h))) {
       return jsonError(corsHeaders, "Host not allowed.", 403);
