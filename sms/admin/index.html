@@ -3325,16 +3325,25 @@ Occasional deals &amp; promotions</textarea>
     function csCropperOpen(dataUrl, index) {
       const item = csState.bodyItems[index];
       const layout = item.layout || 'text-image';
+      var cropW, cropH;
       if (csState.bodyCount === 6) {
-        csCropper.frameW = layout === 'image-only' ? 180 : 176;
-        csCropper.frameH = layout === 'image-only' ? 163 : 120;
+        cropW = layout === 'image-only' ? 180 : 176;
+        cropH = layout === 'image-only' ? 163 : 120;
       } else if (csState.bodyCount === 4) {
-        csCropper.frameW = layout === 'image-only' ? 283 : 147;
-        csCropper.frameH = layout === 'image-only' ? 163 : 176;
+        cropW = layout === 'image-only' ? 283 : 147;
+        cropH = layout === 'image-only' ? 163 : 176;
       } else {
-        csCropper.frameW = layout === 'image-only' ? 590 : 317;
-        csCropper.frameH = 352;
+        cropW = layout === 'image-only' ? 590 : 317;
+        cropH = 352;
       }
+      // Scale up the display so the cropper is comfortable to work with
+      var minDim = Math.min(cropW, cropH);
+      var ds = minDim < 300 ? Math.min(400 / minDim, 3.5) : 1;
+      csCropper.cropW = cropW;
+      csCropper.cropH = cropH;
+      csCropper.displayScale = ds;
+      csCropper.frameW = Math.round(cropW * ds);
+      csCropper.frameH = Math.round(cropH * ds);
       csCropper.index = index;
 
       const overlay = document.getElementById('csCropperOverlay');
@@ -3351,7 +3360,7 @@ Occasional deals &amp; promotions</textarea>
         csCropper.rotation = 0;
         csCropperRecalcScale();
         slider.min = Math.round(csCropper.minScale * 100);
-        slider.max = Math.round(csCropper.minScale * 400);
+        slider.max = Math.round(csCropper.minScale * 250);
         slider.value = Math.round(csCropper.scale * 100);
         csCropperApply();
       };
@@ -3394,7 +3403,7 @@ Occasional deals &amp; promotions</textarea>
       csCropperRecalcScale();
       const slider = document.getElementById('csCropperZoomSlider');
       slider.min = Math.round(csCropper.minScale * 100);
-      slider.max = Math.round(csCropper.minScale * 400);
+      slider.max = Math.round(csCropper.minScale * 250);
       slider.value = Math.round(csCropper.scale * 100);
       csCropperApply();
     };
@@ -3412,7 +3421,7 @@ Occasional deals &amp; promotions</textarea>
         const rect = frame.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
         const oldScale = csCropper.scale;
-        csCropper.scale *= e.deltaY < 0 ? 1.08 : 0.926;
+        csCropper.scale *= e.deltaY < 0 ? 1.03 : 0.971;
         csCropper.scale = Math.max(csCropper.minScale, csCropper.scale);
         const ratio = csCropper.scale / oldScale;
         csCropper.x = mx - (mx - csCropper.x) * ratio;
@@ -3464,19 +3473,21 @@ Occasional deals &amp; promotions</textarea>
     });
 
     window.csCropperSave = function() {
+      const outW = csCropper.cropW;
+      const outH = csCropper.cropH;
       const canvas = document.createElement('canvas');
-      canvas.width = csCropper.frameW;
-      canvas.height = csCropper.frameH;
+      canvas.width = outW;
+      canvas.height = outH;
       const ctx = canvas.getContext('2d');
       const img = document.getElementById('csCropperImg');
       const eff = csCropperEffective();
-      // Source rect: map frame viewport back to rotated image coordinates
+      // Source rect: map display frame viewport back to rotated image coordinates
       const sx = -csCropper.x / csCropper.scale;
       const sy = -csCropper.y / csCropper.scale;
       const sw = csCropper.frameW / csCropper.scale;
       const sh = csCropper.frameH / csCropper.scale;
       if (csCropper.rotation === 0) {
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, csCropper.frameW, csCropper.frameH);
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
       } else {
         // Draw rotated: create a temp canvas with the rotated full image, then crop from it
         const tmpCanvas = document.createElement('canvas');
@@ -3486,7 +3497,7 @@ Occasional deals &amp; promotions</textarea>
         tmpCtx.translate(eff.w / 2, eff.h / 2);
         tmpCtx.rotate(csCropper.rotation * Math.PI / 180);
         tmpCtx.drawImage(img, -csCropper.natW / 2, -csCropper.natH / 2);
-        ctx.drawImage(tmpCanvas, sx, sy, sw, sh, 0, 0, csCropper.frameW, csCropper.frameH);
+        ctx.drawImage(tmpCanvas, sx, sy, sw, sh, 0, 0, outW, outH);
       }
       const croppedData = canvas.toDataURL('image/jpeg', 0.92);
       document.getElementById('csCropperOverlay').classList.remove('open');
