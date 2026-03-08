@@ -832,6 +832,9 @@
       position: absolute; inset: 0; z-index: 1;
       background-size: cover; background-position: center;
     }
+    .cs-canvas.bg-draggable { cursor: grab; }
+    .cs-canvas.bg-draggable:active { cursor: grabbing; }
+    .cs-bg-hint { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 6px; display: none; }
     .cs-prev-graphic { position: absolute; z-index: 2; pointer-events: none; }
     .cs-prev-offer-bar {
       position: absolute; z-index: 5; left: 0; right: 0;
@@ -1324,6 +1327,7 @@
                   <div id="csBgSection" style="display:none;">
                     <h4 style="margin:12px 0 6px;font-size:14px;font-weight:700;">Background</h4>
                     <div class="cs-bg-options" id="csBgOptions"></div>
+                    <div class="cs-bg-hint" id="csBgHint">Drag preview to reposition &bull; scroll to zoom</div>
                     <input type="file" id="csBgFileInput" accept="image/*" style="display:none;" />
                   </div>
                   <button class="cs-step-next" onclick="csStepNext('csStepGraphic')">Next &#8594;</button>
@@ -2806,6 +2810,9 @@ Occasional deals &amp; promotions</textarea>
       bgType: null,
       bgValue: null,
       bgImageData: null,
+      bgRawImage: null,  // full original for in-place positioning
+      bgNatW: 0, bgNatH: 0,  // natural dimensions of uploaded bg
+      bgScale: 1, bgX: 0, bgY: 0,  // pan/zoom state for upload bg
       offerType: null,
       offerMode: null,       // 'text' | 'price' | 'starting'
       offerHasBadge: true,
@@ -2911,17 +2918,90 @@ Occasional deals &amp; promotions</textarea>
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        // Open cropper for background (640x800 aspect)
-        csCropperOpen(e.target.result, -1);
+        const img = new Image();
+        img.onload = function() {
+          // Compute cover-fill scale and center
+          var scale = Math.max(640 / img.width, 800 / img.height);
+          csState.bgType = 'upload';
+          csState.bgValue = null;
+          csState.bgRawImage = e.target.result;
+          csState.bgImageData = e.target.result;
+          csState.bgNatW = img.width;
+          csState.bgNatH = img.height;
+          csState.bgScale = scale;
+          csState.bgX = (640 - img.width * scale) / 2;
+          csState.bgY = (800 - img.height * scale) / 2;
+          document.querySelectorAll('.cs-bg-swatch').forEach(s => s.classList.remove('active'));
+          document.querySelector('.cs-bg-upload-btn').classList.add('active');
+          csUpdatePreview();
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
+
+    // ─── Background In-Place Pan/Zoom ───
+    (function() {
+      var dragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+      var canvas = document.getElementById('csCanvas');
+
+      canvas.addEventListener('mousedown', function(e) {
+        if (csState.bgType !== 'upload' || !csState.bgRawImage) return;
+        dragging = true;
+        origX = csState.bgX; origY = csState.bgY;
+        startX = e.clientX; startY = e.clientY;
+        canvas.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        csState.bgX = origX + (e.clientX - startX);
+        csState.bgY = origY + (e.clientY - startY);
+        csBgClamp();
+        csBgApplyPreview();
+      });
+      window.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        canvas.style.cursor = '';
+      });
+
+      canvas.addEventListener('wheel', function(e) {
+        if (csState.bgType !== 'upload' || !csState.bgRawImage) return;
+        e.preventDefault();
+        var rect = canvas.getBoundingClientRect();
+        var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        var oldScale = csState.bgScale;
+        var minScale = Math.max(640 / csState.bgNatW, 800 / csState.bgNatH);
+        csState.bgScale *= e.deltaY < 0 ? 1.03 : 0.971;
+        csState.bgScale = Math.max(minScale, csState.bgScale);
+        var ratio = csState.bgScale / oldScale;
+        csState.bgX = mx - (mx - csState.bgX) * ratio;
+        csState.bgY = my - (my - csState.bgY) * ratio;
+        csBgClamp();
+        csBgApplyPreview();
+      }, { passive: false });
+    })();
+
+    function csBgClamp() {
+      var sw = csState.bgNatW * csState.bgScale;
+      var sh = csState.bgNatH * csState.bgScale;
+      csState.bgX = Math.min(0, Math.max(640 - sw, csState.bgX));
+      csState.bgY = Math.min(0, Math.max(800 - sh, csState.bgY));
+    }
+
+    function csBgApplyPreview() {
+      var prevBg = document.getElementById('csPrevBg');
+      prevBg.style.backgroundSize = (csState.bgNatW * csState.bgScale) + 'px ' + (csState.bgNatH * csState.bgScale) + 'px';
+      prevBg.style.backgroundPosition = csState.bgX + 'px ' + csState.bgY + 'px';
+    }
 
     // ─── Background Selection ───
     window.csSelectBg = function(type, value) {
       csState.bgType = type;
       csState.bgValue = value;
       csState.bgImageData = null;
+      csState.bgRawImage = null;
       // Highlight
       document.querySelectorAll('#csBgOptions .cs-bg-swatch, #csBgOptions .cs-bg-upload-btn').forEach(s => s.classList.remove('active'));
       const sel = document.querySelector('#csBgOptions [data-bg="' + type + '"]' + (type === 'solid' ? '[data-val="' + value + '"]' : ''));
@@ -3319,23 +3399,17 @@ Occasional deals &amp; promotions</textarea>
 
     function csCropperOpen(dataUrl, index) {
       var cropW, cropH;
-      if (index === -1) {
-        // Background crop: 640x800 canvas ratio
-        cropW = 640;
-        cropH = 800;
+      const item = csState.bodyItems[index];
+      const layout = item.layout || 'text-image';
+      if (csState.bodyCount === 6) {
+        cropW = layout === 'image-only' ? 180 : 176;
+        cropH = layout === 'image-only' ? 163 : 120;
+      } else if (csState.bodyCount === 4) {
+        cropW = layout === 'image-only' ? 283 : 147;
+        cropH = layout === 'image-only' ? 163 : 176;
       } else {
-        const item = csState.bodyItems[index];
-        const layout = item.layout || 'text-image';
-        if (csState.bodyCount === 6) {
-          cropW = layout === 'image-only' ? 180 : 176;
-          cropH = layout === 'image-only' ? 163 : 120;
-        } else if (csState.bodyCount === 4) {
-          cropW = layout === 'image-only' ? 283 : 147;
-          cropH = layout === 'image-only' ? 163 : 176;
-        } else {
-          cropW = layout === 'image-only' ? 590 : 317;
-          cropH = 352;
-        }
+        cropW = layout === 'image-only' ? 590 : 317;
+        cropH = 352;
       }
       // Scale up the display so the cropper is comfortable to work with
       var minDim = Math.min(cropW, cropH);
@@ -3503,15 +3577,7 @@ Occasional deals &amp; promotions</textarea>
       const croppedData = canvas.toDataURL('image/jpeg', 0.92);
       document.getElementById('csCropperOverlay').classList.remove('open');
 
-      if (csCropper.index === -1) {
-        // Background upload crop
-        csState.bgType = 'upload';
-        csState.bgValue = null;
-        csState.bgImageData = croppedData;
-        document.querySelectorAll('.cs-bg-swatch').forEach(s => s.classList.remove('active'));
-        document.querySelector('.cs-bg-upload-btn').classList.add('active');
-        csUpdatePreview();
-      } else if (document.getElementById('csProductEditOverlay').classList.contains('open')) {
+      if (document.getElementById('csProductEditOverlay').classList.contains('open')) {
         csEditTempImage = croppedData;
         csProductEditUpdateImgPreview();
       } else {
@@ -3729,12 +3795,20 @@ Occasional deals &amp; promotions</textarea>
         prevBg.style.backgroundImage = 'url(/assets/mms/' + patternFile + '.svg)';
         prevBg.style.backgroundSize = '100% 100%';
         prevBg.style.backgroundColor = csState.bgValue;
-      } else if (csState.bgType === 'upload' && csState.bgImageData) {
-        prevBg.style.backgroundImage = 'url(' + csState.bgImageData + ')';
+      } else if (csState.bgType === 'upload' && csState.bgRawImage) {
+        prevBg.style.backgroundImage = 'url(' + csState.bgRawImage + ')';
+        prevBg.style.backgroundSize = (csState.bgNatW * csState.bgScale) + 'px ' + (csState.bgNatH * csState.bgScale) + 'px';
+        prevBg.style.backgroundPosition = csState.bgX + 'px ' + csState.bgY + 'px';
+        prevBg.style.backgroundRepeat = 'no-repeat';
         prevBg.style.backgroundColor = '#333';
       } else {
         prevBg.style.backgroundColor = '#ddd';
       }
+      // Toggle drag hint + cursor
+      var isBgUpload = csState.bgType === 'upload' && csState.bgRawImage;
+      canvas.classList.toggle('bg-draggable', !!isBgUpload);
+      var hint = document.getElementById('csBgHint');
+      if (hint) hint.style.display = isBgUpload ? 'block' : 'none';
 
       if (!g) {
         prevGraphic.style.display = 'none';
@@ -4196,13 +4270,11 @@ Occasional deals &amp; promotions</textarea>
         ctx.scale(SCALE, SCALE);
 
         // 1. Background
-        if (csState.bgType === 'upload' && csState.bgImageData) {
-          const bgImg = await csLoadImage(csState.bgImageData);
-          // Cover fill
-          const scale = Math.max(640 / bgImg.width, 800 / bgImg.height);
-          const sw = bgImg.width * scale;
-          const sh = bgImg.height * scale;
-          ctx.drawImage(bgImg, (640 - sw) / 2, (800 - sh) / 2, sw, sh);
+        if (csState.bgType === 'upload' && csState.bgRawImage) {
+          const bgImg = await csLoadImage(csState.bgRawImage);
+          var sw = bgImg.width * csState.bgScale;
+          var sh = bgImg.height * csState.bgScale;
+          ctx.drawImage(bgImg, csState.bgX, csState.bgY, sw, sh);
         } else if (csState.bgType === 'texture') {
           // Use the actual pattern SVG
           const patternFile = csState.color === 'blue' ? 'yellow-pattern-bg-full' : 'gold-pattern-bg-full';
@@ -4800,7 +4872,7 @@ Occasional deals &amp; promotions</textarea>
     // ─── Reset ───
     window.csReset = function() {
       csState = {
-        color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null,
+        color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null, bgRawImage: null, bgNatW: 0, bgNatH: 0, bgScale: 1, bgX: 0, bgY: 0,
         offerType: null, offerMode: null, offerHasBadge: true, offerBadgeColor: 'yellow',
         offerDollars: '', offerCents: '', offerUnit: '', offerSave: '', offerText: '',
         titleText: 'SALE EVENT', rulesText: 'In store only, while supplies last',
