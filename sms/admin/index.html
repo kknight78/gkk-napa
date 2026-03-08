@@ -4131,9 +4131,11 @@ Occasional deals &amp; promotions</textarea>
         if (!g) throw new Error('No graphic selected');
 
         const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 800;
+        const SCALE = 2;
+        canvas.width = 640 * SCALE;
+        canvas.height = 800 * SCALE;
         const ctx = canvas.getContext('2d');
+        ctx.scale(SCALE, SCALE);
 
         // 1. Background
         if (csState.bgType === 'upload' && csState.bgImageData) {
@@ -4709,7 +4711,7 @@ Occasional deals &amp; promotions</textarea>
         const renderedImg = document.getElementById('csRenderedImg');
         renderedImg.src = url;
         document.getElementById('csRenderInfo').textContent =
-          'Size: ' + (finalBlob.size / 1024).toFixed(0) + ' KB | 640x800 JPEG';
+          'Size: ' + (finalBlob.size / 1024).toFixed(0) + ' KB | 1280x1600 JPEG';
         document.getElementById('csRendered').style.display = 'block';
         renderedImg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
