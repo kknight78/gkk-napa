@@ -354,13 +354,17 @@ function parseNapaMeta(html) {
     || html.match(/data-src="Product=([^"]+)"\s+class="[^"]*pdp-gallery-img/i);
   if (galleryMatch) {
     const dataSrc = galleryMatch[1];
-    image = `https://media.napaonline.com/is/image/${dataSrc}`;
+    image = `https://media.napaonline.com/is/image/${dataSrc}?preset=webproofxlarge`;
   }
   if (!image) {
     const ogMatch = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]+)"/i)
       || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:image"/i);
     if (ogMatch && ogMatch[1] && !ogMatch[1].includes("logo") && !ogMatch[1].includes("icon")) {
       image = ogMatch[1];
+      // Upgrade media.napaonline.com images to high-res preset if no preset already set
+      if (image.includes("media.napaonline.com/is/image/") && !image.includes("preset=")) {
+        image += (image.includes("?") ? "&" : "?") + "preset=webproofxlarge";
+      }
     }
   }
 
@@ -2672,8 +2676,14 @@ async function handleRemoveBg(request, env, corsHeaders) {
   }
 
   try {
+    // Upgrade to high-res preset for better bg removal quality
+    let fetchUrl = imageUrl;
+    if (fetchUrl.includes("media.napaonline.com/is/image/") && !fetchUrl.includes("preset=")) {
+      fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "preset=webproofxlarge";
+    }
+
     // Fetch image ourselves — NAPA blocks Replicate's servers (403)
-    const imgResp = await fetch(imageUrl, {
+    const imgResp = await fetch(fetchUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; GKK-NAPA-Bot/1.0)" },
     });
     if (!imgResp.ok) {
@@ -2681,9 +2691,12 @@ async function handleRemoveBg(request, env, corsHeaders) {
     }
     const imgBuf = await imgResp.arrayBuffer();
     const bytes = new Uint8Array(imgBuf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    const b64 = btoa(binary);
+    // Chunk-based base64 to avoid O(n²) string concat and CPU limit
+    const chunks = [];
+    for (let i = 0; i < bytes.length; i += 8192) {
+      chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, bytes.length))));
+    }
+    const b64 = btoa(chunks.join(""));
     const contentType = (imgResp.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
     const dataUri = `data:${contentType};base64,${b64}`;
 
@@ -2692,10 +2705,10 @@ async function handleRemoveBg(request, env, corsHeaders) {
       headers: {
         "Authorization": `Bearer ${env.REPLICATE_API_TOKEN}`,
         "Content-Type": "application/json",
-        "Prefer": "wait",
+        "Prefer": "wait=20",
       },
       body: JSON.stringify({
-        version: "95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+        version: "f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7",
         input: { image: dataUri },
       }),
     });
