@@ -931,6 +931,7 @@
     }
     .cs-cropper-save { background: var(--napa-yellow); color: #000; }
     .cs-cropper-cancel { background: rgba(255,255,255,.15); color: #fff; }
+    .cs-cropper-rotate { background: rgba(255,255,255,.15); color: #fff; font-size: 18px; padding: 10px 16px; line-height: 1; }
     .cs-cropper-zoom {
       display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.6); font-size: 12px;
     }
@@ -1457,6 +1458,7 @@
         <input type="range" id="csCropperZoomSlider" min="100" max="400" value="100" />
         <span>+</span>
       </div>
+      <button class="cs-cropper-rotate" onclick="csCropperRotate()" title="Rotate 90°">&#8635;</button>
       <button class="cs-cropper-save" onclick="csCropperSave()">Save</button>
       <button class="cs-cropper-cancel" onclick="csCropperCancel()">Cancel</button>
     </div>
@@ -3318,7 +3320,7 @@ Occasional deals &amp; promotions</textarea>
     };
 
     // ─── Image Cropper ───
-    const csCropper = { imgEl: null, scale: 1, minScale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, frameW: 0, frameH: 0, natW: 0, natH: 0, index: -1, lastDist: 0 };
+    const csCropper = { imgEl: null, scale: 1, minScale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, frameW: 0, frameH: 0, natW: 0, natH: 0, index: -1, lastDist: 0, rotation: 0 };
 
     function csCropperOpen(dataUrl, index) {
       const item = csState.bodyItems[index];
@@ -3346,14 +3348,8 @@ Occasional deals &amp; promotions</textarea>
       img.onload = function() {
         csCropper.natW = img.naturalWidth;
         csCropper.natH = img.naturalHeight;
-        // Scale to cover
-        const scaleX = csCropper.frameW / csCropper.natW;
-        const scaleY = csCropper.frameH / csCropper.natH;
-        csCropper.minScale = Math.max(scaleX, scaleY);
-        csCropper.scale = csCropper.minScale;
-        // Center
-        csCropper.x = (csCropper.frameW - csCropper.natW * csCropper.scale) / 2;
-        csCropper.y = (csCropper.frameH - csCropper.natH * csCropper.scale) / 2;
+        csCropper.rotation = 0;
+        csCropperRecalcScale();
         slider.min = Math.round(csCropper.minScale * 100);
         slider.max = Math.round(csCropper.minScale * 400);
         slider.value = Math.round(csCropper.scale * 100);
@@ -3363,15 +3359,45 @@ Occasional deals &amp; promotions</textarea>
       overlay.classList.add('open');
     }
 
+    // Get effective dimensions based on rotation (90/270 swaps W/H)
+    function csCropperEffective() {
+      const r = csCropper.rotation % 360;
+      const swapped = (r === 90 || r === 270);
+      return { w: swapped ? csCropper.natH : csCropper.natW, h: swapped ? csCropper.natW : csCropper.natH };
+    }
+
+    function csCropperRecalcScale() {
+      const eff = csCropperEffective();
+      const scaleX = csCropper.frameW / eff.w;
+      const scaleY = csCropper.frameH / eff.h;
+      csCropper.minScale = Math.max(scaleX, scaleY);
+      csCropper.scale = csCropper.minScale;
+      csCropper.x = (csCropper.frameW - eff.w * csCropper.scale) / 2;
+      csCropper.y = (csCropper.frameH - eff.h * csCropper.scale) / 2;
+    }
+
     function csCropperApply() {
       const img = document.getElementById('csCropperImg');
-      // Clamp position so no empty space
-      const scaledW = csCropper.natW * csCropper.scale;
-      const scaledH = csCropper.natH * csCropper.scale;
+      const eff = csCropperEffective();
+      const scaledW = eff.w * csCropper.scale;
+      const scaledH = eff.h * csCropper.scale;
       csCropper.x = Math.min(0, Math.max(csCropper.frameW - scaledW, csCropper.x));
       csCropper.y = Math.min(0, Math.max(csCropper.frameH - scaledH, csCropper.y));
-      img.style.transform = 'translate(' + csCropper.x + 'px,' + csCropper.y + 'px) scale(' + csCropper.scale + ')';
+      // Build transform: translate to position, then rotate around the center of the scaled image
+      const cx = csCropper.natW * csCropper.scale / 2;
+      const cy = csCropper.natH * csCropper.scale / 2;
+      img.style.transform = 'translate(' + csCropper.x + 'px,' + csCropper.y + 'px) translate(' + cx + 'px,' + cy + 'px) rotate(' + csCropper.rotation + 'deg) translate(-' + cx + 'px,-' + cy + 'px) scale(' + csCropper.scale + ')';
     }
+
+    window.csCropperRotate = function() {
+      csCropper.rotation = (csCropper.rotation + 90) % 360;
+      csCropperRecalcScale();
+      const slider = document.getElementById('csCropperZoomSlider');
+      slider.min = Math.round(csCropper.minScale * 100);
+      slider.max = Math.round(csCropper.minScale * 400);
+      slider.value = Math.round(csCropper.scale * 100);
+      csCropperApply();
+    };
 
     // Mouse drag
     document.addEventListener('DOMContentLoaded', function() {
@@ -3443,12 +3469,25 @@ Occasional deals &amp; promotions</textarea>
       canvas.height = csCropper.frameH;
       const ctx = canvas.getContext('2d');
       const img = document.getElementById('csCropperImg');
-      // Source rect: map frame viewport back to source image coordinates
+      const eff = csCropperEffective();
+      // Source rect: map frame viewport back to rotated image coordinates
       const sx = -csCropper.x / csCropper.scale;
       const sy = -csCropper.y / csCropper.scale;
       const sw = csCropper.frameW / csCropper.scale;
       const sh = csCropper.frameH / csCropper.scale;
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, csCropper.frameW, csCropper.frameH);
+      if (csCropper.rotation === 0) {
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, csCropper.frameW, csCropper.frameH);
+      } else {
+        // Draw rotated: create a temp canvas with the rotated full image, then crop from it
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = eff.w;
+        tmpCanvas.height = eff.h;
+        const tmpCtx = tmpCanvas.getContext('2d');
+        tmpCtx.translate(eff.w / 2, eff.h / 2);
+        tmpCtx.rotate(csCropper.rotation * Math.PI / 180);
+        tmpCtx.drawImage(img, -csCropper.natW / 2, -csCropper.natH / 2);
+        ctx.drawImage(tmpCanvas, sx, sy, sw, sh, 0, 0, csCropper.frameW, csCropper.frameH);
+      }
       const croppedData = canvas.toDataURL('image/jpeg', 0.92);
       document.getElementById('csCropperOverlay').classList.remove('open');
 
