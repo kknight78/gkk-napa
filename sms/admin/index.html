@@ -1501,24 +1501,24 @@
       <div class="cs-text-edit-price-bar" id="csTePrice">
         <div class="cs-te-full-row">
           <span class="cs-te-prefix">$</span>
-          <input type="text" class="cs-te-full-price" id="csTeFullPrice" placeholder="XX.99" />
+          <input type="text" class="cs-te-full-price" id="csTeFullPrice" placeholder="XX.99" onfocus="this.select()" />
         </div>
         <div class="cs-te-cut-row" id="csTeCutRow">
           <div class="cs-te-cut-wrap" id="csTeCutWrap">
             <span class="cs-te-cut-prefix">$</span>
-            <input type="text" class="cs-te-cut-price" id="csTeCutPrice" placeholder="X.99" />
+            <input type="text" class="cs-te-cut-price" id="csTeCutPrice" placeholder="X.99" onfocus="this.select()" />
             <button class="cs-te-field-dismiss" onclick="csTeDismissCutPrice()" title="Hide cut price">&times;</button>
           </div>
           <div class="cs-te-unit-wrap" id="csTeUnitWrap">
             <span class="cs-te-unit-prefix">/</span>
-            <input type="text" class="cs-te-unit" id="csTeUnit" placeholder="each" />
+            <input type="text" class="cs-te-unit" id="csTeUnit" placeholder="each" onfocus="this.select()" />
             <button class="cs-te-field-dismiss" onclick="csTeDismissUnit()" title="Hide unit">&times;</button>
           </div>
         </div>
         <button class="cs-te-reset" id="csTeResetBtn" onclick="csTeReset()" title="Restore fields" style="display:none;">&#8635;</button>
       </div>
       <div class="cs-text-edit-desc">
-        <textarea id="csTeName" placeholder="Product Name"></textarea>
+        <textarea id="csTeName" placeholder="Product Name" onfocus="this.select()"></textarea>
       </div>
       <div class="cs-text-edit-actions">
         <button class="cs-te-save" onclick="csTextEditSave()">Save</button>
@@ -3714,10 +3714,10 @@ Occasional deals &amp; promotions</textarea>
         leftEl.innerHTML = startAt +
           '<div style="display:flex;align-items:flex-start;line-height:1;font-weight:900;color:#fff;">' +
             '<span style="font-size:' + (big ? 59 : 49) + 'px;">$</span>' +
-            '<input id="csInlineDollars" autocomplete="off" type="text" value="' + (csState.offerDollars || '') + '" placeholder="0" maxlength="3" inputmode="numeric" style="' + i + 'font-size:' + (big ? 101 : 84) + 'px;line-height:.9;width:' + Math.max(1, (csState.offerDollars || '').length) + 'ch;height:.9em;" />' +
+            '<input id="csInlineDollars" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerDollars || '') + '" placeholder="0" maxlength="3" inputmode="numeric" style="' + i + 'font-size:' + (big ? 101 : 84) + 'px;line-height:.9;width:' + Math.max(1, (csState.offerDollars || '').length) + 'ch;height:.9em;" />' +
             '<span style="display:inline-flex;flex-direction:column;line-height:1;">' +
-              '<input id="csInlineCents" autocomplete="off" type="text" value="' + (csState.offerCents || '') + '" placeholder="99" maxlength="2" inputmode="numeric" style="' + i + 'font-size:' + (big ? 60 : 50) + 'px;width:2ch;height:1em;" />' +
-              '<input id="csInlineUnit" autocomplete="off" type="text" value="' + (csState.offerUnit || '') + '" placeholder="/each" maxlength="10" style="' + i + 'font-weight:300;font-size:' + (big ? 28 : 23) + 'px;line-height:1;width:8ch;height:1.25em;" />' +
+              '<input id="csInlineCents" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerCents || '') + '" placeholder="99" maxlength="2" inputmode="numeric" style="' + i + 'font-size:' + (big ? 60 : 50) + 'px;width:2ch;height:1em;" />' +
+              '<input id="csInlineUnit" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerUnit || '') + '" placeholder="/each" maxlength="10" style="' + i + 'font-weight:300;font-size:' + (big ? 28 : 23) + 'px;line-height:1;width:8ch;height:1.25em;" />' +
             '</span>' +
           '</div>';
 
@@ -3734,7 +3734,7 @@ Occasional deals &amp; promotions</textarea>
               '<img src="/assets/mms/offer-badges/' + cfg.badge + '.svg" style="width:100%;height:100%;" />' +
               '<div style="position:absolute;top:' + numTop + ';left:0;right:0;transform:translateY(-50%);color:' + badgeTextColor + ';font-weight:900;line-height:1;text-align:center;">' +
                 '<span style="position:relative;font-size:' + numSize + 'px;letter-spacing:-.5px;">' +
-                  '<input id="csInlineSave" autocomplete="off" type="text" value="' + (csState.offerSave || '') + '" placeholder="0" maxlength="2" inputmode="numeric" style="' + i + 'font-size:inherit;width:2ch;height:1em;text-align:center;color:inherit;letter-spacing:inherit;" />' +
+                  '<input id="csInlineSave" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerSave || '') + '" placeholder="0" maxlength="2" inputmode="numeric" style="' + i + 'font-size:inherit;width:2ch;height:1em;text-align:center;color:inherit;letter-spacing:inherit;" />' +
                   '<span style="position:absolute;left:100%;top:' + pctTop + ';font-size:' + pctSize + 'px;">%</span>' +
                 '</span>' +
               '</div>' +
