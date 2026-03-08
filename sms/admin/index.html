@@ -2911,13 +2911,8 @@ Occasional deals &amp; promotions</textarea>
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        csState.bgType = 'upload';
-        csState.bgValue = null;
-        csState.bgImageData = e.target.result;
-        // Highlight upload button
-        document.querySelectorAll('.cs-bg-swatch').forEach(s => s.classList.remove('active'));
-        document.querySelector('.cs-bg-upload-btn').classList.add('active');
-        csUpdatePreview();
+        // Open cropper for background (640x800 aspect)
+        csCropperOpen(e.target.result, -1);
       };
       reader.readAsDataURL(file);
     });
@@ -3323,18 +3318,24 @@ Occasional deals &amp; promotions</textarea>
     const csCropper = { imgEl: null, scale: 1, minScale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, frameW: 0, frameH: 0, natW: 0, natH: 0, index: -1, lastDist: 0, rotation: 0 };
 
     function csCropperOpen(dataUrl, index) {
-      const item = csState.bodyItems[index];
-      const layout = item.layout || 'text-image';
       var cropW, cropH;
-      if (csState.bodyCount === 6) {
-        cropW = layout === 'image-only' ? 180 : 176;
-        cropH = layout === 'image-only' ? 163 : 120;
-      } else if (csState.bodyCount === 4) {
-        cropW = layout === 'image-only' ? 283 : 147;
-        cropH = layout === 'image-only' ? 163 : 176;
+      if (index === -1) {
+        // Background crop: 640x800 canvas ratio
+        cropW = 640;
+        cropH = 800;
       } else {
-        cropW = layout === 'image-only' ? 590 : 317;
-        cropH = 352;
+        const item = csState.bodyItems[index];
+        const layout = item.layout || 'text-image';
+        if (csState.bodyCount === 6) {
+          cropW = layout === 'image-only' ? 180 : 176;
+          cropH = layout === 'image-only' ? 163 : 120;
+        } else if (csState.bodyCount === 4) {
+          cropW = layout === 'image-only' ? 283 : 147;
+          cropH = layout === 'image-only' ? 163 : 176;
+        } else {
+          cropW = layout === 'image-only' ? 590 : 317;
+          cropH = 352;
+        }
       }
       // Scale up the display so the cropper is comfortable to work with
       var minDim = Math.min(cropW, cropH);
@@ -3502,8 +3503,15 @@ Occasional deals &amp; promotions</textarea>
       const croppedData = canvas.toDataURL('image/jpeg', 0.92);
       document.getElementById('csCropperOverlay').classList.remove('open');
 
-      // If product edit overlay is open, update temp image there
-      if (document.getElementById('csProductEditOverlay').classList.contains('open')) {
+      if (csCropper.index === -1) {
+        // Background upload crop
+        csState.bgType = 'upload';
+        csState.bgValue = null;
+        csState.bgImageData = croppedData;
+        document.querySelectorAll('.cs-bg-swatch').forEach(s => s.classList.remove('active'));
+        document.querySelector('.cs-bg-upload-btn').classList.add('active');
+        csUpdatePreview();
+      } else if (document.getElementById('csProductEditOverlay').classList.contains('open')) {
         csEditTempImage = croppedData;
         csProductEditUpdateImgPreview();
       } else {
