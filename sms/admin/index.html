@@ -3055,8 +3055,10 @@ Occasional deals &amp; promotions</textarea>
         item.fullPrice = sample.fullPrice;
         item.price = sample.fullPrice;
         item.priceUnit = '/each';
-        // Fetch image from NAPA (async — will update preview when done)
-        csFetchSampleImage(i, sample.partNum);
+        // Fetch image from NAPA — stagger requests to avoid NAPA rate limiting
+        (function(idx, pn) {
+          setTimeout(function() { csFetchSampleImage(idx, pn); }, idx * 300);
+        })(i, sample.partNum);
       }
       csUpdatePreview(true);
     };

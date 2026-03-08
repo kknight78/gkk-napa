@@ -2543,12 +2543,23 @@ async function handlePromoEvents(url, env, corsHeaders) {
   return jsonOk(corsHeaders, events.results);
 }
 
+// In-memory cache for NAPA part lookups (survives within a single worker instance)
+const napaPartCache = new Map();
+const NAPA_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 async function handleNapaPartSearch(request, env, corsHeaders) {
   const body = await request.json();
   const { partNumber } = body;
   if (!partNumber || !partNumber.trim()) return jsonError(corsHeaders, "Part number is required.", 400);
 
   const clean = partNumber.trim().replace(/\s+/g, "");
+
+  // Check in-memory cache first
+  const cached = napaPartCache.get(clean);
+  if (cached && (Date.now() - cached.ts) < NAPA_CACHE_TTL) {
+    return jsonOk(corsHeaders, cached.data);
+  }
+
   try {
     // Try direct product page first: /en/p/PARTNUMBER (reuse HTML to avoid double-fetch)
     const directUrl = `https://www.napaonline.com/en/p/${encodeURIComponent(clean)}`;
@@ -2579,6 +2590,9 @@ async function handleNapaPartSearch(request, env, corsHeaders) {
         if (searchMeta.price) meta.price = searchMeta.price;
       }
     }
+
+    // Cache the result
+    napaPartCache.set(clean, { data: meta, ts: Date.now() });
 
     return jsonOk(corsHeaders, meta);
   } catch (e) {
