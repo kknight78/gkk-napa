@@ -2662,15 +2662,12 @@ Occasional deals &amp; promotions</textarea>
         html += '<div class="composer-media-btns">';
         html += '<button class="composer-media-btn' + (msg.mediaType === 'none' ? ' active' : '') + '" onclick="composerSetMedia(' + i + ',\'none\')">None</button>';
         html += '<button class="composer-media-btn' + (msg.mediaType === 'logo' ? ' active' : '') + '" onclick="composerSetMedia(' + i + ',\'logo\')">Logo</button>';
-        html += '<button class="composer-media-btn' + (msg.mediaType === 'url' ? ' active' : '') + '" onclick="composerSetMedia(' + i + ',\'url\')">Image/Video URL</button>';
+        html += '<button class="composer-media-btn' + (msg.mediaType === 'library' ? ' active' : '') + '" onclick="composerOpenLibrary(' + i + ')">Library</button>';
         html += '<button class="composer-media-btn' + (msg.mediaType === 'studio' ? ' active' : '') + '" onclick="composerOpenStudio(' + i + ')">Create in Studio</button>';
         html += '</div>';
-        if (msg.mediaType === 'url') {
-          html += '<input type="url" class="composer-media-url-input" data-index="' + i + '" placeholder="https://example.com/image.jpg" value="' + (msg.mediaUrl || '') + '" oninput="composerUpdateMediaUrl(' + i + ',this.value)" style="margin-bottom:4px;" />';
-        }
         if (msg.mediaType === 'logo') {
           html += '<div class="composer-media-preview"><img src="' + SMS_LOGO_URL + '" alt="Logo" /></div>';
-        } else if ((msg.mediaType === 'url' || msg.mediaType === 'studio') && msg.mediaUrl) {
+        } else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) {
           html += '<div class="composer-media-preview"><img src="' + msg.mediaUrl + '" alt="Preview" /></div>';
         }
 
@@ -2730,14 +2727,58 @@ Occasional deals &amp; promotions</textarea>
       composerRender();
     };
 
-    window.composerUpdateMediaUrl = function(index, url) {
-      composerMessages[index].mediaUrl = url;
-    };
-
     window.composerOpenStudio = function(index) {
       composerActiveMessageIndex = index;
       composerMessages[index].mediaType = 'studio';
       composerShowView('studio');
+    };
+
+    window.composerOpenLibrary = function(index) {
+      composerMessages[index].mediaType = 'library';
+      composerMessages[index].mediaUrl = null;
+      composerRender();
+      // Fetch campaign media for the library grid
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;';
+      var modal = document.createElement('div');
+      modal.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;';
+      modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3 style="margin:0;font-size:16px;">Media Library</h3><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">&times;</button></div><div id="composerLibraryGrid" style="text-align:center;color:rgba(255,255,255,.4);padding:20px;">Loading...</div>';
+      overlay.appendChild(modal);
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+
+      fetch(WORKER_BASE + '/admin/campaigns', { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(campaigns) {
+        var seen = {};
+        var urls = [];
+        campaigns.forEach(function(c) {
+          if (c.media_url && !seen[c.media_url] && /\.(jpg|jpeg|png|gif|webp|svg)/i.test(c.media_url)) {
+            seen[c.media_url] = true;
+            urls.push({ url: c.media_url, name: c.name, date: c.created_at });
+          }
+        });
+        var grid = document.getElementById('composerLibraryGrid');
+        if (!urls.length) {
+          grid.textContent = 'No images found in past campaigns.';
+          return;
+        }
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;';
+        grid.innerHTML = '';
+        urls.forEach(function(item) {
+          var cell = document.createElement('div');
+          cell.style.cssText = 'cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;aspect-ratio:4/5;position:relative;';
+          cell.innerHTML = '<img src="' + item.url + '" style="width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;bottom:0;left:0;right:0;padding:4px 6px;background:rgba(0,0,0,.7);font-size:10px;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.name || '') + '</div>';
+          cell.addEventListener('mouseenter', function() { cell.style.borderColor = 'var(--napa-yellow)'; });
+          cell.addEventListener('mouseleave', function() { cell.style.borderColor = 'transparent'; });
+          cell.addEventListener('click', function() {
+            composerMessages[index].mediaUrl = item.url;
+            composerRender();
+            overlay.remove();
+          });
+          grid.appendChild(cell);
+        });
+      }).catch(function() {
+        document.getElementById('composerLibraryGrid').textContent = 'Failed to load library.';
+      });
     };
 
     window.composerSetTiming = function(index, sendNow) {
@@ -2756,7 +2797,7 @@ Occasional deals &amp; promotions</textarea>
       if (!phone) { alert('Enter a phone number first.'); return; }
       var mediaUrl = null;
       if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
-      else if ((msg.mediaType === 'url' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+      else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
 
       fetch(WORKER_BASE + '/admin/send-test', {
         method: 'POST',
@@ -2792,7 +2833,7 @@ Occasional deals &amp; promotions</textarea>
         var msg = composerMessages[i];
         var mediaUrl = null;
         if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
-        else if ((msg.mediaType === 'url' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+        else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
 
         var hasBody = msg.body && msg.body.trim();
         if (!hasBody && !mediaUrl) { composerShowError('Message ' + (i + 1) + ' needs text or media.'); return; }
