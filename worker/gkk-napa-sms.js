@@ -1795,7 +1795,7 @@ ${phoneNote}
 </body></html>`;
 }
 
-const QR_CODE_URL = "https://gkk-napa.com/assets/sms-qr-code.png";
+const QR_CODE_URL = "https://gkk-napa.com/assets/sms_qrcode.svg";
 
 function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl) {
   const mediaSection = mediaUrl
