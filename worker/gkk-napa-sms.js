@@ -1795,19 +1795,18 @@ ${phoneNote}
 </body></html>`;
 }
 
+const QR_CODE_URL = "https://gkk-napa.com/assets/sms-qr-code.png";
+
 function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl) {
-  const phoneNote = displayPhone
-    ? `<tr><td style="padding:0 24px 16px;">
-<p style="margin:0;font-size:14px;color:#333;line-height:1.5;text-align:center;">
-  Want texts instead? Get updates faster via SMS!<br>
-  Texts will be sent to <strong>${displayPhone}</strong>
-</p>
+  const mediaSection = mediaUrl
+    ? `<tr><td style="padding:0 24px 20px;">
+<img src="${mediaUrl}" alt="" style="width:100%;display:block;border-radius:8px;" />
 </td></tr>`
     : '';
 
-  const mediaSection = mediaUrl
-    ? `<tr><td align="center" style="padding:0 24px 16px;">
-<img src="${mediaUrl}" alt="" style="max-width:100%;border-radius:8px;" />
+  const bodySection = messageBody
+    ? `<tr><td style="padding:0 24px 20px;">
+<p style="margin:0;font-size:16px;color:#333;line-height:1.6;white-space:pre-wrap;">${escHtml(messageBody)}</p>
 </td></tr>`
     : '';
 
@@ -1816,34 +1815,78 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;">
 <tr><td align="center" style="padding:24px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;">
 
-<!-- NAPA Header -->
-<tr><td style="background-color:#0A0094;">
-<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
-<div style="color:#ffffff;font-size:13px;padding:0 0 10px 12px;">G&amp;KK Store Updates</div>
+<!-- Yellow Header Bar -->
+<tr><td style="background-color:#FFC836;padding:14px 24px;text-align:center;">
+<span style="font-size:18px;font-weight:800;color:#0A0094;letter-spacing:0.5px;">G&amp;KK NAPA</span>
+<span style="font-size:18px;font-weight:800;color:#333;letter-spacing:0.5px;">SAVINGS ALERT</span>
 </td></tr>
 
-<!-- Body -->
-<tr><td style="padding:32px 24px 16px;">
-<h1 style="margin:0 0 16px;font-size:22px;color:#111;font-weight:700;">Hi ${escHtml(greeting)},</h1>
-<p style="margin:0 0 16px;font-size:16px;color:#333;line-height:1.6;white-space:pre-wrap;">${escHtml(messageBody)}</p>
+<!-- Greeting + Body -->
+<tr><td style="padding:28px 24px 8px;">
+<h1 style="margin:0 0 12px;font-size:20px;color:#111;font-weight:700;">Hi ${escHtml(greeting)},</h1>
 </td></tr>
 
+${bodySection}
+
+<!-- Creative Image -->
 ${mediaSection}
 
-<!-- Subscribe CTA -->
-${phoneNote}
-<tr><td align="center" style="padding:0 24px 24px;">
-<a href="${subscribeUrl}" target="_blank"
-   style="display:inline-block;background-color:#FFC836;color:#0A0094;font-size:14px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;">
-  Subscribe to Text Updates
-</a>
+<!-- Sign-off -->
+<tr><td style="padding:0 24px 24px;">
+<p style="margin:0;font-size:15px;color:#555;line-height:1.5;">Thank you,<br>Your G&amp;KK NAPA Stores</p>
 </td></tr>
 
-<!-- Footer -->
-<tr><td style="background-color:#f9fafb;padding:16px 24px;border-top:1px solid #e5e7eb;">
-<p style="margin:0;font-size:12px;color:#888;text-align:center;">G&amp;KK NAPA Auto Parts &middot; <a href="https://gkk-napa.com" style="color:#0A0094;">gkk-napa.com</a></p>
+<!-- QR Code + SMS Signup Box -->
+<tr><td style="padding:0 24px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f1f4;border-radius:10px;overflow:hidden;">
+<tr>
+<td style="padding:20px;width:120px;" valign="top">
+<img src="${QR_CODE_URL}" alt="QR Code" width="110" height="110" style="display:block;width:110px;height:110px;" />
+</td>
+<td style="padding:20px 20px 20px 0;" valign="middle">
+<p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0A0094;text-align:center;">To get notified of exclusive<br>savings on your phone:</p>
+<p style="margin:8px 0 0;font-size:14px;color:#333;text-align:center;line-height:1.6;">
+Text &lsquo;NAPA&rsquo; to <strong>217.441.9077</strong><br>
+Or use the <strong>QR Code</strong><br>
+to sign up at: <a href="https://gkk-napa.com/sms" style="color:#0A0094;font-weight:700;text-decoration:none;">gkk-napa.com/sms</a>
+</p>
+</td>
+</tr>
+</table>
+</td></tr>
+
+<!-- Store Locations -->
+<tr><td style="padding:0 24px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:10px;overflow:hidden;">
+<tr>
+<td style="padding:16px;text-align:center;width:50%;border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
+<div style="font-size:13px;font-weight:700;color:#333;">Danville, IL</div>
+<a href="tel:+12174469067" style="font-size:13px;color:#0A0094;text-decoration:none;">(217) 446-9067</a>
+</td>
+<td style="padding:16px;text-align:center;width:50%;border-bottom:1px solid #e5e7eb;">
+<div style="font-size:13px;font-weight:700;color:#333;">Cayuga, IN</div>
+<a href="tel:+17654871324" style="font-size:13px;color:#0A0094;text-decoration:none;">(765) 487-1324</a>
+</td>
+</tr>
+<tr>
+<td style="padding:16px;text-align:center;width:50%;border-right:1px solid #e5e7eb;">
+<div style="font-size:13px;font-weight:700;color:#333;">Rockville, IN</div>
+<a href="tel:+17655692011" style="font-size:13px;color:#0A0094;text-decoration:none;">(765) 569-2011</a>
+</td>
+<td style="padding:16px;text-align:center;width:50%;">
+<div style="font-size:13px;font-weight:700;color:#333;">Covington, IN</div>
+<a href="tel:+17657932258" style="font-size:13px;color:#0A0094;text-decoration:none;">(765) 793-2258</a>
+</td>
+</tr>
+</table>
+</td></tr>
+
+<!-- Blue Footer Bar -->
+<tr><td style="background-color:#0A0094;padding:16px 24px;text-align:center;">
+<a href="https://gkk-napa.com" style="font-size:15px;font-weight:700;color:#FFC836;text-decoration:none;">G&amp;KK NAPA Auto Parts</a>
+<br><a href="https://gkk-napa.com" style="font-size:13px;color:rgba(255,255,255,0.7);text-decoration:none;">gkk-napa.com</a>
 </td></tr>
 
 </table>
@@ -1894,23 +1937,10 @@ async function handleSendTestEmail(request, env, corsHeaders) {
   if (!email || !email.includes("@")) return jsonError(corsHeaders, "Valid email address is required.", 400);
   if (!sms_text && !image_url) return jsonError(corsHeaders, "Message text or image is required.", 400);
 
-  const emailSubject = subject || "G&KK NAPA — Creative Studio Test";
+  const emailSubject = subject || "G&KK NAPA Savings Alert";
 
-  // Build a simple HTML email showing the MMS image + SMS text
-  const imgHtml = image_url
-    ? `<tr><td style="padding:0 0 16px;"><img src="${escHtml(image_url)}" alt="MMS Preview" style="max-width:100%;border-radius:8px;" /></td></tr>`
-    : "";
-  const textHtml = sms_text
-    ? `<tr><td style="padding:16px;background:#f5f5f5;border-radius:8px;font-family:monospace;font-size:14px;line-height:1.5;white-space:pre-wrap;color:#333;">${escHtml(sms_text)}</td></tr>`
-    : "";
-
-  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#fff;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;padding:24px;">
-  <tr><td style="padding:0 0 12px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">Creative Studio Test Preview</td></tr>
-  ${imgHtml}
-  ${textHtml ? `<tr><td style="padding:12px 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">SMS Text</td></tr>` + textHtml : ""}
-  <tr><td style="padding:24px 0 0;font-size:11px;color:#aaa;text-align:center;">Sent from G&amp;KK NAPA Creative Studio</td></tr>
-</table></body></html>`;
+  // Use the same branded template as real campaign emails
+  const html = buildCampaignEmail("there", sms_text || "", "https://gkk-napa.com/sms/subscribe", null, image_url || null);
 
   try {
     const resp = await fetch("https://api.resend.com/emails", {
