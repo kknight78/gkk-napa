@@ -2798,7 +2798,7 @@ Occasional deals &amp; promotions</textarea>
 
         // Test send — below preview
         html += '<div class="composer-test-row">';
-        html += '<input type="tel" id="composerTestPhone' + i + '" placeholder="(555) 555-1234" style="width:auto;" />';
+        html += '<input type="text" id="composerTestDest' + i + '" placeholder="Phone or email" style="width:auto;" />';
         html += '<button id="composerTestBtn' + i + '" class="btn-secondary" style="flex-shrink:0;padding:8px 14px;font-size:12px;" onclick="composerTestSend(' + i + ')"' + (hasContent ? '' : ' disabled') + '>Send Test</button>';
         html += '</div>';
 
@@ -3034,20 +3034,33 @@ Occasional deals &amp; promotions</textarea>
 
     window.composerTestSend = function(index) {
       var msg = composerMessages[index];
-      var phone = document.getElementById('composerTestPhone' + index).value;
-      if (!phone) { alert('Enter a phone number first.'); return; }
+      var dest = (document.getElementById('composerTestDest' + index).value || '').trim();
+      if (!dest) { alert('Enter a phone number or email.'); return; }
       var mediaUrl = null;
       if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
       else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
 
-      fetch(WORKER_BASE + '/admin/send-test', {
-        method: 'POST',
-        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ body: msg.body, phone: phone, image_url: mediaUrl })
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.error) alert('Test failed: ' + data.error);
-        else alert('Test sent!');
-      }).catch(function(e) { alert('Error: ' + e.message); });
+      var isEmail = dest.indexOf('@') !== -1;
+
+      if (isEmail) {
+        fetch(WORKER_BASE + '/admin/send-test-email', {
+          method: 'POST',
+          headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ email: dest, sms_text: msg.body, image_url: mediaUrl, subject: 'Campaign Test Preview' })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.error) alert('Test failed: ' + data.error);
+          else alert('Test email sent to ' + dest + '!');
+        }).catch(function(e) { alert('Error: ' + e.message); });
+      } else {
+        fetch(WORKER_BASE + '/admin/send-test', {
+          method: 'POST',
+          headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ body: msg.body, phone: dest, image_url: mediaUrl })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.error) alert('Test failed: ' + data.error);
+          else alert('Test SMS sent!');
+        }).catch(function(e) { alert('Error: ' + e.message); });
+      }
     };
 
     window.composerUpdateRecipients = function() {
