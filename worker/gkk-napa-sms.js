@@ -1834,7 +1834,7 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 <!-- NAPA Header Bar -->
 <tr><td style="background-color:#0A0094;">
 <img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
-<div style="padding:4px 0 14px 12px;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;"><span style="color:#FFC836;">SAVINGS</span> <span style="color:#ffffff;">ALERTS</span></div>
+<div style="padding:0 0 9px 12px;font-size:16px;font-weight:800;letter-spacing:-1px;text-transform:uppercase;"><span style="color:#FFC836;">SAVINGS</span> <span style="color:#ffffff;">ALERTS</span></div>
 </td></tr>
 
 <!-- Greeting + Body -->
