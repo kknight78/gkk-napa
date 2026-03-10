@@ -1812,12 +1812,6 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 </td></tr>`
     : '';
 
-  const logoSection = !hasCreative
-    ? `<tr><td style="padding:0 24px 16px;">
-<img src="${SMS_LOGO_EMAIL}" alt="G&KK NAPA Auto Parts" style="height:50px;width:auto;display:block;" />
-</td></tr>`
-    : '';
-
   const bodySection = messageBody
     ? hasCreative
       ? `<tr><td style="padding:0 24px 20px;">
@@ -1835,17 +1829,14 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 <tr><td align="center" style="padding:24px 16px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;">
 
-<!-- Yellow Header Bar -->
-<tr><td style="background-color:#FFC836;padding:14px 24px;text-align:center;">
-<span style="font-size:18px;font-weight:800;color:#0A0094;letter-spacing:0.5px;">G&amp;KK NAPA</span>
-<span style="font-size:18px;font-weight:800;color:#333;letter-spacing:0.5px;">SAVINGS ALERT</span>
+<!-- NAPA Header Bar -->
+<tr><td style="background-color:#0A0094;">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
+<div style="color:#FFC836;font-size:14px;font-weight:700;padding:0 0 12px 12px;letter-spacing:0.5px;">Savings Alert</div>
 </td></tr>
 
-<!-- Small logo (text-only emails) -->
-${logoSection}
-
 <!-- Greeting + Body -->
-<tr><td style="padding:${hasCreative ? '28px' : '16px'} 24px 8px;">
+<tr><td style="padding:28px 24px 8px;">
 <h1 style="margin:0 0 12px;font-size:20px;color:#111;font-weight:700;">Hi ${escHtml(greeting)},</h1>
 </td></tr>
 
