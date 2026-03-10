@@ -425,6 +425,70 @@
     }
     .composer-media-btn.active { background: var(--napa-yellow); color: #111; border-color: var(--napa-yellow); }
     .composer-media-btn:hover { border-color: rgba(255,255,255,.4); }
+
+    /* Media Library Panel */
+    .lib-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .lib-panel {
+      background: var(--bg); border: 1px solid rgba(255,255,255,.14); border-radius: 16px;
+      width: 100%; max-width: 720px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    }
+    .lib-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 24px 16px; border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .lib-close {
+      background: none; border: none; color: rgba(255,255,255,.5); font-size: 24px; cursor: pointer;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; transition: all .15s;
+    }
+    .lib-close:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .lib-toolbar {
+      padding: 16px 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .lib-search {
+      flex: 1; min-width: 160px; padding: 9px 14px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.2);
+      color: #fff; font-size: 14px;
+    }
+    .lib-search::placeholder { color: rgba(255,255,255,.3); }
+    .lib-search:focus { outline: none; border-color: var(--napa-yellow); }
+    .lib-filters { display: flex; gap: 4px; }
+    .lib-filter-btn {
+      padding: 7px 14px; font-size: 12px; font-weight: 600; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.14); background: transparent;
+      color: rgba(255,255,255,.5); cursor: pointer; transition: all .15s;
+    }
+    .lib-filter-btn.active { background: var(--napa-yellow); color: #111; border-color: var(--napa-yellow); }
+    .lib-filter-btn:hover:not(.active) { border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.8); }
+    .lib-sort {
+      padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.2); color: #fff; font-size: 13px; cursor: pointer;
+    }
+    .lib-status { padding: 8px 24px; font-size: 12px; color: rgba(255,255,255,.35); }
+    .lib-grid {
+      padding: 16px 24px 24px; overflow-y: auto; flex: 1;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px;
+    }
+    .lib-cell {
+      position: relative; border-radius: 10px; overflow: hidden; cursor: pointer;
+      border: 2px solid rgba(255,255,255,.08); transition: all .2s; aspect-ratio: 4/5;
+      background: rgba(0,0,0,.3);
+    }
+    .lib-cell:hover { border-color: var(--napa-yellow); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .lib-badge {
+      position: absolute; top: 8px; left: 8px; padding: 2px 8px; border-radius: 4px;
+      background: rgba(0,0,0,.7); color: var(--napa-yellow); font-size: 10px; font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .lib-meta {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 10px;
+      background: linear-gradient(transparent, rgba(0,0,0,.85));
+    }
+    .lib-name { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lib-date { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 2px; }
+
     .composer-timing-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .composer-timing-row label { font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; }
     .composer-timing-row input[type="datetime-local"] { padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; font-size: 13px; }
@@ -2733,44 +2797,135 @@ Occasional deals &amp; promotions</textarea>
       composerShowView('studio');
     };
 
+    // Media Library state
+    var _libAllItems = [];
+    var _libFilter = 'all';
+    var _libSearch = '';
+    var _libSort = 'newest';
+    var _libIndex = null;
+    var _libOverlay = null;
+
+    function _libRenderGrid() {
+      var grid = document.getElementById('libGrid');
+      if (!grid) return;
+      var items = _libAllItems.slice();
+
+      // Filter
+      if (_libFilter === 'image') items = items.filter(function(i) { return !/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i.test(i.url); });
+      if (_libFilter === 'video') items = items.filter(function(i) { return /\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i.test(i.url); });
+
+      // Search
+      if (_libSearch) {
+        var q = _libSearch.toLowerCase();
+        items = items.filter(function(i) { return (i.label || '').toLowerCase().indexOf(q) !== -1; });
+      }
+
+      // Sort
+      if (_libSort === 'newest') items.sort(function(a, b) { return b.created_at.localeCompare(a.created_at); });
+      else if (_libSort === 'oldest') items.sort(function(a, b) { return a.created_at.localeCompare(b.created_at); });
+      else if (_libSort === 'name') items.sort(function(a, b) { return (a.label || '').localeCompare(b.label || ''); });
+
+      // Count
+      document.getElementById('libCount').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+
+      if (!items.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:rgba(255,255,255,.35);">' +
+          (_libAllItems.length ? 'No matches found.' : 'No media yet. Create one in the Studio!') + '</div>';
+        return;
+      }
+      var html = '';
+      items.forEach(function(item, idx) {
+        var isVideo = /\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i.test(item.url);
+        var dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        html += '<div class="lib-cell" data-idx="' + idx + '" data-url="' + item.url + '">';
+        if (isVideo) {
+          html += '<video src="' + item.url + '" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>';
+          html += '<div class="lib-badge">VIDEO</div>';
+        } else {
+          html += '<img src="' + item.url + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />';
+        }
+        html += '<div class="lib-meta">';
+        html += '<div class="lib-name">' + (item.label || 'Untitled') + '</div>';
+        html += '<div class="lib-date">' + dateStr + '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+      grid.innerHTML = html;
+
+      // Click handlers
+      grid.querySelectorAll('.lib-cell').forEach(function(cell) {
+        cell.addEventListener('click', function() {
+          composerMessages[_libIndex].mediaUrl = cell.dataset.url;
+          composerMessages[_libIndex].mediaType = 'library';
+          composerRender();
+          if (_libOverlay) _libOverlay.remove();
+        });
+      });
+    }
+
     window.composerOpenLibrary = function(index) {
+      _libIndex = index;
+      _libFilter = 'all';
+      _libSearch = '';
+      _libSort = 'newest';
+      _libAllItems = [];
+
       composerMessages[index].mediaType = 'library';
       composerMessages[index].mediaUrl = null;
       composerRender();
-      // Fetch campaign media for the library grid
+
       var overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;';
-      var modal = document.createElement('div');
-      modal.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;';
-      modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3 style="margin:0;font-size:16px;">Media Library</h3><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">&times;</button></div><div id="composerLibraryGrid" style="text-align:center;color:rgba(255,255,255,.4);padding:20px;">Loading...</div>';
-      overlay.appendChild(modal);
+      overlay.className = 'lib-overlay';
+      _libOverlay = overlay;
+
+      overlay.innerHTML =
+        '<div class="lib-panel">' +
+          '<div class="lib-header">' +
+            '<h3 style="margin:0;font-size:18px;font-weight:700;">Media Library</h3>' +
+            '<button class="lib-close" onclick="this.closest(\'.lib-overlay\').remove()">&times;</button>' +
+          '</div>' +
+          '<div class="lib-toolbar">' +
+            '<input type="search" id="libSearchInput" placeholder="Search by name..." class="lib-search" />' +
+            '<div class="lib-filters">' +
+              '<button class="lib-filter-btn active" data-filter="all">All</button>' +
+              '<button class="lib-filter-btn" data-filter="image">Images</button>' +
+              '<button class="lib-filter-btn" data-filter="video">Videos</button>' +
+            '</div>' +
+            '<select id="libSortSelect" class="lib-sort">' +
+              '<option value="newest">Newest First</option>' +
+              '<option value="oldest">Oldest First</option>' +
+              '<option value="name">Name A–Z</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="lib-status"><span id="libCount">0 items</span></div>' +
+          '<div id="libGrid" class="lib-grid"><div style="grid-column:1/-1;text-align:center;padding:40px 0;color:rgba(255,255,255,.35);">Loading...</div></div>' +
+        '</div>';
+
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
       document.body.appendChild(overlay);
 
-      fetch(WORKER_BASE + '/admin/media-library', { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(items) {
-        var grid = document.getElementById('composerLibraryGrid');
-        if (!items.length) {
-          grid.textContent = 'No images yet. Create one in the Studio!';
-          return;
-        }
-        var urls = items.map(function(item) { return { url: item.url, name: item.label, date: item.created_at }; });
-        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;';
-        grid.innerHTML = '';
-        urls.forEach(function(item) {
-          var cell = document.createElement('div');
-          cell.style.cssText = 'cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;aspect-ratio:4/5;position:relative;';
-          cell.innerHTML = '<img src="' + item.url + '" style="width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;bottom:0;left:0;right:0;padding:4px 6px;background:rgba(0,0,0,.7);font-size:10px;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.name || '') + '</div>';
-          cell.addEventListener('mouseenter', function() { cell.style.borderColor = 'var(--napa-yellow)'; });
-          cell.addEventListener('mouseleave', function() { cell.style.borderColor = 'transparent'; });
-          cell.addEventListener('click', function() {
-            composerMessages[index].mediaUrl = item.url;
-            composerRender();
-            overlay.remove();
-          });
-          grid.appendChild(cell);
+      // Wire up controls
+      document.getElementById('libSearchInput').addEventListener('input', function() {
+        _libSearch = this.value; _libRenderGrid();
+      });
+      document.getElementById('libSortSelect').addEventListener('change', function() {
+        _libSort = this.value; _libRenderGrid();
+      });
+      overlay.querySelectorAll('.lib-filter-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          overlay.querySelectorAll('.lib-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          _libFilter = btn.dataset.filter;
+          _libRenderGrid();
         });
+      });
+
+      // Fetch items
+      fetch(WORKER_BASE + '/admin/media-library', { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(items) {
+        _libAllItems = items;
+        _libRenderGrid();
       }).catch(function() {
-        document.getElementById('composerLibraryGrid').textContent = 'Failed to load library.';
+        document.getElementById('libGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--red);">Failed to load library.</div>';
       });
     };
 
