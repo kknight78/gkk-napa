@@ -2783,7 +2783,7 @@ Occasional deals &amp; promotions</textarea>
 
         html += '<div class="composer-preview-col">';
         html += '<div class="composer-preview-label">Preview</div>';
-        html += '<div class="composer-phone">';
+        html += '<div class="composer-phone" id="composerPhone' + i + '">';
         if (hasContent) {
           if (hasBody) {
             html += '<div class="composer-phone-bubble">' + (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span></div>';
@@ -2799,7 +2799,7 @@ Occasional deals &amp; promotions</textarea>
         // Test send — below preview
         html += '<div class="composer-test-row">';
         html += '<input type="tel" id="composerTestPhone' + i + '" placeholder="(555) 555-1234" style="width:auto;" />';
-        html += '<button class="btn-secondary" style="flex-shrink:0;padding:8px 14px;font-size:12px;" onclick="composerTestSend(' + i + ')"' + (hasContent ? '' : ' disabled') + '>Send Test</button>';
+        html += '<button id="composerTestBtn' + i + '" class="btn-secondary" style="flex-shrink:0;padding:8px 14px;font-size:12px;" onclick="composerTestSend(' + i + ')"' + (hasContent ? '' : ' disabled') + '>Send Test</button>';
         html += '</div>';
 
         html += '</div>'; // end preview col
@@ -2829,8 +2829,34 @@ Occasional deals &amp; promotions</textarea>
       composerRender();
     };
 
+    function composerUpdatePreview(index) {
+      var phone = document.getElementById('composerPhone' + index);
+      var testBtn = document.getElementById('composerTestBtn' + index);
+      if (!phone) return;
+      var msg = composerMessages[index];
+      var mediaUrl = null;
+      if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
+      else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+      var hasBody = msg.body && msg.body.trim();
+      var hasContent = hasBody || mediaUrl;
+      var h = '';
+      if (hasContent) {
+        if (hasBody) {
+          h += '<div class="composer-phone-bubble">' + msg.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span></div>';
+        }
+        if (mediaUrl) {
+          h += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
+        }
+      } else {
+        h += '<div class="composer-phone-empty">Message preview<br>will appear here</div>';
+      }
+      phone.innerHTML = h;
+      if (testBtn) testBtn.disabled = !hasContent;
+    }
+
     window.composerUpdateBody = function(index, el) {
       composerMessages[index].body = el.value;
+      composerUpdatePreview(index);
     };
 
     window.composerSetMedia = function(index, type) {
