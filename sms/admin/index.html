@@ -503,6 +503,12 @@
     .composer-test-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
     .composer-test-row input { flex: 1; width: auto; padding: 8px 10px; font-size: 13px; }
     .composer-test-row button:disabled { opacity: .35; cursor: not-allowed; }
+    .recipient-chip {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+      padding: 10px 16px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      transition: all .15s; min-width: 90px;
+    }
+    .recipient-chip:hover { border-color: var(--napa-yellow); background: rgba(255,255,255,.06); }
     .composer-add-btn {
       display: block; width: 100%; padding: 12px; margin: 0 0 16px; font-size: 14px; font-weight: 700;
       background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.2); border-radius: 12px;
@@ -1355,30 +1361,29 @@
             <label for="composerName">Campaign Name</label>
             <input id="composerName" type="text" placeholder="e.g., March Motor Oil Sale" maxlength="100" />
 
-            <label for="composerSubject">Email Subject Line</label>
-            <input id="composerSubject" type="text" placeholder="G&KK NAPA Savings Alert" maxlength="150" value="G&KK NAPA Savings Alert" />
-
-            <label for="composerStore">Send To</label>
-            <select id="composerStore" onchange="composerUpdateRecipients()">
-              <option value="">All Stores</option>
-              <option value="danville">Danville, IL</option>
-              <option value="cayuga">Cayuga, IN</option>
-              <option value="rockville">Rockville, IN</option>
-              <option value="covington">Covington, IN</option>
-            </select>
-
             <div style="margin-top:12px;">
               <label style="display:flex;align-items:center;gap:8px;margin:0 0 8px;cursor:pointer;">
                 <input type="checkbox" id="composerPriority" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
                 <span style="font-size:14px;">★ Priority customers only</span>
               </label>
               <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                <input type="checkbox" id="composerEmailFallback" style="width:auto;accent-color:var(--napa-yellow);" />
-                <span style="font-size:14px;">Also email non-subscribed customers</span>
+                <input type="checkbox" id="composerEmailFallback" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
+                <span style="font-size:14px;">Also send email to customers with email addresses</span>
               </label>
             </div>
 
-            <div class="recipient-preview" id="composerRecipientPreview">Loading recipient count...</div>
+            <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
+              <div class="recipient-chip" id="composerSmsCount" onclick="composerViewList('sms')" style="cursor:pointer;" title="Click to view list">
+                <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">SMS</span>
+                <span id="composerSmsNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
+                <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
+              </div>
+              <div class="recipient-chip" id="composerEmailCount" onclick="composerViewList('email')" style="cursor:pointer;display:none;" title="Click to view list">
+                <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">Email</span>
+                <span id="composerEmailNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
+                <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
+              </div>
+            </div>
           </div>
 
           <h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin:0 0 8px;">Messages</h3>
@@ -3067,17 +3072,61 @@ Occasional deals &amp; promotions</textarea>
     };
 
     window.composerUpdateRecipients = function() {
-      var store = document.getElementById('composerStore').value;
       var priority = document.getElementById('composerPriority').checked;
-      var url = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
-      if (store) url += '&store=' + store;
+      var emailChecked = document.getElementById('composerEmailFallback').checked;
+
+      // SMS count (subscribed)
+      var smsUrl = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
+      if (priority) smsUrl += '&priority_only=1';
+      fetch(smsUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
+        document.getElementById('composerSmsNum').textContent = data.count || 0;
+      }).catch(function() {});
+
+      // Email count (all customers with email)
+      var emailChip = document.getElementById('composerEmailCount');
+      if (emailChecked) {
+        emailChip.style.display = '';
+        var emailUrl = WORKER_BASE + '/admin/customers?count_only=1&has_email=1';
+        if (priority) emailUrl += '&priority_only=1';
+        fetch(emailUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
+          document.getElementById('composerEmailNum').textContent = data.count || 0;
+        }).catch(function() {});
+      } else {
+        emailChip.style.display = 'none';
+      }
+    };
+
+    window.composerViewList = function(type) {
+      var priority = document.getElementById('composerPriority').checked;
+      var url = WORKER_BASE + '/admin/customers?status=' + (type === 'sms' ? 'subscribed' : 'all');
+      if (type === 'email') url = WORKER_BASE + '/admin/customers?has_email=1';
       if (priority) url += '&priority_only=1';
-      fetch(url, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
-        var count = data.count || 0;
-        var label = priority ? ' priority' : '';
-        document.getElementById('composerRecipientPreview').textContent = count + label + ' subscribed recipient' + (count !== 1 ? 's' : '');
+
+      var overlay = document.createElement('div');
+      overlay.className = 'lib-overlay';
+      overlay.innerHTML =
+        '<div class="lib-panel" style="max-width:500px;">' +
+          '<div class="lib-header"><h3 style="margin:0;font-size:16px;">' + (type === 'sms' ? 'SMS Recipients' : 'Email Recipients') + '</h3>' +
+          '<button class="lib-close" onclick="this.closest(\'.lib-overlay\').remove()">&times;</button></div>' +
+          '<div id="composerListBody" style="padding:16px 24px;overflow-y:auto;flex:1;"><div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;">Loading...</div></div>' +
+        '</div>';
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+
+      fetch(url, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(customers) {
+        var body = document.getElementById('composerListBody');
+        if (!customers.length) { body.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;">No recipients found.</div>'; return; }
+        var html = '<div style="font-size:12px;color:rgba(255,255,255,.35);margin-bottom:8px;">' + customers.length + ' recipient' + (customers.length !== 1 ? 's' : '') + '</div>';
+        html += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:6px 8px;color:rgba(255,255,255,.5);font-weight:600;">Name</th><th style="text-align:left;padding:6px 8px;color:rgba(255,255,255,.5);font-weight:600;">' + (type === 'sms' ? 'Phone' : 'Email') + '</th></tr>';
+        customers.forEach(function(c) {
+          var detail = type === 'sms' ? (c.phone || '') : (c.email || '');
+          html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);"><td style="padding:6px 8px;">' + (c.name || 'Unknown') + '</td><td style="padding:6px 8px;color:rgba(255,255,255,.6);">' + detail + '</td></tr>';
+        });
+        html += '</table>';
+        body.innerHTML = html;
       }).catch(function() {
-        document.getElementById('composerRecipientPreview').textContent = 'Could not load count';
+        document.getElementById('composerListBody').innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load list.</div>';
       });
     };
 
@@ -3119,8 +3168,7 @@ Occasional deals &amp; promotions</textarea>
         headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: name,
-          email_subject: document.getElementById('composerSubject').value.trim() || 'G&KK NAPA Savings Alert',
-          store: document.getElementById('composerStore').value || null,
+          email_subject: 'G&KK NAPA Savings Alert',
           priority_only: document.getElementById('composerPriority').checked,
           email_fallback: document.getElementById('composerEmailFallback').checked,
           messages: apiMessages

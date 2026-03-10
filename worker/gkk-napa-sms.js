@@ -558,13 +558,9 @@ async function processScheduledEvents(env) {
 
       // Email fallback for scheduled events
       if (promoMeta.email_fallback && env.RESEND_API_KEY) {
-        let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
-        const emailBinds = [];
-        if (campaign.store_filter) { emailSql += " AND store = ?"; emailBinds.push(campaign.store_filter); }
+        let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
         if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
-
-        const emailStmt = env.DB.prepare(emailSql);
-        const emailCustomers = emailBinds.length > 0 ? await emailStmt.bind(...emailBinds).all() : await emailStmt.all();
+        const emailCustomers = await env.DB.prepare(emailSql).all();
 
         for (const customer of emailCustomers.results) {
           const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
@@ -1115,6 +1111,7 @@ async function handleListCustomers(url, env, corsHeaders) {
   const q = url.searchParams.get("q");
   const countOnly = url.searchParams.get("count_only");
   const priorityOnly = url.searchParams.get("priority_only");
+  const hasEmail = url.searchParams.get("has_email");
 
   let sql = countOnly ? "SELECT COUNT(*) as count FROM customers WHERE 1=1" : "SELECT * FROM customers WHERE 1=1";
   const binds = [];
@@ -1129,6 +1126,9 @@ async function handleListCustomers(url, env, corsHeaders) {
   }
   if (priorityOnly) {
     sql += " AND is_priority = 1";
+  }
+  if (hasEmail) {
+    sql += " AND email IS NOT NULL AND email != ''";
   }
   if (q) {
     sql += " AND (name LIKE ? OR phone LIKE ? OR email LIKE ?)";
@@ -2199,11 +2199,9 @@ async function handleCampaignCompose(request, env, corsHeaders) {
     }
 
     if (email_fallback && env.RESEND_API_KEY) {
-      let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
-      const emailBinds = [];
-      if (store) { emailSql += " AND store = ?"; emailBinds.push(store); }
+      let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
       if (priority_only) { emailSql += " AND is_priority = 1"; }
-      const emailCustomers = emailBinds.length > 0 ? await env.DB.prepare(emailSql).bind(...emailBinds).all() : await env.DB.prepare(emailSql).all();
+      const emailCustomers = await env.DB.prepare(emailSql).all();
 
       for (const customer of emailCustomers.results) {
         const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
