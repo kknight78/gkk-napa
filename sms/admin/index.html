@@ -1342,6 +1342,11 @@
                 </div>
                 <div class="cs-step-body">
 
+                <div class="cs-offer-visual-btn" data-offer="none" onclick="csSelectOfferVisual('none')" style="margin-bottom:12px;">
+                  <div style="background:rgba(255,255,255,.08);border-radius:4px;padding:12px;text-align:center;color:rgba(255,255,255,.5);font-weight:700;font-size:15px;">No Offer Bar</div>
+                </div>
+                <hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:0 0 12px;" />
+
                 <h4 style="margin:0 0 6px;font-size:14px;font-weight:700;">Text</h4>
                 <div class="cs-offer-visual-btn" data-offer="text" onclick="csSelectOfferVisual('text')">
                   <div style="background:rgba(0,0,0,.45);border-radius:4px;padding:10px;text-align:center;color:#fff;font-weight:900;font-size:18px;line-height:1.2;">Huge Discounts on all Motor Oil Brands!!</div>
@@ -1392,6 +1397,7 @@
                   <button class="cs-offer-type-btn" onclick="csSelectBodyCount(1)">1 Item</button>
                   <button class="cs-offer-type-btn" onclick="csSelectBodyCount(4)">4 Items</button>
                   <button class="cs-offer-type-btn" onclick="csSelectBodyCount(6)">6 Items</button>
+                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(9)" id="csBodyCount9Btn" style="display:none;">9 Items</button>
                 </div>
                 <div id="csTemplateRow" style="display:none;margin-top:10px;">
                   <h4 style="margin:0 0 6px;font-size:14px;font-weight:700;">Template</h4>
@@ -3029,9 +3035,22 @@ Occasional deals &amp; promotions</textarea>
     }
 
     window.csSelectOfferVisual = function(mode) {
+      // If switching away from 'none' while bodyCount is 9, reset body
+      if (mode !== 'none' && csState.bodyCount === 9) {
+        csState.bodyCount = null;
+        csState.bodyItems = [];
+        document.querySelectorAll('#csStepBody .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('csTemplateRow').style.display = 'none';
+        document.getElementById('csBodyHint').style.display = 'none';
+      }
       csState.offerMode = mode;
       document.querySelectorAll('.cs-offer-visual-btn').forEach(b => b.classList.toggle('active', b.dataset.offer === mode));
-      csUpdateOfferFromVisual();
+      if (mode === 'none') {
+        csState.offerType = 'none';
+        csUpdatePreview();
+      } else {
+        csUpdateOfferFromVisual();
+      }
     };
 
     window.csSelectBadgeColor = function(color) {
@@ -3064,7 +3083,7 @@ Occasional deals &amp; promotions</textarea>
         // Create items with source: null (set per-cell when image added)
         csState.bodyItems = Array.from({ length: count }, () => ({ name: '', image: null, originalImage: null, partNum: '', layout: 'text-image', price: '', fullPrice: '', priceUnit: '/each', cutPriceHidden: false, unitHidden: false, source: null }));
         // Show template selector directly (no source step)
-        if (count === 1 || count === 4 || count === 6) {
+        if (count === 1 || count === 4 || count === 6 || count === 9) {
           document.getElementById('csTemplateRow').style.display = 'block';
           // Auto-select "text-image" as default
           document.querySelectorAll('#csTemplateRow .cs-offer-type-btn').forEach(b => b.classList.remove('active'));
@@ -3221,7 +3240,7 @@ Occasional deals &amp; promotions</textarea>
       document.getElementById('csTeUnit').value = rawUnit;
       document.getElementById('csTeName').value = item.name || 'Product Name';
       // Hide name field for 6-item layouts
-      document.querySelector('.cs-text-edit-desc').style.display = csState.bodyCount === 6 ? 'none' : '';
+      document.querySelector('.cs-text-edit-desc').style.display = (csState.bodyCount === 6 || csState.bodyCount === 9) ? 'none' : '';
       // Set visibility of cut/unit wraps
       var cutHidden = !!item.cutPriceHidden;
       var unitHidden = !!item.unitHidden;
@@ -3401,7 +3420,10 @@ Occasional deals &amp; promotions</textarea>
       var cropW, cropH;
       const item = csState.bodyItems[index];
       const layout = item.layout || 'text-image';
-      if (csState.bodyCount === 6) {
+      if (csState.bodyCount === 9) {
+        cropW = layout === 'image-only' ? 180 : 176;
+        cropH = layout === 'image-only' ? 180 : 120;
+      } else if (csState.bodyCount === 6) {
         cropW = layout === 'image-only' ? 180 : 176;
         cropH = layout === 'image-only' ? 163 : 120;
       } else if (csState.bodyCount === 4) {
@@ -3656,6 +3678,9 @@ Occasional deals &amp; promotions</textarea>
         if (!csState.offerMode) return;
         document.getElementById('csStepOffer').classList.add('completed');
         csShowStep('csStepBody');
+        // Show 9-item option only when no offer bar
+        var btn9 = document.getElementById('csBodyCount9Btn');
+        if (btn9) btn9.style.display = csState.offerMode === 'none' ? '' : 'none';
         document.getElementById('csActions').style.display = 'flex';
       }
     };
@@ -3843,7 +3868,7 @@ Occasional deals &amp; promotions</textarea>
       prevTitleBar.style.display = 'block';
 
       // ── Offer Bar ──
-      if (csState.offerType) {
+      if (csState.offerType && csState.offerType !== 'none') {
         const cfg = CS_OFFER_TYPES[csState.offerType];
         prevOfferBar.style.display = 'flex';
 
@@ -3887,12 +3912,17 @@ Occasional deals &amp; promotions</textarea>
       // ── Body ──
       const prevBody = document.getElementById('csPrevBody');
       if (csState.bodyCount > 0 && csState.bodyItems.length > 0) {
-        // Position: centered between offer bar and title bar (titleH ~95px)
-        if (g.position === 'top') {
-          prevBody.style.top = (318 / 800 * 100).toFixed(2) + '%';
+        var noOffer = !csState.offerType || csState.offerType === 'none';
+        var bodyTop, bodyHeight;
+        if (noOffer) {
+          bodyTop = g.position === 'top' ? 131 : 95;
+          bodyHeight = 574;
         } else {
-          prevBody.style.top = (131 / 800 * 100).toFixed(2) + '%';
+          bodyTop = g.position === 'top' ? 318 : 131;
+          bodyHeight = 352;
         }
+        prevBody.style.top = (bodyTop / 800 * 100).toFixed(2) + '%';
+        prevBody.style.height = bodyHeight + 'px';
         prevBody.style.display = 'flex';
         prevBody.style.background = '';  // reset inline bg from previous render
 
@@ -4116,6 +4146,67 @@ Occasional deals &amp; promotions</textarea>
             ti6Html += '</div>';
             prevBody.innerHTML = ti6Html;
           }
+        } else if (csState.bodyCount === 9) {
+          // ─── 9-Item Preview ───
+          var layout9 = csState.bodyItems[0] ? (csState.bodyItems[0].layout || 'text-image') : 'text-image';
+          prevBody.style.padding = '0';
+          prevBody.style.gap = '0';
+          prevBody.style.flexWrap = 'nowrap';
+          prevBody.style.alignItems = 'stretch';
+          prevBody.style.justifyContent = 'flex-start';
+
+          if (layout9 === 'image-only') {
+            prevBody.style.background = 'linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%)';
+            var grid9Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:' + bodyHeight + 'px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;">';
+            for (var g9 = 0; g9 < 9; g9++) {
+              var g9Item = csState.bodyItems[g9] || {};
+              grid9Html += '<div class="cs-prev-body-clickable" style="width:180px;height:180px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;" onclick="csEditBodyItem(' + g9 + ')">';
+              if (g9Item.image) {
+                grid9Html += '<img src="' + g9Item.image + '" style="max-width:180px;max-height:180px;object-fit:contain;" />';
+                grid9Html += '<div class="cs-img-hover-overlay"><span>&#128247;</span>Click to change</div>';
+              } else {
+                grid9Html += '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:11px;gap:4px;background:rgba(0,0,0,.15);border-radius:4px;"><span style="font-size:20px;">&#128247;</span>Click</div>';
+              }
+              grid9Html += '</div>';
+            }
+            grid9Html += '</div>';
+            prevBody.innerHTML = grid9Html;
+          } else {
+            // Text-Image: 3×3 grid, 176×176 cells (image 176×120 + price bar 176×56)
+            prevBody.style.background = 'rgba(0,0,0,0.3)';
+            var ti9Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:' + bodyHeight + 'px;padding:23px 8px;box-sizing:border-box;column-gap:48px;row-gap:0;">';
+            for (var t9 = 0; t9 < 9; t9++) {
+              var t9Item = csState.bodyItems[t9] || {};
+              var priceBar9 = '';
+              priceBar9 += '<div style="color:#fff;font-weight:900;font-size:20px;line-height:1;">' + (t9Item.fullPrice || '$XX.99') + '</div>';
+              var showCut9 = !t9Item.cutPriceHidden;
+              var showUnit9 = !t9Item.unitHidden;
+              if (showCut9 || showUnit9) {
+                priceBar9 += '<div style="display:flex;align-items:baseline;gap:3px;">';
+                if (showCut9) priceBar9 += '<span style="color:#FFC836;font-weight:300;font-size:10px;line-height:1;text-decoration:line-through;">' + (t9Item.price || '$X.99') + '</span>';
+                if (showUnit9) priceBar9 += '<span style="color:#fff;font-size:10px;font-weight:300;">' + (t9Item.priceUnit || '/each') + '</span>';
+                priceBar9 += '</div>';
+              }
+              var t9CellNapa = t9Item.source === 'napa';
+              ti9Html += '<div style="width:176px;height:176px;display:flex;flex-direction:column;overflow:hidden;">';
+              var t9CellBg = t9CellNapa ? 'background:linear-gradient(180deg, #fff 60%, #999 100%);' : '';
+              var t9PlaceholderColor = t9CellNapa ? 'color:rgba(0,0,0,.3);' : 'color:rgba(255,255,255,.4);background:rgba(0,0,0,.15);border-radius:4px;';
+              ti9Html += '<div class="cs-prev-body-clickable" style="width:176px;height:120px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;' + t9CellBg + '" onclick="csEditBodyItem(' + t9 + ')">';
+              if (t9Item.image) {
+                ti9Html += '<img src="' + t9Item.image + '" style="max-width:176px;max-height:120px;object-fit:contain;" />';
+                ti9Html += '<div class="cs-img-hover-overlay"><span>&#128247;</span>Click to change</div>';
+              } else {
+                ti9Html += '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;' + t9PlaceholderColor + 'font-size:10px;gap:3px;"><span style="font-size:18px;">&#128247;</span>Click</div>';
+              }
+              ti9Html += '</div>';
+              ti9Html += '<div style="width:176px;height:56px;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;" onclick="csOpenTextEdit(' + t9 + ')">';
+              ti9Html += priceBar9;
+              ti9Html += '</div>';
+              ti9Html += '</div>';
+            }
+            ti9Html += '</div>';
+            prevBody.innerHTML = ti9Html;
+          }
         } else {
           // Other multi-item counts — generic grid
           prevBody.style.padding = '8px';
@@ -4298,7 +4389,7 @@ Occasional deals &amp; promotions</textarea>
         } catch (e) { console.warn('Graphic load failed', e); }
 
         // 3. Offer bar
-        if (csState.offerType) {
+        if (csState.offerType && csState.offerType !== 'none') {
           const cfg = CS_OFFER_TYPES[csState.offerType];
           const offerY = g.position === 'top' ? 131 : (800 - 131 - 151);
           ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -4420,8 +4511,9 @@ Occasional deals &amp; promotions</textarea>
           btn.textContent = 'Generating...';
         }
         if (csState.bodyCount > 0) {
-          const bodyY = g.position === 'top' ? 318 : 131;
-          const bodyH = 352;
+          const noOfferC = !csState.offerType || csState.offerType === 'none';
+          const bodyY = noOfferC ? (g.position === 'top' ? 131 : 95) : (g.position === 'top' ? 318 : 131);
+          const bodyH = noOfferC ? 574 : 352;
 
           if (csState.bodyCount === 1) {
             const item = csState.bodyItems[0];
@@ -4776,6 +4868,125 @@ Occasional deals &amp; promotions</textarea>
                       ctx.fillStyle = '#ffffff';
                       ctx.textAlign = 'left';
                       ctx.fillText(unitText6, drawX6, priceY6 + 9);
+                    }
+                  }
+                  ctx.textAlign = 'left';
+                }
+              }
+            }
+          } else if (csState.bodyCount === 9) {
+            // ─── 9-Item Canvas Render ───
+            const layout9c = csState.bodyItems[0] ? (csState.bodyItems[0].layout || 'text-image') : 'text-image';
+            const items9 = csState.bodyItems;
+
+            if (layout9c === 'image-only') {
+              // Photo Only: 3×3 grid, 180×180 cells, 25px side padding
+              const cellW9 = 180;
+              const cellH9 = 180;
+              const gap9X = (590 - cellW9 * 3) / 2; // 25
+              const gap9Y = (bodyH - cellH9 * 3) / 2; // ~17
+
+              const grad9 = ctx.createLinearGradient(0, 0, 640, 0);
+              grad9.addColorStop(0, '#ffffff');
+              grad9.addColorStop(0.8, 'rgba(255,255,255,0.3)');
+              ctx.fillStyle = grad9;
+              ctx.fillRect(0, bodyY, 640, bodyH);
+
+              for (let q9 = 0; q9 < 9; q9++) {
+                const col9 = q9 % 3;
+                const row9 = Math.floor(q9 / 3);
+                const cx9 = 25 + col9 * (cellW9 + gap9X);
+                const cy9 = bodyY + gap9Y + row9 * (cellH9 + gap9Y);
+                if (items9[q9] && items9[q9].image) {
+                  try {
+                    const img9 = await csLoadImage(items9[q9]._canvasImage || items9[q9].image);
+                    const s9 = Math.min(cellW9 / img9.width, cellH9 / img9.height);
+                    const dw9 = img9.width * s9;
+                    const dh9 = img9.height * s9;
+                    ctx.drawImage(img9, cx9 + (cellW9 - dw9) / 2, cy9 + (cellH9 - dh9) / 2, dw9, dh9);
+                  } catch (e) {}
+                }
+              }
+            } else {
+              // Text-Image: 3×3 grid, 176×176 cells, image 176×120 + price bar 176×56
+              ctx.fillStyle = 'rgba(0,0,0,0.3)';
+              ctx.fillRect(0, bodyY, 640, bodyH);
+              await document.fonts.ready;
+
+              const cellW9t = 176;
+              const cellH9t = 176;
+              const imgH9 = 120;
+              const priceH9 = 56;
+              const colGap9 = 48;
+              const topPad9 = Math.floor((bodyH - cellH9t * 3) / 2);
+
+              for (let q9 = 0; q9 < 9; q9++) {
+                const col9 = q9 % 3;
+                const row9 = Math.floor(q9 / 3);
+                const cx9 = 8 + col9 * (cellW9t + colGap9);
+                const cy9 = bodyY + topPad9 + row9 * cellH9t;
+                const it9 = items9[q9] || {};
+
+                // Image area (176×120)
+                const cellNapa9 = it9.source === 'napa';
+                if (cellNapa9) {
+                  const iGrad9 = ctx.createLinearGradient(0, cy9, 0, cy9 + imgH9);
+                  iGrad9.addColorStop(0.6, '#ffffff');
+                  iGrad9.addColorStop(1, '#999999');
+                  ctx.fillStyle = iGrad9;
+                  ctx.fillRect(cx9, cy9, cellW9t, imgH9);
+                }
+                if (it9.image) {
+                  try {
+                    const img9 = await csLoadImage(it9._canvasImage || it9.image);
+                    const s9 = Math.min(cellW9t / img9.width, imgH9 / img9.height);
+                    const dw9 = img9.width * s9;
+                    const dh9 = img9.height * s9;
+                    ctx.drawImage(img9, cx9 + (cellW9t - dw9) / 2, cy9 + (imgH9 - dh9) / 2, dw9, dh9);
+                  } catch (e) {}
+                }
+
+                // Price bar (176×56, solid black)
+                const py9 = cy9 + imgH9;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(cx9, py9, cellW9t, priceH9);
+
+                if (it9.fullPrice) {
+                  const showCut9c = !it9.cutPriceHidden && !!it9.price;
+                  const showUnit9c = !it9.unitHidden && !!it9.priceUnit;
+                  const hasCutRow9 = showCut9c || showUnit9c;
+                  const totalPriceH9 = 20 + (hasCutRow9 ? 12 : 0);
+                  const priceCenterY9 = py9 + priceH9 / 2;
+                  let priceY9 = priceCenterY9 - totalPriceH9 / 2;
+
+                  ctx.fillStyle = '#ffffff';
+                  ctx.font = '900 20px "NAPA Sans Cn", system-ui';
+                  ctx.textAlign = 'center';
+                  ctx.fillText(it9.fullPrice, cx9 + cellW9t / 2, priceY9 + 16);
+                  priceY9 += 20;
+
+                  if (hasCutRow9) {
+                    ctx.font = '300 10px "NAPA Sans Cn", system-ui';
+                    const cutText9 = showCut9c ? it9.price : '';
+                    const unitText9 = showUnit9c ? it9.priceUnit : '';
+                    const cutW9 = cutText9 ? ctx.measureText(cutText9).width : 0;
+                    const eachW9 = unitText9 ? ctx.measureText(unitText9).width : 0;
+                    const gapW9 = (cutText9 && unitText9) ? 3 : 0;
+                    const totalW9 = cutW9 + gapW9 + eachW9;
+                    const startX9 = cx9 + (cellW9t - totalW9) / 2;
+                    let drawX9 = startX9;
+
+                    if (showCut9c) {
+                      ctx.fillStyle = '#FFC836';
+                      ctx.textAlign = 'left';
+                      ctx.fillText(cutText9, drawX9, priceY9 + 9);
+                      ctx.fillRect(drawX9, priceY9 + 5, cutW9, 1);
+                      drawX9 += cutW9 + gapW9;
+                    }
+                    if (showUnit9c) {
+                      ctx.fillStyle = '#ffffff';
+                      ctx.textAlign = 'left';
+                      ctx.fillText(unitText9, drawX9, priceY9 + 9);
                     }
                   }
                   ctx.textAlign = 'left';
