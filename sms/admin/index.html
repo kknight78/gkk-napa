@@ -5129,21 +5129,51 @@ Occasional deals &amp; promotions</textarea>
           if (data.secure_url) {
             document.getElementById('csRenderInfo').textContent +=
               ' | Uploaded: ' + data.secure_url.split('/').pop();
-            // Save to media library
-            fetch(WORKER_BASE + '/admin/media-library', {
-              method: 'POST',
-              headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
-              body: JSON.stringify({ url: data.secure_url, label: (csState.titleText || 'Creative Studio').substring(0, 80) })
-            }).catch(function() {});
-            // If opened from Campaign Composer, show "Use in Campaign" button
+
+            // Action buttons: Save / Discard / Save & Use in Campaign
+            var actionsDiv = document.createElement('div');
+            actionsDiv.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;';
+
+            function csSaveToLibrary(url) {
+              return fetch(WORKER_BASE + '/admin/media-library', {
+                method: 'POST',
+                headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ url: url, label: (csState.titleText || 'Creative Studio').substring(0, 80) })
+              });
+            }
+
+            var saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Save to Library';
+            saveBtn.className = 'btn btn-primary';
+            saveBtn.onclick = function() {
+              saveBtn.disabled = true; saveBtn.textContent = 'Saved!';
+              csSaveToLibrary(data.secure_url);
+              discardBtn.remove();
+            };
+
+            var discardBtn = document.createElement('button');
+            discardBtn.textContent = 'Discard';
+            discardBtn.className = 'btn-secondary';
+            discardBtn.style.cssText = 'padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px;';
+            discardBtn.onclick = function() {
+              actionsDiv.innerHTML = '<span style="color:rgba(255,255,255,.4);font-size:13px;">Discarded — image not saved to library.</span>';
+            };
+
+            actionsDiv.appendChild(saveBtn);
+            actionsDiv.appendChild(discardBtn);
+
             if (composerActiveMessageIndex !== null) {
               var useBtn = document.createElement('button');
-              useBtn.textContent = 'Use in Campaign';
+              useBtn.textContent = 'Save & Use in Campaign';
               useBtn.className = 'btn btn-primary';
-              useBtn.style.cssText = 'margin-top:12px;display:block;';
-              useBtn.onclick = function() { csAttachToComposer(data.secure_url); };
-              document.getElementById('csRenderInfo').parentNode.appendChild(useBtn);
+              useBtn.onclick = function() {
+                csSaveToLibrary(data.secure_url);
+                csAttachToComposer(data.secure_url);
+              };
+              actionsDiv.appendChild(useBtn);
             }
+
+            document.getElementById('csRenderInfo').parentNode.appendChild(actionsDiv);
           }
         } catch (e) { console.warn('Cloudinary upload failed', e); }
 
