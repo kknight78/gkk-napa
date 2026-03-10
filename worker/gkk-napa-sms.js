@@ -1797,16 +1797,34 @@ ${phoneNote}
 
 const QR_CODE_URL = "https://gkk-napa.com/assets/sms_qrcode.svg";
 
+const SMS_LOGO_EMAIL = "https://gkk-napa.com/assets/sms-logo.png";
+
 function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl) {
-  const mediaSection = mediaUrl
+  // Detect if media is the SMS logo (not a real creative)
+  const isLogo = mediaUrl && mediaUrl.includes('sms-logo');
+  const hasCreative = mediaUrl && !isLogo;
+
+  // With a creative image: show it full-width, plain text above
+  // Without creative: show small logo + bigger/bolder message text
+  const mediaSection = hasCreative
     ? `<tr><td style="padding:0 24px 20px;">
 <img src="${mediaUrl}" alt="" style="width:100%;display:block;border-radius:8px;" />
 </td></tr>`
     : '';
 
+  const logoSection = !hasCreative
+    ? `<tr><td style="padding:0 24px 16px;">
+<img src="${SMS_LOGO_EMAIL}" alt="G&KK NAPA Auto Parts" style="height:50px;width:auto;display:block;" />
+</td></tr>`
+    : '';
+
   const bodySection = messageBody
-    ? `<tr><td style="padding:0 24px 20px;">
+    ? hasCreative
+      ? `<tr><td style="padding:0 24px 20px;">
 <p style="margin:0;font-size:16px;color:#333;line-height:1.6;white-space:pre-wrap;">${escHtml(messageBody)}</p>
+</td></tr>`
+      : `<tr><td style="padding:0 24px 20px;">
+<p style="margin:0;font-size:20px;color:#111;line-height:1.5;white-space:pre-wrap;font-weight:600;">${escHtml(messageBody)}</p>
 </td></tr>`
     : '';
 
@@ -1823,8 +1841,11 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 <span style="font-size:18px;font-weight:800;color:#333;letter-spacing:0.5px;">SAVINGS ALERT</span>
 </td></tr>
 
+<!-- Small logo (text-only emails) -->
+${logoSection}
+
 <!-- Greeting + Body -->
-<tr><td style="padding:28px 24px 8px;">
+<tr><td style="padding:${hasCreative ? '28px' : '16px'} 24px 8px;">
 <h1 style="margin:0 0 12px;font-size:20px;color:#111;font-weight:700;">Hi ${escHtml(greeting)},</h1>
 </td></tr>
 
