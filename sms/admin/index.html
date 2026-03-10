@@ -482,6 +482,14 @@
       background: rgba(0,0,0,.7); color: var(--napa-yellow); font-size: 10px; font-weight: 700;
       letter-spacing: .5px;
     }
+    .lib-delete {
+      position: absolute; top: 6px; right: 6px; width: 28px; height: 28px;
+      border-radius: 6px; border: none; background: rgba(0,0,0,.6); color: rgba(255,255,255,.5);
+      font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: all .15s; z-index: 2;
+    }
+    .lib-cell:hover .lib-delete { opacity: 1; }
+    .lib-delete:hover { background: var(--red); color: #fff; }
     .lib-meta {
       position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 10px;
       background: linear-gradient(transparent, rgba(0,0,0,.85));
@@ -2837,13 +2845,14 @@ Occasional deals &amp; promotions</textarea>
       items.forEach(function(item, idx) {
         var isVideo = /\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i.test(item.url);
         var dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-        html += '<div class="lib-cell" data-idx="' + idx + '" data-url="' + item.url + '">';
+        html += '<div class="lib-cell" data-idx="' + idx + '" data-url="' + item.url + '" data-id="' + item.id + '">';
         if (isVideo) {
           html += '<video src="' + item.url + '" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>';
           html += '<div class="lib-badge">VIDEO</div>';
         } else {
           html += '<img src="' + item.url + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />';
         }
+        html += '<button class="lib-delete" data-id="' + item.id + '" title="Delete">&times;</button>';
         html += '<div class="lib-meta">';
         html += '<div class="lib-name">' + (item.label || 'Untitled') + '</div>';
         html += '<div class="lib-date">' + dateStr + '</div>';
@@ -2854,11 +2863,26 @@ Occasional deals &amp; promotions</textarea>
 
       // Click handlers
       grid.querySelectorAll('.lib-cell').forEach(function(cell) {
-        cell.addEventListener('click', function() {
+        cell.addEventListener('click', function(e) {
+          if (e.target.closest('.lib-delete')) return; // handled separately
           composerMessages[_libIndex].mediaUrl = cell.dataset.url;
           composerMessages[_libIndex].mediaType = 'library';
           composerRender();
           if (_libOverlay) _libOverlay.remove();
+        });
+      });
+      grid.querySelectorAll('.lib-delete').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (!confirm('Delete this item from the library?')) return;
+          var id = btn.dataset.id;
+          btn.textContent = '...';
+          fetch(WORKER_BASE + '/admin/media-library/' + id, {
+            method: 'DELETE', headers: authHeaders()
+          }).then(function() {
+            _libAllItems = _libAllItems.filter(function(i) { return String(i.id) !== String(id); });
+            _libRenderGrid();
+          });
         });
       });
     }

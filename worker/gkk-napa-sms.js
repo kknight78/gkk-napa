@@ -791,6 +791,14 @@ export default {
         return handleSaveToLibrary(request, env, corsHeaders);
       }
 
+      // ── Admin: DELETE /admin/media-library/:id ──
+      if (request.method === "DELETE" && path.match(/^\/admin\/media-library\/\d+$/)) {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        const id = path.split('/').pop();
+        await env.DB.prepare("DELETE FROM media_library WHERE id = ?").bind(id).run();
+        return jsonOk(corsHeaders, { ok: true });
+      }
+
       // ── Admin: GET /admin/campaigns ──
       if (request.method === "GET" && path === "/admin/campaigns") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
