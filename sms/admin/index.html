@@ -408,6 +408,8 @@
       position: relative; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.14);
       border-radius: 12px; padding: 16px; margin-bottom: 16px;
     }
+    .composer-msg-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; }
+    @media (max-width: 700px) { .composer-msg-layout { grid-template-columns: 1fr; } }
     .composer-msg-card.active { border-color: var(--napa-yellow); }
     .composer-msg-dot {
       position: absolute; left: -22px; top: 18px; width: 14px; height: 14px;
@@ -498,16 +500,30 @@
     .composer-timing-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .composer-timing-row label { font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; }
     .composer-timing-row input[type="datetime-local"] { width: auto; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; font-size: 13px; }
-    .composer-test-row { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 10px; background: rgba(255,255,255,.03); border: 1px dashed rgba(255,255,255,.14); border-radius: 8px; }
-    .composer-test-row input { flex: 1; padding: 8px 10px; font-size: 13px; }
+    .composer-test-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .composer-test-row input { flex: 1; width: auto; padding: 8px 10px; font-size: 13px; }
+    .composer-test-row button:disabled { opacity: .35; cursor: not-allowed; }
     .composer-add-btn {
       display: block; width: 100%; padding: 12px; margin: 0 0 16px; font-size: 14px; font-weight: 700;
       background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.2); border-radius: 12px;
       color: rgba(255,255,255,.5); cursor: pointer; text-align: center; transition: all .15s;
     }
     .composer-add-btn:hover { border-color: var(--napa-yellow); color: var(--napa-yellow); }
-    .composer-media-preview { margin-top: 8px; }
-    .composer-media-preview img { max-width: 200px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); }
+    .composer-preview-col { display: flex; flex-direction: column; }
+    .composer-preview-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); margin-bottom: 6px; }
+    .composer-phone {
+      background: #1a1a1a; border-radius: 16px; padding: 14px; flex: 1;
+      border: 1px solid rgba(255,255,255,.1); overflow: hidden;
+    }
+    .composer-phone-bubble {
+      background: rgba(255,255,255,.08); border-radius: 12px; padding: 12px;
+      font-size: 13px; line-height: 1.5; color: rgba(255,255,255,.85); white-space: pre-wrap; word-break: break-word;
+    }
+    .composer-phone-media { margin-top: 8px; border-radius: 10px; overflow: hidden; }
+    .composer-phone-media img { width: 100%; display: block; }
+    .composer-phone-empty {
+      text-align: center; padding: 30px 10px; color: rgba(255,255,255,.2); font-size: 13px;
+    }
 
     /* Offer Builder sections */
     .ob-section {
@@ -2722,6 +2738,11 @@ Occasional deals &amp; promotions</textarea>
         if (!isFirst) html += '<button class="composer-msg-remove" onclick="composerRemoveMessage(' + i + ')" title="Remove">&times;</button>';
         html += '</div>';
 
+        html += '<div class="composer-msg-layout">';
+
+        // ── Left column: controls ──
+        html += '<div class="composer-controls-col">';
+
         // Body
         html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Message Text <span style="font-weight:400;color:rgba(255,255,255,.3);">(optional if media attached)</span></label>';
         html += '<textarea class="composer-msg-body" data-index="' + i + '" maxlength="1500" placeholder="Type your message..." style="min-height:80px;" oninput="composerUpdateBody(' + i + ',this)">' + (msg.body || '') + '</textarea>';
@@ -2735,11 +2756,6 @@ Occasional deals &amp; promotions</textarea>
         html += '<button class="composer-media-btn' + (msg.mediaType === 'library' ? ' active' : '') + '" onclick="composerOpenLibrary(' + i + ')">Library</button>';
         html += '<button class="composer-media-btn' + (msg.mediaType === 'studio' ? ' active' : '') + '" onclick="composerOpenStudio(' + i + ')">Create in Studio</button>';
         html += '</div>';
-        if (msg.mediaType === 'logo') {
-          html += '<div class="composer-media-preview"><img src="' + SMS_LOGO_URL + '" alt="Logo" /></div>';
-        } else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) {
-          html += '<div class="composer-media-preview"><img src="' + msg.mediaUrl + '" alt="Preview" /></div>';
-        }
 
         // Timing
         html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);margin-top:10px;display:block;">Timing</label>';
@@ -2756,13 +2772,40 @@ Occasional deals &amp; promotions</textarea>
         }
         html += '</div>';
 
-        // Test send
+        html += '</div>'; // end controls col
+
+        // ── Right column: preview + test send ──
+        var mediaUrl = null;
+        if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
+        else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+        var hasBody = msg.body && msg.body.trim();
+        var hasContent = hasBody || mediaUrl;
+
+        html += '<div class="composer-preview-col">';
+        html += '<div class="composer-preview-label">Preview</div>';
+        html += '<div class="composer-phone">';
+        if (hasContent) {
+          if (hasBody) {
+            html += '<div class="composer-phone-bubble">' + (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span></div>';
+          }
+          if (mediaUrl) {
+            html += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
+          }
+        } else {
+          html += '<div class="composer-phone-empty">Message preview<br>will appear here</div>';
+        }
+        html += '</div>'; // end phone
+
+        // Test send — below preview
         html += '<div class="composer-test-row">';
-        html += '<input type="tel" id="composerTestPhone' + i + '" placeholder="(555) 555-1234" />';
-        html += '<button class="btn-secondary" style="flex-shrink:0;padding:8px 14px;font-size:12px;" onclick="composerTestSend(' + i + ')">Send Test</button>';
+        html += '<input type="tel" id="composerTestPhone' + i + '" placeholder="(555) 555-1234" style="width:auto;" />';
+        html += '<button class="btn-secondary" style="flex-shrink:0;padding:8px 14px;font-size:12px;" onclick="composerTestSend(' + i + ')"' + (hasContent ? '' : ' disabled') + '>Send Test</button>';
         html += '</div>';
 
-        html += '</div>';
+        html += '</div>'; // end preview col
+
+        html += '</div>'; // end layout
+        html += '</div>'; // end card
       }
       document.getElementById('composerTimeline').innerHTML = html;
     }
