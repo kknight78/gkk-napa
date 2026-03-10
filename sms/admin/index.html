@@ -5130,8 +5130,13 @@ Occasional deals &amp; promotions</textarea>
             document.getElementById('csRenderInfo').textContent +=
               ' | Uploaded: ' + data.secure_url.split('/').pop();
 
+            // Clear any previous action buttons
+            var oldActions = document.getElementById('csPostGenActions');
+            if (oldActions) oldActions.remove();
+
             // Action buttons: Save / Discard / Save & Use in Campaign
             var actionsDiv = document.createElement('div');
+            actionsDiv.id = 'csPostGenActions';
             actionsDiv.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;';
 
             function csSaveToLibrary(url) {
