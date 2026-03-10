@@ -1355,6 +1355,9 @@
             <label for="composerName">Campaign Name</label>
             <input id="composerName" type="text" placeholder="e.g., March Motor Oil Sale" maxlength="100" />
 
+            <label for="composerSubject">Email Subject Line</label>
+            <input id="composerSubject" type="text" placeholder="G&KK NAPA Savings Alert" maxlength="150" value="G&KK NAPA Savings Alert" />
+
             <label for="composerStore">Send To</label>
             <select id="composerStore" onchange="composerUpdateRecipients()">
               <option value="">All Stores</option>
@@ -3116,6 +3119,7 @@ Occasional deals &amp; promotions</textarea>
         headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: name,
+          email_subject: document.getElementById('composerSubject').value.trim() || 'G&KK NAPA Savings Alert',
           store: document.getElementById('composerStore').value || null,
           priority_only: document.getElementById('composerPriority').checked,
           email_fallback: document.getElementById('composerEmailFallback').checked,

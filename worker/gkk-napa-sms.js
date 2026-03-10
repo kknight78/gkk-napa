@@ -590,7 +590,7 @@ async function processScheduledEvents(env) {
                 from: env.FROM_EMAIL,
                 to: [customer.email],
                 reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
-                subject: `${campaign.name} \u2014 G&KK NAPA`,
+                subject: promoMeta.email_subject || `${campaign.name} \u2014 G&KK NAPA`,
                 html,
               }),
             });
@@ -2139,7 +2139,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
 // ─── Campaign Composer ─────────────────────────────────────────
 async function handleCampaignCompose(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, store, priority_only, email_fallback, messages } = body;
+  const { name, store, priority_only, email_fallback, email_subject, messages } = body;
 
   if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
   if (!messages || !Array.isArray(messages) || messages.length === 0) return jsonError(corsHeaders, "At least one message is required.", 400);
@@ -2154,7 +2154,8 @@ async function handleCampaignCompose(request, env, corsHeaders) {
   }
 
   const now = new Date().toISOString();
-  const promoMeta = JSON.stringify({ priority_only: !!priority_only, email_fallback: !!email_fallback });
+  const emailSubj = email_subject || "G&KK NAPA Savings Alert";
+  const promoMeta = JSON.stringify({ priority_only: !!priority_only, email_fallback: !!email_fallback, email_subject: emailSubj });
   const firstMsg = messages[0];
 
   const campaignResult = await env.DB.prepare(
@@ -2216,7 +2217,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
           const resp = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: `${name.trim()} \u2014 G&KK NAPA`, html }),
+            body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: emailSubj, html }),
           });
           if (resp.ok) emailSent++; else emailFailed++;
         } catch (e) { emailFailed++; }
