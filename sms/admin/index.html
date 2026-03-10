@@ -1393,7 +1393,7 @@
                 </div>
                 <div class="cs-step-body">
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(0)">None</button>
+                  <button class="cs-offer-type-btn" onclick="csSelectBodyCount(0)" id="csBodyCount0Btn" style="display:none;">None</button>
                   <button class="cs-offer-type-btn" onclick="csSelectBodyCount(1)">1 Item</button>
                   <button class="cs-offer-type-btn" onclick="csSelectBodyCount(4)">4 Items</button>
                   <button class="cs-offer-type-btn" onclick="csSelectBodyCount(6)">6 Items</button>
@@ -3682,6 +3682,9 @@ Occasional deals &amp; promotions</textarea>
         // Show 9-item option only when no offer bar
         var btn9 = document.getElementById('csBodyCount9Btn');
         if (btn9) btn9.style.display = csState.offerMode === 'none' ? '' : 'none';
+        // Show "None" products option only when background is an uploaded photo
+        var btn0 = document.getElementById('csBodyCount0Btn');
+        if (btn0) btn0.style.display = csState.bgType === 'upload' ? '' : 'none';
         document.getElementById('csActions').style.display = 'flex';
       }
     };
