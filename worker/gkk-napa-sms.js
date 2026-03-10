@@ -1818,7 +1818,9 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 <p style="margin:0;font-size:16px;color:#333;line-height:1.6;white-space:pre-wrap;">${escHtml(messageBody)}</p>
 </td></tr>`
       : `<tr><td style="padding:0 24px 20px;">
-<p style="margin:0;font-size:20px;color:#111;line-height:1.5;white-space:pre-wrap;font-weight:600;">${escHtml(messageBody)}</p>
+<div style="background:#FFF8E8;border:2px solid #FFC836;border-radius:12px;padding:20px;">
+<p style="margin:0;font-size:20px;color:#111;line-height:1.5;white-space:pre-wrap;font-weight:700;">${escHtml(messageBody)}</p>
+</div>
 </td></tr>`
     : '';
 
@@ -1832,7 +1834,7 @@ function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, m
 <!-- NAPA Header Bar -->
 <tr><td style="background-color:#0A0094;">
 <img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA Auto Parts" height="75" style="display:block;height:75px;width:auto;">
-<div style="color:#FFC836;font-size:14px;font-weight:700;padding:0 0 12px 12px;letter-spacing:0.5px;">Savings Alert</div>
+<div style="padding:4px 0 14px 12px;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;"><span style="color:#FFC836;">SAVINGS</span> <span style="color:#ffffff;">ALERTS</span></div>
 </td></tr>
 
 <!-- Greeting + Body -->
