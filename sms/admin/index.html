@@ -2747,20 +2747,13 @@ Occasional deals &amp; promotions</textarea>
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
       document.body.appendChild(overlay);
 
-      fetch(WORKER_BASE + '/admin/campaigns', { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(campaigns) {
-        var seen = {};
-        var urls = [];
-        campaigns.forEach(function(c) {
-          if (c.media_url && !seen[c.media_url] && /\.(jpg|jpeg|png|gif|webp|svg)/i.test(c.media_url)) {
-            seen[c.media_url] = true;
-            urls.push({ url: c.media_url, name: c.name, date: c.created_at });
-          }
-        });
+      fetch(WORKER_BASE + '/admin/media-library', { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(items) {
         var grid = document.getElementById('composerLibraryGrid');
-        if (!urls.length) {
-          grid.textContent = 'No images found in past campaigns.';
+        if (!items.length) {
+          grid.textContent = 'No images yet. Create one in the Studio!';
           return;
         }
+        var urls = items.map(function(item) { return { url: item.url, name: item.label, date: item.created_at }; });
         grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;';
         grid.innerHTML = '';
         urls.forEach(function(item) {
@@ -5136,6 +5129,12 @@ Occasional deals &amp; promotions</textarea>
           if (data.secure_url) {
             document.getElementById('csRenderInfo').textContent +=
               ' | Uploaded: ' + data.secure_url.split('/').pop();
+            // Save to media library
+            fetch(WORKER_BASE + '/admin/media-library', {
+              method: 'POST',
+              headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ url: data.secure_url, label: (csState.titleText || 'Creative Studio').substring(0, 80) })
+            }).catch(function() {});
             // If opened from Campaign Composer, show "Use in Campaign" button
             if (composerActiveMessageIndex !== null) {
               var useBtn = document.createElement('button');

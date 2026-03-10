@@ -779,6 +779,18 @@ export default {
         return handleCampaignCompose(request, env, corsHeaders);
       }
 
+      // ── Admin: GET /admin/media-library ──
+      if (request.method === "GET" && path === "/admin/media-library") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleMediaLibrary(env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/media-library ──
+      if (request.method === "POST" && path === "/admin/media-library") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleSaveToLibrary(request, env, corsHeaders);
+      }
+
       // ── Admin: GET /admin/campaigns ──
       if (request.method === "GET" && path === "/admin/campaigns") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -2750,6 +2762,53 @@ async function handleCreatePromoAsset(request, env, corsHeaders) {
 // ═══════════════════════════════════════════════════════════════
 // Admin: Campaign History
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// Media Library
+// ═══════════════════════════════════════════════════════════════
+
+async function handleMediaLibrary(env, corsHeaders) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS media_library (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL UNIQUE,
+      label TEXT,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  const items = await env.DB.prepare(
+    "SELECT id, url, label, created_at FROM media_library ORDER BY created_at DESC"
+  ).all();
+  return jsonOk(corsHeaders, items.results);
+}
+
+async function handleSaveToLibrary(request, env, corsHeaders) {
+  const { url, label } = await request.json();
+  if (!url) return jsonError(corsHeaders, "URL is required.", 400);
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS media_library (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL UNIQUE,
+      label TEXT,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  const now = new Date().toISOString();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO media_library (url, label, created_at) VALUES (?, ?, ?)"
+    ).bind(url, label || null, now).run();
+  } catch (e) {
+    // UNIQUE constraint — already in library, just update label
+    if (label) {
+      await env.DB.prepare("UPDATE media_library SET label = ? WHERE url = ?").bind(label, url).run();
+    }
+  }
+  return jsonOk(corsHeaders, { ok: true });
+}
 
 async function handleListCampaigns(env, corsHeaders) {
   const campaigns = await env.DB.prepare(
