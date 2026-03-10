@@ -773,6 +773,12 @@ export default {
         return handleSendCampaign(request, env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/campaign-compose ──
+      if (request.method === "POST" && path === "/admin/campaign-compose") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleCampaignCompose(request, env, corsHeaders);
+      }
+
       // ── Admin: GET /admin/campaigns ──
       if (request.method === "GET" && path === "/admin/campaigns") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -1087,8 +1093,10 @@ async function handleListCustomers(url, env, corsHeaders) {
   const store = url.searchParams.get("store");
   const status = url.searchParams.get("status");
   const q = url.searchParams.get("q");
+  const countOnly = url.searchParams.get("count_only");
+  const priorityOnly = url.searchParams.get("priority_only");
 
-  let sql = "SELECT * FROM customers WHERE 1=1";
+  let sql = countOnly ? "SELECT COUNT(*) as count FROM customers WHERE 1=1" : "SELECT * FROM customers WHERE 1=1";
   const binds = [];
 
   if (store && VALID_STORES.includes(store)) {
@@ -1099,17 +1107,21 @@ async function handleListCustomers(url, env, corsHeaders) {
     sql += " AND sms_status = ?";
     binds.push(status);
   }
+  if (priorityOnly) {
+    sql += " AND is_priority = 1";
+  }
   if (q) {
     sql += " AND (name LIKE ? OR phone LIKE ? OR email LIKE ?)";
     const search = `%${q}%`;
     binds.push(search, search, search);
   }
 
-  sql += " ORDER BY name ASC, created_at DESC";
+  if (!countOnly) sql += " ORDER BY name ASC, created_at DESC";
 
   const stmt = env.DB.prepare(sql);
   const result = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
 
+  if (countOnly) return jsonOk(corsHeaders, { count: result.results[0].count });
   return jsonOk(corsHeaders, result.results);
 }
 
@@ -2057,6 +2069,108 @@ async function handleSendCampaign(request, env, corsHeaders) {
     failed: failedCount,
     email_sent: emailSent,
     email_failed: emailFailed,
+  });
+}
+
+// ─── Campaign Composer ─────────────────────────────────────────
+async function handleCampaignCompose(request, env, corsHeaders) {
+  const body = await request.json();
+  const { name, store, priority_only, email_fallback, messages } = body;
+
+  if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
+  if (!messages || !Array.isArray(messages) || messages.length === 0) return jsonError(corsHeaders, "At least one message is required.", 400);
+  if (store && !VALID_STORES.includes(store)) return jsonError(corsHeaders, "Invalid store filter.", 400);
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    const hasBody = msg.body && msg.body.trim();
+    if (!hasBody && !msg.media_url) return jsonError(corsHeaders, `Message ${i + 1} needs text or media.`, 400);
+    if (hasBody && msg.body.length > 1500) return jsonError(corsHeaders, `Message ${i + 1} exceeds 1500 characters.`, 400);
+    if (i > 0 && !msg.send_at) return jsonError(corsHeaders, `Message ${i + 1} must have a scheduled time.`, 400);
+  }
+
+  const now = new Date().toISOString();
+  const promoMeta = JSON.stringify({ priority_only: !!priority_only, email_fallback: !!email_fallback });
+  const firstMsg = messages[0];
+
+  const campaignResult = await env.DB.prepare(
+    "INSERT INTO campaigns (name, body, store_filter, recipient_count, promo_type, promo_meta, media_url, created_at) VALUES (?, ?, ?, 0, 'compose', ?, ?, ?)"
+  ).bind(name.trim(), firstMsg.body || "", store || null, promoMeta, firstMsg.media_url || null, now).run();
+  const campaignId = campaignResult.meta.last_row_id;
+
+  const eventIds = [];
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    const sendAt = (i === 0 && msg.send_now) ? now : msg.send_at;
+    const status = (i === 0 && msg.send_now) ? "sending" : "scheduled";
+    const evResult = await env.DB.prepare(
+      "INSERT INTO campaign_events (campaign_id, event_index, label, body, media_url, send_at, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(campaignId, i, `Message ${i + 1}`, msg.body || "", msg.media_url || null, sendAt, status, now).run();
+    eventIds.push(evResult.meta.last_row_id);
+  }
+
+  let sentCount = 0, failedCount = 0, emailSent = 0, emailFailed = 0;
+
+  if (firstMsg.send_now) {
+    let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+    const binds = [];
+    if (store) { customerSql += " AND store = ?"; binds.push(store); }
+    if (priority_only) { customerSql += " AND is_priority = 1"; }
+    const stmt = env.DB.prepare(customerSql);
+    const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+
+    let fullMessage = firstMsg.body ? firstMsg.body.trim() : "";
+    if (fullMessage) {
+      fullMessage = await shortenUrlsInText(fullMessage, env);
+      fullMessage += "\n\nReply STOP to opt out.";
+    }
+
+    for (const customer of customers.results) {
+      const result = await sendSms(env, customer.phone, fullMessage, firstMsg.media_url);
+      await env.DB.prepare(
+        "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+      ).bind(result.ok ? result.sid : null, customer.id, campaignId, fullMessage, result.ok ? (result.status || "queued") : "failed", result.ok ? null : (result.error || "send_failed"), now, now).run();
+      if (result.ok) sentCount++; else failedCount++;
+    }
+
+    if (email_fallback && env.RESEND_API_KEY) {
+      let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
+      const emailBinds = [];
+      if (store) { emailSql += " AND store = ?"; emailBinds.push(store); }
+      if (priority_only) { emailSql += " AND is_priority = 1"; }
+      const emailCustomers = emailBinds.length > 0 ? await env.DB.prepare(emailSql).bind(...emailBinds).all() : await env.DB.prepare(emailSql).all();
+
+      for (const customer of emailCustomers.results) {
+        const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
+        const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+        const displayPhone = canSms ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : null;
+        const shortCode = canSms ? (customer.short_code || await ensureShortCode(env.DB, customer.id)) : null;
+        const subscribeUrl = canSms ? `https://gkk-napa.com/s/${shortCode}` : 'https://gkk-napa.com/sms/subscribe';
+        const emailMedia = firstMsg.media_url && !firstMsg.media_url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) ? firstMsg.media_url : null;
+        const html = buildCampaignEmail(greeting, firstMsg.body || "", subscribeUrl, displayPhone, emailMedia);
+        try {
+          const resp = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: `${name.trim()} \u2014 G&KK NAPA`, html }),
+          });
+          if (resp.ok) emailSent++; else emailFailed++;
+        } catch (e) { emailFailed++; }
+        await new Promise(r => setTimeout(r, 600));
+      }
+    }
+
+    await env.DB.prepare("UPDATE campaign_events SET status = 'sent', sent_count = ?, failed_count = ? WHERE id = ?").bind(sentCount, failedCount, eventIds[0]).run();
+    await env.DB.prepare("UPDATE campaigns SET recipient_count = ?, sent_count = ?, failed_count = ?, email_count = ?, email_failed_count = ? WHERE id = ?").bind(sentCount + failedCount, sentCount, failedCount, emailSent, emailFailed, campaignId).run();
+  }
+
+  return jsonOk(corsHeaders, {
+    campaign_id: campaignId,
+    events: eventIds.length,
+    sent: sentCount,
+    failed: failedCount,
+    email_sent: emailSent,
+    scheduled: messages.filter((m, i) => i > 0 || !m.send_now).length,
   });
 }
 

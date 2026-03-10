@@ -401,6 +401,44 @@
       color: #111;
     }
 
+    /* Campaign Composer */
+    .composer-timeline { position: relative; padding-left: 28px; margin: 16px 0; }
+    .composer-timeline::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.12); }
+    .composer-msg-card {
+      position: relative; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    }
+    .composer-msg-card.active { border-color: var(--napa-yellow); }
+    .composer-msg-dot {
+      position: absolute; left: -22px; top: 18px; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--napa-yellow); border: 2px solid #1a1a1a;
+    }
+    .composer-msg-dot.pending { background: rgba(255,255,255,.3); }
+    .composer-msg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .composer-msg-header h3 { margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--napa-yellow); }
+    .composer-msg-remove { background: none; border: none; color: rgba(255,255,255,.3); cursor: pointer; font-size: 18px; padding: 0 4px; }
+    .composer-msg-remove:hover { color: #ff4444; }
+    .composer-media-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .composer-media-btn {
+      padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid rgba(255,255,255,.18);
+      background: transparent; color: rgba(255,255,255,.6); cursor: pointer; transition: all .15s;
+    }
+    .composer-media-btn.active { background: var(--napa-yellow); color: #111; border-color: var(--napa-yellow); }
+    .composer-media-btn:hover { border-color: rgba(255,255,255,.4); }
+    .composer-timing-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .composer-timing-row label { font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; }
+    .composer-timing-row input[type="datetime-local"] { padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; font-size: 13px; }
+    .composer-test-row { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 10px; background: rgba(255,255,255,.03); border: 1px dashed rgba(255,255,255,.14); border-radius: 8px; }
+    .composer-test-row input { flex: 1; padding: 8px 10px; font-size: 13px; }
+    .composer-add-btn {
+      display: block; width: 100%; padding: 12px; margin: 0 0 16px; font-size: 14px; font-weight: 700;
+      background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.2); border-radius: 12px;
+      color: rgba(255,255,255,.5); cursor: pointer; text-align: center; transition: all .15s;
+    }
+    .composer-add-btn:hover { border-color: var(--napa-yellow); color: var(--napa-yellow); }
+    .composer-media-preview { margin-top: 8px; }
+    .composer-media-preview img { max-width: 200px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); }
+
     /* Offer Builder sections */
     .ob-section {
       background: rgba(255,255,255,.04);
@@ -1223,47 +1261,16 @@
       <!-- ═══ Tab 3: Send SMS ═══ -->
       <div class="tab-content" id="tab-send">
 
-        <!-- Mode Toggle -->
-        <div class="mode-toggle">
-          <button class="mode-btn active" data-mode="manual" onclick="setSendMode('manual')">Manual Message</button>
-          <button class="mode-btn" data-mode="creative" onclick="setSendMode('creative')">Creative Studio</button>
-        </div>
+        <!-- ── Campaign Composer View ── -->
+        <div id="composerView">
+          <div class="form-card" style="margin-bottom:16px;">
+            <h2 style="margin-top:0;">Campaign Composer</h2>
 
-        <!-- ── Manual Message Mode (existing) ── -->
-        <div id="sendModeManual">
-          <div class="form-card">
-            <h2 style="margin-top:0;">New SMS Campaign</h2>
+            <label for="composerName">Campaign Name</label>
+            <input id="composerName" type="text" placeholder="e.g., March Motor Oil Sale" maxlength="100" />
 
-            <label for="campaignName">Campaign Name</label>
-            <input id="campaignName" type="text" placeholder="e.g., February Promo" maxlength="100" />
-
-            <label for="campaignBody">Message <span style="font-weight:400;font-size:12px;color:var(--dim);">(optional if media is attached)</span></label>
-            <textarea id="campaignBody" placeholder="Type your message... (optional if sending media only)" maxlength="1500" style="min-height:120px;"></textarea>
-            <div class="char-count" id="charCount">0 / 1,500</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">"Reply STOP to opt out." appended automatically. Links auto-shortened via gkk-napa.com.</div>
-
-            <label>Media</label>
-            <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
-              <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-                <input type="radio" name="imageOption" value="logo" checked style="width:auto;accent-color:var(--napa-yellow);" /> Store logo
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-                <input type="radio" name="imageOption" value="custom" style="width:auto;accent-color:var(--napa-yellow);" /> Image / Video URL
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer;">
-                <input type="radio" name="imageOption" value="none" style="width:auto;accent-color:var(--napa-yellow);" /> No media (SMS only)
-              </label>
-            </div>
-            <div id="customImageRow" style="display:none;margin-bottom:4px;">
-              <input id="campaignImageUrl" type="url" placeholder="https://example.com/image.png or video.mp4" />
-              <div style="font-size:11px;color:var(--dim);margin-top:4px;">Supports images (jpg, png, gif) and video (mp4). Max 5 MB.</div>
-            </div>
-            <div id="imagePreview" style="margin-bottom:8px;">
-              <img src="https://gkk-napa.com/assets/sms-logo.png" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />
-            </div>
-
-            <label for="campaignStore">Send To</label>
-            <select id="campaignStore">
+            <label for="composerStore">Send To</label>
+            <select id="composerStore" onchange="composerUpdateRecipients()">
               <option value="">All Stores</option>
               <option value="danville">Danville, IL</option>
               <option value="cayuga">Cayuga, IN</option>
@@ -1273,40 +1280,33 @@
 
             <div style="margin-top:12px;">
               <label style="display:flex;align-items:center;gap:8px;margin:0 0 8px;cursor:pointer;">
-                <input type="checkbox" id="priorityOnly" style="width:auto;accent-color:var(--napa-yellow);" />
+                <input type="checkbox" id="composerPriority" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
                 <span style="font-size:14px;">★ Priority customers only</span>
               </label>
               <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                <input type="checkbox" id="emailFallback" style="width:auto;accent-color:var(--napa-yellow);" />
-                <span style="font-size:14px;">Also email non-subscribed customers with email addresses</span>
+                <input type="checkbox" id="composerEmailFallback" style="width:auto;accent-color:var(--napa-yellow);" />
+                <span style="font-size:14px;">Also email non-subscribed customers</span>
               </label>
-              <div id="emailFallbackPreview" style="display:none;font-size:13px;color:var(--dim);margin:6px 0 0 28px;"></div>
             </div>
 
-            <div class="recipient-preview" id="recipientPreview">
-              Loading recipient count...
-            </div>
+            <div class="recipient-preview" id="composerRecipientPreview">Loading recipient count...</div>
+          </div>
 
-            <div style="margin-top:16px;padding:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.18);border-radius:12px;">
-              <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--dim);margin-bottom:8px;">Send Test First</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input id="testPhone" type="tel" placeholder="(555) 555-1234" style="flex:1;padding:10px 12px;font-size:14px;" />
-                <button class="btn-secondary" id="btnSendTest" style="flex-shrink:0;padding:10px 16px;">Send Test</button>
-              </div>
-              <div class="error" id="testError" style="display:none;font-size:13px;"></div>
-              <div class="success" id="testSuccess" style="display:none;font-size:13px;"></div>
-            </div>
+          <h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin:0 0 8px;">Messages</h3>
+          <div class="composer-timeline" id="composerTimeline"></div>
 
-            <div style="margin-top:16px;">
-              <button class="btn-primary" id="btnSend" style="width:100%;font-size:16px;padding:14px;">Send Campaign</button>
-            </div>
-            <div class="error" id="sendError" style="display:none;"></div>
-            <div class="success" id="sendSuccess" style="display:none;"></div>
+          <button class="composer-add-btn" onclick="composerAddMessage()">+ Add Follow-Up Message</button>
+
+          <div class="form-card">
+            <button class="btn-primary" id="composerSendBtn" style="width:100%;font-size:16px;padding:14px;" onclick="composerSubmit()">Send / Schedule Campaign</button>
+            <div class="error" id="composerError" style="display:none;"></div>
+            <div class="success" id="composerSuccess" style="display:none;"></div>
           </div>
         </div>
 
-        <!-- ── Creative Studio Mode ── -->
-        <div id="sendModeCreative" style="display:none;">
+        <!-- ── Creative Studio View (toggled from Composer) ── -->
+        <div id="creativeStudioView" style="display:none;">
+          <button class="btn-secondary" onclick="composerShowView('composer')" style="margin-bottom:12px;">&larr; Back to Campaign Composer</button>
           <div class="cs-layout">
 
             <!-- ═══ LEFT: Wizard Steps ═══ -->
@@ -2374,216 +2374,7 @@ Occasional deals &amp; promotions</textarea>
       }
     });
 
-    // ─── Send SMS Campaign ───────────────────────────────────
-    const campaignName = document.getElementById("campaignName");
-    const campaignBody = document.getElementById("campaignBody");
-    const campaignStore = document.getElementById("campaignStore");
-    const charCount = document.getElementById("charCount");
-    const recipientPreview = document.getElementById("recipientPreview");
-    const sendError = document.getElementById("sendError");
-    const sendSuccess = document.getElementById("sendSuccess");
-
-    campaignBody.addEventListener("input", () => {
-      const len = campaignBody.value.length;
-      charCount.textContent = `${len.toLocaleString()} / 1,500`;
-      charCount.className = "char-count" + (len > 1500 ? " over" : len > 1400 ? " warn" : "");
-    });
-
-    // Image/video option handling
-    const imagePreview = document.getElementById("imagePreview");
-    const customImageRow = document.getElementById("customImageRow");
-    const campaignImageUrl = document.getElementById("campaignImageUrl");
-    const LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
-
-    function isVideoUrl(url) {
-      return /\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i.test(url) || url.includes('/video/');
-    }
-
-    function mediaPreviewHtml(url) {
-      if (!url) return '<div style="font-size:13px;color:var(--dim);padding:8px 0;">Enter a URL above</div>';
-      if (isVideoUrl(url)) {
-        return `<video src="${esc(url)}" controls muted playsinline style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);"></video>`;
-      }
-      return `<img src="${esc(url)}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
-    }
-
-    document.querySelectorAll('input[name="imageOption"]').forEach(radio => {
-      radio.addEventListener("change", () => {
-        const val = radio.value;
-        customImageRow.style.display = val === "custom" ? "block" : "none";
-        if (val === "logo") {
-          imagePreview.innerHTML = `<img src="${LOGO_URL}" alt="Preview" style="max-width:200px;border-radius:8px;border:1px solid rgba(255,255,255,.14);" />`;
-        } else if (val === "none") {
-          imagePreview.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:8px 0;">No media — will send as SMS (cheaper)</div>';
-        } else {
-          imagePreview.innerHTML = mediaPreviewHtml(campaignImageUrl.value.trim());
-        }
-      });
-    });
-    campaignImageUrl.addEventListener("input", () => {
-      const url = campaignImageUrl.value.trim();
-      if (url) {
-        imagePreview.innerHTML = mediaPreviewHtml(url);
-      }
-    });
-
-    function getImageUrl() {
-      const selected = document.querySelector('input[name="imageOption"]:checked').value;
-      if (selected === "logo") return LOGO_URL;
-      if (selected === "custom") return campaignImageUrl.value.trim() || null;
-      return null; // "none" — no image, plain SMS
-    }
-
-    campaignStore.addEventListener("change", updateRecipientPreview);
-
-    // Priority + email fallback toggles
-    const priorityOnly = document.getElementById("priorityOnly");
-    const emailFallback = document.getElementById("emailFallback");
-    const emailFallbackPreview = document.getElementById("emailFallbackPreview");
-
-    priorityOnly.addEventListener("change", updateRecipientPreview);
-    emailFallback.addEventListener("change", () => {
-      emailFallbackPreview.style.display = emailFallback.checked ? "block" : "none";
-      updateRecipientPreview();
-    });
-
-    // ─── Send Test SMS ──────────────────────────────────────
-    const testPhone = document.getElementById("testPhone");
-    const testError = document.getElementById("testError");
-    const testSuccess = document.getElementById("testSuccess");
-
-    testPhone.addEventListener("input", () => {
-      const pos = testPhone.selectionStart;
-      const before = testPhone.value.length;
-      testPhone.value = formatPhone(testPhone.value);
-      const after = testPhone.value.length;
-      testPhone.setSelectionRange(pos + (after - before), pos + (after - before));
-    });
-
-    document.getElementById("btnSendTest").addEventListener("click", async () => {
-      testError.style.display = "none";
-      testSuccess.style.display = "none";
-
-      const body = campaignBody.value.trim();
-      const phone = testPhone.value.trim();
-
-      const imageUrl = getImageUrl();
-      if (!body && !imageUrl) { testError.textContent = "Write a message or attach media."; testError.style.display = "block"; return; }
-      if (!phone) { testError.textContent = "Enter a phone number."; testError.style.display = "block"; return; }
-
-      const btn = document.getElementById("btnSendTest");
-      btn.disabled = true;
-      btn.textContent = "Sending...";
-
-      try {
-        const payload = { phone };
-        if (body) payload.body = body;
-        if (imageUrl) payload.image_url = imageUrl;
-
-        const resp = await fetch(`${WORKER_BASE}/admin/send-test`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify(payload),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Failed to send test.");
-
-        const sid = data.sid || "";
-        testSuccess.innerHTML = `Test sent! Check your phone.${sid ? ` <span style="font-size:11px;color:var(--dim);user-select:all;cursor:text;">SID: ${sid}</span>` : ""}`;
-        testSuccess.style.display = "block";
-      } catch (e) {
-        testError.textContent = e.message;
-        testError.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Send Test";
-      }
-    });
-
-    async function updateRecipientPreview() {
-      const params = new URLSearchParams({ status: "subscribed" });
-      if (campaignStore.value) params.set("store", campaignStore.value);
-
-      try {
-        const allResp = await fetch(`${WORKER_BASE}/admin/customers?${params}`, { headers: authHeaders() });
-        let smsRecipients = await allResp.json();
-        if (priorityOnly.checked) smsRecipients = smsRecipients.filter(c => c.is_priority);
-        const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
-        const priorityLabel = priorityOnly.checked ? " priority" : "";
-        recipientPreview.innerHTML = `Will send SMS to <strong>${smsRecipients.length}</strong>${priorityLabel} subscribed customer${smsRecipients.length !== 1 ? "s" : ""} at ${storeName}.`;
-
-        // Email fallback count
-        if (emailFallback.checked) {
-          const allCustResp = await fetch(`${WORKER_BASE}/admin/customers`, { headers: authHeaders() });
-          const allCusts = await allCustResp.json();
-          let emailEligible = allCusts.filter(c => c.sms_status !== 'subscribed' && c.email);
-          if (campaignStore.value) emailEligible = emailEligible.filter(c => c.store === campaignStore.value);
-          if (priorityOnly.checked) emailEligible = emailEligible.filter(c => c.is_priority);
-          emailFallbackPreview.textContent = `+ Will email ${emailEligible.length}${priorityLabel} non-subscribed customer${emailEligible.length !== 1 ? 's' : ''} with email addresses.`;
-        }
-      } catch {
-        recipientPreview.innerHTML = "Could not load recipient count.";
-      }
-    }
-
-    document.getElementById("btnSend").addEventListener("click", async () => {
-      sendError.style.display = "none";
-      sendSuccess.style.display = "none";
-
-      const name = campaignName.value.trim();
-      const body = campaignBody.value.trim();
-
-      const imageUrl = getImageUrl();
-      if (!name) { sendError.textContent = "Campaign name is required."; sendError.style.display = "block"; return; }
-      if (!body && !imageUrl) { sendError.textContent = "Message body or media is required."; sendError.style.display = "block"; return; }
-      if (body.length > 1500) { sendError.textContent = "Message is too long."; sendError.style.display = "block"; return; }
-
-      const msgType = imageUrl ? (body ? "MMS (with media)" : "MMS (media only)") : "SMS (text only)";
-      const storeName = campaignStore.value ? (STORE_NAMES[campaignStore.value] || campaignStore.value) : "all stores";
-      const priorityLabel = priorityOnly.checked ? " PRIORITY" : "";
-      const emailNote = emailFallback.checked ? `\n\n+ Email to${priorityLabel.toLowerCase()} non-subscribed customers with email.` : '';
-      const confirmMsg = body
-        ? `Send this ${msgType} campaign to${priorityLabel} subscribed customers at ${storeName}?${emailNote}\n\nMessage:\n${body}\n\nReply STOP to opt out.`
-        : `Send this ${msgType} campaign to${priorityLabel} subscribed customers at ${storeName}?${emailNote}\n\n(Media only, no text body)`;
-      if (!confirm(confirmMsg)) return;
-
-      const btn = document.getElementById("btnSend");
-      btn.disabled = true;
-      btn.textContent = "Sending...";
-
-      try {
-        const payload = { name, store: campaignStore.value || undefined };
-        if (body) payload.body = body;
-        if (imageUrl) payload.image_url = imageUrl;
-        if (priorityOnly.checked) payload.priority_only = true;
-        if (emailFallback.checked) payload.email_fallback = true;
-
-        const resp = await fetch(`${WORKER_BASE}/admin/send`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify(payload),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Failed to send.");
-
-        let successMsg = `Campaign sent! ${data.sent} SMS delivered, ${data.failed} failed out of ${data.recipient_count} recipients.`;
-        if (data.email_sent > 0 || data.email_failed > 0) {
-          successMsg += ` Emails: ${data.email_sent} sent, ${data.email_failed} failed.`;
-        }
-        sendSuccess.textContent = successMsg;
-        sendSuccess.style.display = "block";
-        campaignName.value = "";
-        campaignBody.value = "";
-        charCount.textContent = "0 / 1,500";
-        charCount.className = "char-count";
-      } catch (e) {
-        sendError.textContent = e.message;
-        sendError.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Send Campaign";
-      }
-    });
+    // (Old manual message code removed — replaced by Campaign Composer)
 
     // ─── Campaign History ────────────────────────────────────
     const campaignList = document.getElementById("campaignList");
@@ -2838,11 +2629,243 @@ Occasional deals &amp; promotions</textarea>
     const csImageCache = {};
 
     // ─── Send Mode Toggle ───
-    window.setSendMode = function(mode) {
-      document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
-      document.getElementById("sendModeManual").style.display = mode === "manual" ? "block" : "none";
-      document.getElementById("sendModeCreative").style.display = mode === "creative" ? "block" : "none";
+    // ─── Campaign Composer ───
+    var composerMessages = [
+      { body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }
+    ];
+    var composerActiveMessageIndex = null;
+    var SMS_LOGO_URL = 'https://gkk-napa.com/assets/sms-logo.png';
+
+    window.composerShowView = function(view) {
+      document.getElementById('composerView').style.display = view === 'composer' ? 'block' : 'none';
+      document.getElementById('creativeStudioView').style.display = view === 'studio' ? 'block' : 'none';
     };
+
+    function composerRender() {
+      var html = '';
+      for (var i = 0; i < composerMessages.length; i++) {
+        var msg = composerMessages[i];
+        var isFirst = i === 0;
+        html += '<div class="composer-msg-card" data-index="' + i + '">';
+        html += '<div class="composer-msg-dot' + (isFirst ? '' : ' pending') + '"></div>';
+        html += '<div class="composer-msg-header"><h3>Message ' + (i + 1) + '</h3>';
+        if (!isFirst) html += '<button class="composer-msg-remove" onclick="composerRemoveMessage(' + i + ')" title="Remove">&times;</button>';
+        html += '</div>';
+
+        // Body
+        html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Message Text <span style="font-weight:400;color:rgba(255,255,255,.3);">(optional if media attached)</span></label>';
+        html += '<textarea class="composer-msg-body" data-index="' + i + '" maxlength="1500" placeholder="Type your message..." style="min-height:80px;" oninput="composerUpdateBody(' + i + ',this)">' + (msg.body || '') + '</textarea>';
+        html += '<div style="font-size:11px;color:rgba(255,255,255,.3);margin:2px 0 8px;">' + (msg.body || '').length + '/1,500 &mdash; "Reply STOP to opt out." appended automatically</div>';
+
+        // Media
+        html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Media</label>';
+        html += '<div class="composer-media-btns">';
+        html += '<button class="composer-media-btn' + (msg.mediaType === 'none' ? ' active' : '') + '" onclick="composerSetMedia(' + i + ',\'none\')">None</button>';
+        html += '<button class="composer-media-btn' + (msg.mediaType === 'logo' ? ' active' : '') + '" onclick="composerSetMedia(' + i + ',\'logo\')">Logo</button>';
+        html += '<button class="composer-media-btn' + (msg.mediaType === 'url' ? ' active' : '') + '" onclick="composerSetMedia(' + i + ',\'url\')">Image/Video URL</button>';
+        html += '<button class="composer-media-btn' + (msg.mediaType === 'studio' ? ' active' : '') + '" onclick="composerOpenStudio(' + i + ')">Create in Studio</button>';
+        html += '</div>';
+        if (msg.mediaType === 'url') {
+          html += '<input type="url" class="composer-media-url-input" data-index="' + i + '" placeholder="https://example.com/image.jpg" value="' + (msg.mediaUrl || '') + '" oninput="composerUpdateMediaUrl(' + i + ',this.value)" style="margin-bottom:4px;" />';
+        }
+        if (msg.mediaType === 'logo') {
+          html += '<div class="composer-media-preview"><img src="' + SMS_LOGO_URL + '" alt="Logo" /></div>';
+        } else if ((msg.mediaType === 'url' || msg.mediaType === 'studio') && msg.mediaUrl) {
+          html += '<div class="composer-media-preview"><img src="' + msg.mediaUrl + '" alt="Preview" /></div>';
+        }
+
+        // Timing
+        html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);margin-top:10px;display:block;">Timing</label>';
+        html += '<div class="composer-timing-row">';
+        if (isFirst) {
+          html += '<label><input type="radio" name="composerTiming0" value="now" style="width:auto;accent-color:var(--napa-yellow);"' + (msg.sendNow ? ' checked' : '') + ' onchange="composerSetTiming(' + i + ',true)"> Send Now</label>';
+          html += '<label><input type="radio" name="composerTiming0" value="schedule" style="width:auto;accent-color:var(--napa-yellow);"' + (!msg.sendNow ? ' checked' : '') + ' onchange="composerSetTiming(' + i + ',false)"> Schedule</label>';
+          if (!msg.sendNow) {
+            html += '<input type="datetime-local" value="' + (msg.sendAt || '') + '" onchange="composerSetSendAt(' + i + ',this.value)" />';
+          }
+        } else {
+          html += '<input type="datetime-local" value="' + (msg.sendAt || '') + '" onchange="composerSetSendAt(' + i + ',this.value)" />';
+          html += '<span style="font-size:11px;color:rgba(255,255,255,.3);">Sent within 5 min of scheduled time</span>';
+        }
+        html += '</div>';
+
+        // Test send
+        html += '<div class="composer-test-row">';
+        html += '<input type="tel" id="composerTestPhone' + i + '" placeholder="(555) 555-1234" />';
+        html += '<button class="btn-secondary" style="flex-shrink:0;padding:8px 14px;font-size:12px;" onclick="composerTestSend(' + i + ')">Send Test</button>';
+        html += '</div>';
+
+        html += '</div>';
+      }
+      document.getElementById('composerTimeline').innerHTML = html;
+    }
+
+    window.composerAddMessage = function() {
+      // Default schedule to 2 days after last message
+      var lastMsg = composerMessages[composerMessages.length - 1];
+      var defaultDate = '';
+      if (lastMsg.sendAt) {
+        var d = new Date(lastMsg.sendAt);
+        d.setDate(d.getDate() + 2);
+        defaultDate = d.toISOString().slice(0, 16);
+      }
+      composerMessages.push({ body: '', mediaType: 'none', mediaUrl: null, sendNow: false, sendAt: defaultDate });
+      composerRender();
+    };
+
+    window.composerRemoveMessage = function(index) {
+      if (composerMessages.length <= 1) return;
+      composerMessages.splice(index, 1);
+      composerRender();
+    };
+
+    window.composerUpdateBody = function(index, el) {
+      composerMessages[index].body = el.value;
+    };
+
+    window.composerSetMedia = function(index, type) {
+      composerMessages[index].mediaType = type;
+      if (type === 'logo') composerMessages[index].mediaUrl = SMS_LOGO_URL;
+      else if (type === 'none') composerMessages[index].mediaUrl = null;
+      composerRender();
+    };
+
+    window.composerUpdateMediaUrl = function(index, url) {
+      composerMessages[index].mediaUrl = url;
+    };
+
+    window.composerOpenStudio = function(index) {
+      composerActiveMessageIndex = index;
+      composerMessages[index].mediaType = 'studio';
+      composerShowView('studio');
+    };
+
+    window.composerSetTiming = function(index, sendNow) {
+      composerMessages[index].sendNow = sendNow;
+      composerMessages[index].sendAt = null;
+      composerRender();
+    };
+
+    window.composerSetSendAt = function(index, val) {
+      composerMessages[index].sendAt = val;
+    };
+
+    window.composerTestSend = function(index) {
+      var msg = composerMessages[index];
+      var phone = document.getElementById('composerTestPhone' + index).value;
+      if (!phone) { alert('Enter a phone number first.'); return; }
+      var mediaUrl = null;
+      if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
+      else if ((msg.mediaType === 'url' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+
+      fetch(WORKER_BASE + '/admin/send-test', {
+        method: 'POST',
+        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ body: msg.body, phone: phone, image_url: mediaUrl })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) alert('Test failed: ' + data.error);
+        else alert('Test sent!');
+      }).catch(function(e) { alert('Error: ' + e.message); });
+    };
+
+    window.composerUpdateRecipients = function() {
+      var store = document.getElementById('composerStore').value;
+      var priority = document.getElementById('composerPriority').checked;
+      var url = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
+      if (store) url += '&store=' + store;
+      if (priority) url += '&priority_only=1';
+      fetch(url, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
+        var count = data.count || 0;
+        var label = priority ? ' priority' : '';
+        document.getElementById('composerRecipientPreview').textContent = count + label + ' subscribed recipient' + (count !== 1 ? 's' : '');
+      }).catch(function() {
+        document.getElementById('composerRecipientPreview').textContent = 'Could not load count';
+      });
+    };
+
+    window.composerSubmit = function() {
+      var name = document.getElementById('composerName').value.trim();
+      if (!name) { composerShowError('Campaign name is required.'); return; }
+
+      var apiMessages = [];
+      for (var i = 0; i < composerMessages.length; i++) {
+        var msg = composerMessages[i];
+        var mediaUrl = null;
+        if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
+        else if ((msg.mediaType === 'url' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+
+        var hasBody = msg.body && msg.body.trim();
+        if (!hasBody && !mediaUrl) { composerShowError('Message ' + (i + 1) + ' needs text or media.'); return; }
+        if (i > 0 && !msg.sendAt) { composerShowError('Message ' + (i + 1) + ' needs a scheduled time.'); return; }
+        if (i === 0 && !msg.sendNow && !msg.sendAt) { composerShowError('Message 1 needs a scheduled time or "Send Now".'); return; }
+
+        var sendAt = null;
+        if (!msg.sendNow && msg.sendAt) sendAt = new Date(msg.sendAt).toISOString();
+
+        apiMessages.push({ body: msg.body || '', media_url: mediaUrl, send_now: i === 0 && msg.sendNow, send_at: sendAt });
+      }
+
+      var sendNowCount = apiMessages.filter(function(m) { return m.send_now; }).length;
+      var schedCount = apiMessages.length - sendNowCount;
+      var confirmMsg = 'Send this campaign?\n\n';
+      if (sendNowCount > 0) confirmMsg += '• ' + sendNowCount + ' message(s) sent immediately\n';
+      if (schedCount > 0) confirmMsg += '• ' + schedCount + ' message(s) scheduled\n';
+      if (!confirm(confirmMsg)) return;
+
+      var btn = document.getElementById('composerSendBtn');
+      btn.disabled = true; btn.textContent = 'Sending...';
+      composerShowError(''); composerShowSuccess('');
+
+      fetch(WORKER_BASE + '/admin/campaign-compose', {
+        method: 'POST',
+        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          name: name,
+          store: document.getElementById('composerStore').value || null,
+          priority_only: document.getElementById('composerPriority').checked,
+          email_fallback: document.getElementById('composerEmailFallback').checked,
+          messages: apiMessages
+        })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { composerShowError(data.error); return; }
+        var msg = 'Campaign created!';
+        if (data.sent > 0) msg += ' Sent to ' + data.sent + ' subscribers.';
+        if (data.scheduled > 0) msg += ' ' + data.scheduled + ' message(s) scheduled.';
+        composerShowSuccess(msg);
+        // Reset composer
+        composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }];
+        document.getElementById('composerName').value = '';
+        composerRender();
+      }).catch(function(e) {
+        composerShowError('Error: ' + e.message);
+      }).finally(function() {
+        btn.disabled = false; btn.textContent = 'Send / Schedule Campaign';
+      });
+    };
+
+    function composerShowError(msg) {
+      var el = document.getElementById('composerError');
+      el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+    }
+    function composerShowSuccess(msg) {
+      var el = document.getElementById('composerSuccess');
+      el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+    }
+
+    // Attach studio-generated image to composer
+    window.csAttachToComposer = function(url) {
+      if (composerActiveMessageIndex !== null) {
+        composerMessages[composerActiveMessageIndex].mediaType = 'studio';
+        composerMessages[composerActiveMessageIndex].mediaUrl = url;
+        composerActiveMessageIndex = null;
+        composerShowView('composer');
+        composerRender();
+      }
+    };
+
+    // Initialize composer on load
+    composerRender();
+    composerUpdateRecipients();
 
     // ─── Color Selection ───
     window.csSelectColor = function(color) {
@@ -5072,6 +5095,15 @@ Occasional deals &amp; promotions</textarea>
           if (data.secure_url) {
             document.getElementById('csRenderInfo').textContent +=
               ' | Uploaded: ' + data.secure_url.split('/').pop();
+            // If opened from Campaign Composer, show "Use in Campaign" button
+            if (composerActiveMessageIndex !== null) {
+              var useBtn = document.createElement('button');
+              useBtn.textContent = 'Use in Campaign';
+              useBtn.className = 'btn btn-primary';
+              useBtn.style.cssText = 'margin-top:12px;display:block;';
+              useBtn.onclick = function() { csAttachToComposer(data.secure_url); };
+              document.getElementById('csRenderInfo').parentNode.appendChild(useBtn);
+            }
           }
         } catch (e) { console.warn('Cloudinary upload failed', e); }
 
