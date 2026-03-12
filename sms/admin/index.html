@@ -1282,29 +1282,34 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Toast notifications */
+    /* Toast notifications — inline near trigger */
     .toast {
       background: rgba(30,30,60,.95);
       border: 1px solid rgba(255,255,255,.2);
       border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 14px;
+      padding: 10px 16px;
+      font-size: 13px;
       color: #fff;
       pointer-events: auto;
       box-shadow: 0 8px 32px rgba(0,0,0,.5);
       animation: toastIn .3s ease-out;
-      max-width: 360px;
+      max-width: 340px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      position: absolute;
+      z-index: 10000;
+      white-space: nowrap;
     }
     .toast.success { border-color: rgba(142,207,142,.4); }
-    .toast.success::before { content: '\2713'; color: var(--green); font-weight: 700; font-size: 16px; }
+    .toast.success::before { content: '\2713'; color: var(--green); font-weight: 700; font-size: 15px; }
     .toast.error { border-color: rgba(255,107,107,.4); }
-    .toast.error::before { content: '\2717'; color: var(--red); font-weight: 700; font-size: 16px; }
+    .toast.error::before { content: '\2717'; color: var(--red); font-weight: 700; font-size: 15px; }
+    .toast.info { border-color: rgba(100,180,255,.4); }
+    .toast.info::before { content: '\2139'; color: #8cc4ff; font-weight: 700; font-size: 15px; }
     .toast.fadeout { animation: toastOut .3s ease-in forwards; }
-    @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
 
     /* Review modal summary */
     .review-row {
@@ -1879,8 +1884,7 @@ Occasional deals &amp; promotions</textarea>
     </div>
   </div>
 
-  <!-- ═══ Toast Container ═══ -->
-  <div id="toastContainer" style="position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+  <!-- Toast notifications are positioned inline near their trigger -->
 
   <script>
     const WORKER_BASE = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
@@ -2546,13 +2550,19 @@ Occasional deals &amp; promotions</textarea>
       var row = document.querySelector('.customer-item[data-id="' + id + '"]');
       if (row) { row.style.display = 'none'; row.dataset.pendingDelete = '1'; }
 
-      // Build undo toast
-      var container = document.getElementById('toastContainer');
+      // Build undo toast near the deleted row
       var toast = document.createElement('div');
       toast.className = 'toast';
       toast.style.borderColor = 'rgba(255,107,107,.4)';
       toast.innerHTML = '<span style="flex:1;">Deleted <strong>' + esc(name) + '</strong></span><button style="background:var(--napa-yellow);color:#111;border:none;border-radius:6px;padding:4px 12px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;" id="undoDeleteBtn">Undo</button>';
-      container.appendChild(toast);
+      document.body.appendChild(toast);
+      if (row) {
+        var rr = row.getBoundingClientRect();
+        toast.style.left = (rr.left + rr.width / 2 - toast.offsetWidth / 2) + 'px';
+        toast.style.top = (rr.top + window.scrollY) + 'px';
+      } else {
+        toast.style.position = 'fixed'; toast.style.top = '20px'; toast.style.right = '20px';
+      }
 
       var pending = {
         id: id,
@@ -2568,7 +2578,7 @@ Occasional deals &amp; promotions</textarea>
         if (row) { row.style.display = ''; delete row.dataset.pendingDelete; }
         toast.classList.add('fadeout');
         setTimeout(function() { toast.remove(); }, 300);
-        showToast('Restored ' + name, 'success');
+        showToast('Restored ' + name, 'success', row);
       });
     };
 
@@ -2777,7 +2787,7 @@ Occasional deals &amp; promotions</textarea>
                 </div>
                 <div style="margin-top:8px;display:flex;gap:8px;">
                   <button class="btn-primary" style="padding:6px 16px;font-size:13px;" onclick="event.stopPropagation();loadDraft(${c.id})">Edit Draft</button>
-                  <button class="btn-danger" style="padding:6px 12px;font-size:13px;" onclick="event.stopPropagation();deleteDraft(${c.id})">Delete</button>
+                  <button class="btn-danger" style="padding:6px 12px;font-size:13px;" onclick="event.stopPropagation();deleteDraft(${c.id},this)">Delete</button>
                 </div>
               </div>
             `;
@@ -2878,11 +2888,11 @@ Occasional deals &amp; promotions</textarea>
       } catch (e) { alert('Failed to load draft: ' + e.message); }
     };
 
-    window.deleteDraft = async function(id) {
+    window.deleteDraft = async function(id, btnEl) {
       if (!confirm('Delete this draft?')) return;
       try {
         await fetch(`${WORKER_BASE}/admin/campaigns/${id}`, { method: 'DELETE', headers: authHeaders() });
-        showToast('Draft deleted', 'success');
+        showToast('Draft deleted', 'success', btnEl);
         loadCampaigns();
       } catch { alert('Failed to delete draft.'); }
     };
@@ -3590,8 +3600,9 @@ Occasional deals &amp; promotions</textarea>
 
     window.composerTestSend = function(index) {
       var msg = composerMessages[index];
+      var btn = document.getElementById('composerTestBtn' + index);
       var dest = (document.getElementById('composerTestDest' + index).value || '').trim();
-      if (!dest) { showToast('Enter a phone number or email.', 'error'); return; }
+      if (!dest) { showToast('Enter a phone number or email.', 'error', btn); return; }
       var mediaUrl = null;
       if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
       else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
@@ -3604,18 +3615,18 @@ Occasional deals &amp; promotions</textarea>
           headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
           body: JSON.stringify({ email: dest, sms_text: msg.body, image_url: mediaUrl, subject: 'G&KK NAPA - SAVINGS ALERT!' })
         }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data.error) showToast('Test failed: ' + data.error, 'error');
-          else showToast('Test email sent to ' + dest, 'success');
-        }).catch(function(e) { showToast('Error: ' + e.message, 'error'); });
+          if (data.error) showToast('Test failed: ' + data.error, 'error', btn);
+          else showToast('Test email sent to ' + dest, 'success', btn);
+        }).catch(function(e) { showToast('Error: ' + e.message, 'error', btn); });
       } else {
         fetch(WORKER_BASE + '/admin/send-test', {
           method: 'POST',
           headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
           body: JSON.stringify({ body: msg.body, phone: dest, image_url: mediaUrl })
         }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data.error) showToast('Test failed: ' + data.error, 'error');
-          else showToast('Test SMS sent!', 'success');
-        }).catch(function(e) { showToast('Error: ' + e.message, 'error'); });
+          if (data.error) showToast('Test failed: ' + data.error, 'error', btn);
+          else showToast('Test SMS sent!', 'success', btn);
+        }).catch(function(e) { showToast('Error: ' + e.message, 'error', btn); });
       }
     };
 
@@ -3692,13 +3703,36 @@ Occasional deals &amp; promotions</textarea>
     };
 
     // ─── Toast notification system ──────────────────────────
-    function showToast(message, type) {
+    // showToast(message, type, anchor)
+    //   anchor: optional DOM element or element ID string — toast appears next to it
+    //           if omitted, falls back to fixed top-right corner
+    function showToast(message, type, anchor) {
       type = type || 'success';
-      var container = document.getElementById('toastContainer');
+      var el = typeof anchor === 'string' ? document.getElementById(anchor) : anchor;
       var toast = document.createElement('div');
       toast.className = 'toast ' + type;
       toast.textContent = message;
-      container.appendChild(toast);
+      document.body.appendChild(toast);
+
+      if (el) {
+        var rect = el.getBoundingClientRect();
+        var tW = toast.offsetWidth;
+        // Position above the anchor, centered horizontally
+        var left = rect.left + rect.width / 2 - tW / 2;
+        var top = rect.top - toast.offsetHeight - 8 + window.scrollY;
+        // Keep on screen
+        if (left < 8) left = 8;
+        if (left + tW > window.innerWidth - 8) left = window.innerWidth - tW - 8;
+        if (top < 8 + window.scrollY) top = rect.bottom + 8 + window.scrollY;
+        toast.style.left = left + 'px';
+        toast.style.top = top + 'px';
+      } else {
+        // Fallback: fixed top-right
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+      }
+
       setTimeout(function() {
         toast.classList.add('fadeout');
         setTimeout(function() { toast.remove(); }, 300);
@@ -3827,7 +3861,7 @@ Occasional deals &amp; promotions</textarea>
         if (data.sent > 0) msg += ' Sent to ' + data.sent + ' subscribers.';
         if (data.scheduled > 0) msg += ' ' + data.scheduled + ' message(s) scheduled.';
         composerShowSuccess(msg);
-        showToast(msg, 'success');
+        showToast(msg, 'success', 'btnReviewConfirm');
         // Reset composer
         composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }];
         composerDraftId = null;
@@ -3881,7 +3915,7 @@ Occasional deals &amp; promotions</textarea>
         var statusEl = document.getElementById('composerDraftStatus');
         statusEl.textContent = 'Draft saved — ' + new Date().toLocaleTimeString();
         statusEl.style.display = 'block';
-        showToast('Draft saved', 'success');
+        showToast('Draft saved', 'success', btn);
       }).catch(function(e) {
         composerShowError('Error saving draft: ' + e.message);
       }).finally(function() {
@@ -4308,6 +4342,7 @@ Occasional deals &amp; promotions</textarea>
       input.addEventListener('change', function() {
         var file = this.files[0];
         if (!file) return;
+        var anchor = document.getElementById('csBgVideoSaveBtn') || input;
         csState.videoUrl = URL.createObjectURL(file);
         csState.bgType = 'video';
         csState.videoSource = 'upload';
@@ -4329,9 +4364,9 @@ Occasional deals &amp; promotions</textarea>
               headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
               body: JSON.stringify({ url: data.secure_url, label: file.name.replace(/\.[^.]+$/, '') })
             });
-            showToast('Video uploaded!', 'success');
+            showToast('Video uploaded!', 'success', anchor);
           }
-        }).catch(function(e) { showToast('Video upload failed: ' + e.message, 'error'); });
+        }).catch(function(e) { showToast('Video upload failed: ' + e.message, 'error', anchor); });
       });
     }
 
@@ -4358,7 +4393,8 @@ Occasional deals &amp; promotions</textarea>
     // HeyGen video generation
     window.csGenerateVideo = function() {
       var script = (csState.videoScript || '').trim();
-      if (!script) { showToast('Enter a script first.', 'error'); return; }
+      var genBtn = document.getElementById('csVideoGenBtn');
+      if (!script) { showToast('Enter a script first.', 'error', genBtn); return; }
 
       var testCheckbox = document.getElementById('csVideoTestMode');
       var isTest = testCheckbox ? testCheckbox.checked : false;
@@ -4394,7 +4430,7 @@ Occasional deals &amp; promotions</textarea>
             el.textContent = (m > 0 ? m + 'm ' : '') + s + 's';
           }
         }, 1000);
-        showToast('Video generating — you can work on other parts while you wait.', 'info');
+        showToast('Video generating — you can work on other parts while you wait.', 'info', genBtn);
       }).catch(function(e) {
         csState.videoStatus = 'failed';
         csState.videoError = e.message;
@@ -4420,7 +4456,7 @@ Occasional deals &amp; promotions</textarea>
           if (saveBtn) saveBtn.disabled = false;
           csRebuildBgOptions();
           csUpdatePreview();
-          showToast("Brian's video is ready!", 'success');
+          showToast("Brian's video is ready!", 'success', document.getElementById('csBgVideoContent') || document.getElementById('csBgSection'));
         } else if (data.status === 'failed') {
           csState.videoStatus = 'failed';
           csState.videoError = data.error || 'Video generation failed';
@@ -4447,15 +4483,16 @@ Occasional deals &amp; promotions</textarea>
     };
 
     // Save composited video to library
-    window.csSaveVideoToLibrary = function(url) {
+    window.csSaveVideoToLibrary = function(url, btnEl) {
+      var anchor = btnEl || document.getElementById('csRendered');
       fetch(WORKER_BASE + '/admin/media-library', {
         method: 'POST',
         headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ url: url, label: (csState.titleText || 'Video MMS').substring(0, 80) })
       }).then(function() {
-        showToast('Saved to library!', 'success');
+        showToast('Saved to library!', 'success', anchor);
       }).catch(function() {
-        showToast('Failed to save to library.', 'error');
+        showToast('Failed to save to library.', 'error', anchor);
       });
     };
 
@@ -5122,7 +5159,7 @@ Occasional deals &amp; promotions</textarea>
         if (!csState.graphicId || !csState.bgType) return;
         // For video bg, require a video to be ready
         if (csState.bgType === 'video' && !csState.videoUrl) {
-          showToast('Generate or select a video first.', 'error');
+          showToast('Generate or select a video first.', 'error', document.querySelector('#csStepGraphic .cs-step-next'));
           return;
         }
         document.getElementById('csStepGraphic').classList.add('completed');
@@ -5953,7 +5990,7 @@ Occasional deals &amp; promotions</textarea>
           rendered.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         } catch (err) {
-          showToast('Video generation failed: ' + err.message, 'error');
+          showToast('Video generation failed: ' + err.message, 'error', btn);
         }
         btn.textContent = 'Generate';
         btn.disabled = false;
