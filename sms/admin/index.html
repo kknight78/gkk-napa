@@ -500,6 +500,7 @@
     .composer-timing-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .composer-timing-row label { font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; }
     .composer-timing-row input[type="datetime-local"] { width: auto; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; font-size: 13px; }
+    .composer-timing-row input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); }
     .composer-test-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
     .composer-test-row input { flex: 1; width: auto; padding: 8px 10px; font-size: 13px; }
     .composer-test-row button:disabled { opacity: .35; cursor: not-allowed; }
@@ -605,11 +606,14 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 0;
+      padding: 14px;
       font-size: 13px;
-      border-bottom: 1px solid rgba(255,255,255,.04);
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      margin-bottom: 10px;
     }
-    .event-row:last-child { border-bottom: none; }
+    .event-row:last-child { margin-bottom: 0; }
     .event-status { font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .event-sent { color: var(--green); }
     .event-scheduled { color: var(--orange); }
@@ -919,6 +923,15 @@
     }
     .cs-bg-upload-btn:hover { border-color: rgba(255,255,255,.5); color: #fff; }
     .cs-bg-upload-btn.active { border-color: var(--napa-yellow); color: var(--napa-yellow); }
+    .cs-bg-video-sources { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cs-bg-video-btn {
+      padding: 8px 12px; font-size: 12px; font-weight: 600;
+      border: 1px solid rgba(255,255,255,.15); border-radius: 6px;
+      background: rgba(255,255,255,.05); color: rgba(255,255,255,.6);
+      cursor: pointer; transition: all .15s;
+    }
+    .cs-bg-video-btn:hover { border-color: rgba(255,255,255,.3); color: #fff; }
+    .cs-bg-video-btn.active { border-color: var(--napa-yellow); color: var(--napa-yellow); background: rgba(249,200,66,.08); }
     .cs-offer-types {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -948,7 +961,8 @@
     }
     .cs-offer-visual-btn:hover { border-color: rgba(255,255,255,.3); }
     .cs-offer-visual-btn.active { border-color: var(--napa-yellow); }
-    .cs-canvas-wrap { width: 640px; max-width: 640px; margin: 0 auto; }
+    .cs-canvas-wrap { max-width: 640px; margin: 0 auto; overflow: hidden; transition: max-width .3s; }
+    .cs-canvas-wrap.video-mode { max-width: 450px; }
     .cs-canvas {
       width: 640px; height: 800px;
       position: relative; overflow: hidden;
@@ -957,7 +971,9 @@
       font-family: 'NAPA Sans Cn', 'NAPA Sans', system-ui, sans-serif;
       user-select: none;
       container-type: inline-size;
+      transition: width .3s, height .3s;
     }
+    .cs-canvas.video-mode { width: 450px; height: 800px; }
     .cs-prev-bg {
       position: absolute; inset: 0; z-index: 1;
       background-size: cover; background-position: center;
@@ -1003,6 +1019,22 @@
     }
     #csPrevTitleText { color: #F9C842; font-weight: 700; font-size: 38px; text-transform: uppercase; height: 38px; margin: -6px 0 0; }
     #csPrevRulesText { color: #fff; font-weight: 500; font-size: 24px; margin: -4px 0 -3px; }
+    /* Video-mode title/rules scaling (450/640 ≈ 0.7×) */
+    .cs-canvas.video-mode .cs-prev-title-bar { padding: 15px 18px; font-size: 27px; }
+    .cs-canvas.video-mode #csPrevTitleText { font-size: 27px; height: 27px; margin: -4px 0 0; }
+    .cs-canvas.video-mode #csPrevRulesText { font-size: 17px; margin: -3px 0 -2px; }
+    /* Video-mode subtitle zone — placeholder showing where Creatomate subtitles render */
+    .cs-prev-subtitle-zone {
+      position: absolute; z-index: 5; left: 0; right: 0;
+      display: none; align-items: center; justify-content: center;
+      pointer-events: none; text-align: center; padding: 0 8%;
+      box-sizing: border-box;
+    }
+    .cs-prev-subtitle-zone span {
+      color: #fff; font-size: 27px; font-weight: 800; line-height: 1.15;
+      text-shadow: 0 2px 8px rgba(0,0,0,.7), 0 0 3px rgba(0,0,0,.5);
+      opacity: .45;
+    }
     .cs-prev-body {
       position: absolute; z-index: 3;
       left: 0; right: 0;
@@ -1140,6 +1172,41 @@
     .cs-product-edit-actions { display: flex; gap: 8px; margin-top: 16px; }
     .cs-product-edit-actions button { flex: 1; padding: 12px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
 
+    /* ── Background Photo/Video Modal ── */
+    .cs-bg-modal-overlay {
+      position: fixed; inset: 0; z-index: 9998;
+      background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center;
+    }
+    .cs-bg-modal {
+      background: #1a1a4a; border: 1px solid rgba(255,255,255,.2); border-radius: 12px;
+      padding: 24px; width: 90%; max-width: 420px; color: #fff;
+    }
+    .cs-bg-modal h3 { margin: 0 0 14px; font-size: 18px; color: var(--napa-yellow); text-transform: uppercase; }
+    .cs-bg-modal-src {
+      flex: 1; padding: 10px 12px; font-size: 13px; font-weight: 600; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.2); background: transparent; color: rgba(255,255,255,.6);
+      cursor: pointer; transition: all .15s;
+    }
+    .cs-bg-modal-src:hover { border-color: rgba(255,255,255,.4); color: #fff; }
+    .cs-bg-modal-src.active { background: var(--napa-yellow); color: #111; border-color: var(--napa-yellow); }
+    .cs-bg-modal textarea {
+      width: 100%; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.2);
+      color: #fff; font-size: 14px; box-sizing: border-box; resize: vertical;
+      font-family: inherit;
+    }
+    .cs-bg-modal input[type="file"] {
+      width: 100%; padding: 8px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.2);
+      color: #fff; font-size: 12px; box-sizing: border-box;
+    }
+    .video-spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.2); border-top-color: var(--napa-yellow);
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ── 4-Item Text Edit Popup ── */
     .cs-text-edit-overlay {
       display: none; position: fixed; inset: 0; z-index: 9998;
@@ -1204,6 +1271,63 @@
       .cs-preview { position: static; order: -1; }
     }
 
+    /* Video spinner */
+    .video-spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.2);
+      border-top-color: var(--napa-yellow);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notifications */
+    .toast {
+      background: rgba(30,30,60,.95);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 14px;
+      color: #fff;
+      pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      animation: toastIn .3s ease-out;
+      max-width: 360px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.success { border-color: rgba(142,207,142,.4); }
+    .toast.success::before { content: '\2713'; color: var(--green); font-weight: 700; font-size: 16px; }
+    .toast.error { border-color: rgba(255,107,107,.4); }
+    .toast.error::before { content: '\2717'; color: var(--red); font-weight: 700; font-size: 16px; }
+    .toast.fadeout { animation: toastOut .3s ease-in forwards; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+    /* Review modal summary */
+    .review-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 14px;
+    }
+    .review-row:last-child { border-bottom: none; }
+    .review-label { color: rgba(255,255,255,.5); }
+    .review-value { font-weight: 700; color: var(--napa-yellow); }
+    .review-msg-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    .review-msg-card .review-msg-body { color: rgba(255,255,255,.7); white-space: pre-wrap; margin-top: 4px; max-height: 60px; overflow: hidden; }
+
     @media (max-width: 600px) {
       .tabs { overflow-x: auto; }
       .tab { padding: 10px 12px; font-size: 12px; white-space: nowrap; }
@@ -1234,26 +1358,25 @@
 
     <!-- ═══ Admin Screen ═══ -->
     <div id="adminScreen" style="display:none;">
-      <h1>SMS Marketing</h1>
+      <h1>SMS &amp; Email Marketing</h1>
 
       <!-- Tabs -->
       <div class="tabs">
-        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab active" data-tab="send">SMS</button>
         <button class="tab" data-tab="customers">Customers</button>
-        <button class="tab" data-tab="send">Send SMS</button>
-        <button class="tab" data-tab="history">History</button>
+        <button class="tab" data-tab="history">Campaigns</button>
       </div>
 
-      <!-- ═══ Tab 1: Dashboard ═══ -->
-      <div class="tab-content active" id="tab-dashboard">
+      <!-- ═══ Tab: Customers ═══ -->
+      <div class="tab-content" id="tab-customers">
 
         <!-- Alerts -->
         <div class="dash-section" id="dashAlerts"></div>
 
         <!-- KPIs -->
         <div class="kpi-grid" id="kpiGrid">
-          <div class="kpi-card clickable" onclick="switchToTab('customers')"><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-label">Total Customers</div><div class="kpi-sub" id="kpiPriority"></div></div>
-          <div class="kpi-card clickable" onclick="switchToTab('customers',{status:'subscribed'})"><div class="kpi-num" id="kpiSubscribed">—</div><div class="kpi-label">Subscribed</div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-label">Total Customers</div><div class="kpi-sub" id="kpiPriority"></div></div>
+          <div class="kpi-card"><div class="kpi-num" id="kpiSubscribed">—</div><div class="kpi-label">Subscribed</div></div>
           <div class="kpi-card"><div class="kpi-num" id="kpiConversion">—</div><div class="kpi-label">Invite → Subscribe</div><div class="kpi-sub" id="kpiConversionSub"></div></div>
           <div class="kpi-card clickable" onclick="switchToTab('history')"><div class="kpi-num" id="kpiMessages">—</div><div class="kpi-label">Messages (Month)</div></div>
         </div>
@@ -1298,10 +1421,8 @@
           <button class="btn-secondary" id="btnPrintQr">Print QR Codes</button>
           <button class="btn-secondary" id="btnGenShortCodes">Generate Short Codes</button>
         </div>
-      </div>
 
-      <!-- ═══ Tab 2: Customers ═══ -->
-      <div class="tab-content" id="tab-customers">
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:24px 0 16px;" />
         <div class="filter-bar">
           <select id="filterStore">
             <option value="">All Stores</option>
@@ -1350,38 +1471,51 @@
         <div id="customerList"></div>
       </div>
 
-      <!-- ═══ Tab 3: Send SMS ═══ -->
-      <div class="tab-content" id="tab-send">
+      <!-- ═══ Tab: SMS (Campaign Composer + Creative Studio) ═══ -->
+      <div class="tab-content active" id="tab-send">
 
         <!-- ── Campaign Composer View ── -->
         <div id="composerView">
+          <h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin:0 0 8px;">Campaign</h3>
           <div class="form-card" style="margin-bottom:16px;">
-            <h2 style="margin-top:0;">Campaign Composer</h2>
-
-            <label for="composerName">Campaign Name</label>
+            <div class="composer-msg-header" style="margin-bottom:12px;"><h3>Name</h3></div>
             <input id="composerName" type="text" placeholder="e.g., March Motor Oil Sale" maxlength="100" />
 
-            <div style="margin-top:12px;">
-              <label style="display:flex;align-items:center;gap:8px;margin:0 0 8px;cursor:pointer;">
-                <input type="checkbox" id="composerPriority" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
-                <span style="font-size:14px;">★ Priority customers only</span>
-              </label>
-              <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                <input type="checkbox" id="composerEmailFallback" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
-                <span style="font-size:14px;">Also send email to customers with email addresses</span>
-              </label>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:200px;">
+                <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
+                  <input type="checkbox" id="composerPriority" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
+                  <span style="font-size:14px;">★ Priority customers only</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
+                  <input type="checkbox" id="composerEmailFallback" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
+                  <span style="font-size:14px;">Also send email to customers with email addresses</span>
+                </label>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div class="recipient-chip" id="composerSmsCount" onclick="composerViewList('sms')" style="cursor:pointer;" title="Click to view list">
+                  <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">SMS</span>
+                  <span id="composerSmsNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
+                  <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
+                </div>
+                <div class="recipient-chip" id="composerEmailCount" onclick="composerViewList('email')" style="cursor:pointer;display:none;" title="Click to view list">
+                  <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">Email</span>
+                  <span id="composerEmailNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
+                  <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
+                </div>
+              </div>
             </div>
 
-            <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
-              <div class="recipient-chip" id="composerSmsCount" onclick="composerViewList('sms')" style="cursor:pointer;" title="Click to view list">
-                <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">SMS</span>
-                <span id="composerSmsNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
-                <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
-              </div>
-              <div class="recipient-chip" id="composerEmailCount" onclick="composerViewList('email')" style="cursor:pointer;display:none;" title="Click to view list">
-                <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">Email</span>
-                <span id="composerEmailNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
-                <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
+            <div id="composerDevSection" style="margin-top:12px;padding:10px 12px;border:1px dashed rgba(255,200,0,.3);border-radius:8px;background:rgba(255,200,0,.04);">
+              <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
+                <input type="checkbox" id="composerDevMode" style="width:auto;accent-color:#f59e0b;" onchange="composerToggleDev()" />
+                <span style="font-size:14px;color:#f59e0b;">Test Mode — send only to me</span>
+              </label>
+              <div id="composerDevFields" style="display:none;margin-top:8px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <input id="composerDevPhone" type="tel" placeholder="Your phone (e.g. 2175551234)" style="flex:1;min-width:140px;font-size:13px;" />
+                  <input id="composerDevEmail" type="email" placeholder="Your email" style="flex:1;min-width:140px;font-size:13px;" />
+                </div>
               </div>
             </div>
           </div>
@@ -1392,7 +1526,11 @@
           <button class="composer-add-btn" onclick="composerAddMessage()">+ Add Follow-Up Message</button>
 
           <div class="form-card">
-            <button class="btn-primary" id="composerSendBtn" style="width:100%;font-size:16px;padding:14px;" onclick="composerSubmit()">Send / Schedule Campaign</button>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-secondary" id="composerDraftBtn" style="flex:0 0 auto;font-size:14px;padding:14px 20px;" onclick="composerSaveDraft()">Save Draft</button>
+              <button class="btn-primary" id="composerSendBtn" style="flex:1;font-size:16px;padding:14px;" onclick="composerSubmit()">Send / Schedule Campaign</button>
+            </div>
+            <div id="composerDraftStatus" style="display:none;margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);"></div>
             <div class="error" id="composerError" style="display:none;"></div>
             <div class="success" id="composerSuccess" style="display:none;"></div>
           </div>
@@ -1413,6 +1551,14 @@
                   <span class="cs-step-check">&#10003;</span>
                 </div>
                 <div class="cs-step-body">
+                  <div style="margin-bottom:10px;">
+                    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin-bottom:6px;">Compatible with background:</div>
+                    <div style="display:flex;align-items:center;gap:14px;font-size:13px;">
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="checkbox" id="csFilterPhoto" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Photo</label>
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="checkbox" id="csFilterVideo" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Video</label>
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="checkbox" id="csFilterBolt" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Bolt Graphic</label>
+                    </div>
+                  </div>
                   <div class="cs-color-toggle">
                     <button class="cs-color-btn active" data-color="blue" onclick="csSelectColor('blue')">Blue</button>
                     <button class="cs-color-btn" data-color="black" onclick="csSelectColor('black')">Black</button>
@@ -1423,6 +1569,7 @@
                     <div class="cs-bg-options" id="csBgOptions"></div>
                     <div class="cs-bg-hint" id="csBgHint">Drag preview to reposition &bull; scroll to zoom</div>
                     <input type="file" id="csBgFileInput" accept="image/*" style="display:none;" />
+                    <input type="file" id="csBgVideoFileInput" accept="video/mp4,video/quicktime,video/webm" style="display:none;" />
                   </div>
                   <button class="cs-step-next" onclick="csStepNext('csStepGraphic')">Next &#8594;</button>
                 </div>
@@ -1518,6 +1665,9 @@
                     <input type="text" id="csPrevTitleText" autocomplete="off" maxlength="32" value="SALE EVENT" />
                     <input type="text" id="csPrevRulesText" autocomplete="off" value="In store only, while supplies last" />
                   </div>
+                  <div class="cs-prev-subtitle-zone" id="csPrevSubtitleZone" style="display:none;">
+                    <span>Subtitles will appear here</span>
+                  </div>
                   <div class="cs-prev-offer-bar" id="csPrevOfferBar" style="display:none;">
                     <div id="csPrevOfferLeft"></div>
                     <div id="csPrevOfferRight"></div>
@@ -1527,7 +1677,7 @@
               </div>
 
               <div class="cs-actions-row" id="csActions" style="display:none;">
-                <button class="btn-primary" onclick="csGenerate()">Generate Image</button>
+                <button class="btn-primary" onclick="csGenerate()" id="csGenerateBtn">Generate</button>
                 <button class="btn-secondary" onclick="csReset()">Reset</button>
               </div>
 
@@ -1543,7 +1693,7 @@
 
       </div>
 
-      <!-- ═══ Tab 4: History ═══ -->
+      <!-- ═══ Tab: History ═══ -->
       <div class="tab-content" id="tab-history">
         <div id="campaignList"></div>
       </div>
@@ -1588,8 +1738,8 @@
         <input type="text" id="csProductEditPartNum" placeholder="e.g. LMP H6054NVLEDN" />
       </div>
       <div class="cs-product-edit-actions">
-        <button class="btn-primary" onclick="csProductEditSave()">Save</button>
         <button class="btn-secondary" onclick="csProductEditCancel()">Cancel</button>
+        <button class="btn-primary" onclick="csProductEditSave()">Save</button>
       </div>
     </div>
   </div>
@@ -1668,8 +1818,8 @@
       </div>
 
       <div class="form-row" style="margin-top:16px;">
-        <button class="btn-primary" id="btnModalSave">Save</button>
         <button class="btn-secondary" id="btnModalCancel">Cancel</button>
+        <button class="btn-primary" id="btnModalSave">Save</button>
       </div>
       <div class="error" id="modalError" style="display:none;"></div>
     </div>
@@ -1696,8 +1846,8 @@ Occasional deals &amp; promotions</textarea>
       <div id="invitePreview" style="background:#fff;border-radius:8px;padding:0;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
 
       <div class="form-row" style="margin-top:16px;">
-        <button class="btn-primary" id="btnInviteSend">Send Invitations</button>
         <button class="btn-secondary" id="btnInviteCancel">Cancel</button>
+        <button class="btn-primary" id="btnInviteSend">Send Invitations</button>
       </div>
       <div class="error" id="inviteError" style="display:none;"></div>
       <div class="success" id="inviteSuccess" style="display:none;"></div>
@@ -1714,6 +1864,21 @@ Occasional deals &amp; promotions</textarea>
       </div>
     </div>
   </div>
+
+  <!-- ═══ Campaign Review Modal ═══ -->
+  <div class="modal-overlay" id="campaignReviewModal">
+    <div class="modal" style="max-width:550px;">
+      <h2 style="margin-top:0;color:var(--napa-yellow);">Review Campaign</h2>
+      <div id="campaignReviewBody"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn-secondary" id="btnReviewCancel">Go Back</button>
+        <button class="btn-primary" id="btnReviewConfirm" style="flex:1;font-size:16px;">Confirm &amp; Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Toast Container ═══ -->
+  <div id="toastContainer" style="position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
 
   <script>
     const WORKER_BASE = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
@@ -1746,17 +1911,14 @@ Occasional deals &amp; promotions</textarea>
       tab.classList.add("active");
       document.getElementById(`tab-${tabName}`).classList.add("active");
 
-      if (filters && tabName === "customers") {
-        if (filters.status) document.getElementById("filterStatus").value = filters.status;
-        loadCustomers();
-      } else if (tabName === "customers") {
+      if (tabName === "customers") {
+        if (filters && filters.status) document.getElementById("filterStatus").value = filters.status;
+        loadDashboard();
         loadCustomers();
       } else if (tabName === "history") {
         loadCampaigns();
       } else if (tabName === "send") {
-        updateRecipientPreview();
-      } else if (tabName === "dashboard") {
-        loadDashboard();
+        composerUpdateRecipients();
       }
     };
 
@@ -1787,8 +1949,7 @@ Occasional deals &amp; promotions</textarea>
         }
         loginScreen.style.display = "none";
         adminScreen.style.display = "block";
-        loadDashboard();
-        loadCustomers();
+        composerUpdateRecipients();
       } catch {
         authToken = "";
         loginError.textContent = "Could not connect to server.";
@@ -1807,9 +1968,8 @@ Occasional deals &amp; promotions</textarea>
         document.getElementById(`tab-${tab.dataset.tab}`).classList.add("active");
 
         // Refresh data when switching tabs
-        if (tab.dataset.tab === "dashboard") loadDashboard();
-        if (tab.dataset.tab === "customers") loadCustomers();
-        if (tab.dataset.tab === "send") updateRecipientPreview();
+        if (tab.dataset.tab === "customers") { loadDashboard(); loadCustomers(); }
+        if (tab.dataset.tab === "send") composerUpdateRecipients();
         if (tab.dataset.tab === "history") loadCampaigns();
       });
     });
@@ -2178,15 +2338,35 @@ Occasional deals &amp; promotions</textarea>
       }
     }
 
-    function renderCustomers(customers) {
-      customerCount.textContent = `${customers.length} customer${customers.length !== 1 ? "s" : ""}`;
+    var _customerPage = 0;
+    var _customerPageSize = 25;
+    var _filteredCustomers = [];
 
-      if (customers.length === 0) {
+    function renderCustomers(customers) {
+      _filteredCustomers = customers;
+      _customerPage = 0;
+      _renderCustomerPage();
+    }
+
+    function _renderCustomerPage() {
+      var customers = _filteredCustomers;
+      var total = customers.length;
+      var totalPages = Math.max(1, Math.ceil(total / _customerPageSize));
+      if (_customerPage >= totalPages) _customerPage = totalPages - 1;
+      if (_customerPage < 0) _customerPage = 0;
+
+      var start = _customerPage * _customerPageSize;
+      var end = Math.min(start + _customerPageSize, total);
+      var page = customers.slice(start, end);
+
+      customerCount.textContent = total + ' customer' + (total !== 1 ? 's' : '');
+
+      if (total === 0) {
         customerList.innerHTML = '<div class="empty">No customers match the filters.</div>';
         return;
       }
 
-      customerList.innerHTML = customers.map(c => `
+      var html = page.map(c => `
         <div class="customer-item" data-id="${c.id}">
           <div class="customer-info">
             <div class="customer-name">
@@ -2206,7 +2386,26 @@ Occasional deals &amp; promotions</textarea>
           </div>
         </div>
       `).join("");
+
+      // Pagination controls
+      if (totalPages > 1) {
+        html += '<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px;padding:8px 0;">';
+        html += '<button class="btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="customerPagePrev()"' + (_customerPage === 0 ? ' disabled' : '') + '>&larr; Prev</button>';
+        html += '<span style="font-size:13px;color:rgba(255,255,255,.5);">' + (start + 1) + '–' + end + ' of ' + total + '</span>';
+        html += '<button class="btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="customerPageNext()"' + (_customerPage >= totalPages - 1 ? ' disabled' : '') + '>Next &rarr;</button>';
+        html += '</div>';
+      }
+
+      customerList.innerHTML = html;
     }
+
+    window.customerPagePrev = function() {
+      if (_customerPage > 0) { _customerPage--; _renderCustomerPage(); customerList.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    };
+    window.customerPageNext = function() {
+      var totalPages = Math.ceil(_filteredCustomers.length / _customerPageSize);
+      if (_customerPage < totalPages - 1) { _customerPage++; _renderCustomerPage(); customerList.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    };
 
     // ─── Toggle Priority ─────────────────────────────────────
     window.togglePriority = async function(id, newValue) {
@@ -2330,22 +2529,65 @@ Occasional deals &amp; promotions</textarea>
       }
     });
 
-    // ─── Delete Customer ─────────────────────────────────────
-    window.deleteCustomer = async function(id, name) {
-      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-      await new Promise(r => setTimeout(r, 50));
+    // ─── Delete Customer (with undo) ─────────────────────────
+    var _pendingDelete = null;
+
+    window.deleteCustomer = function(id, name) {
+      // Cancel any previous pending delete
+      if (_pendingDelete) {
+        clearTimeout(_pendingDelete.timer);
+        if (_pendingDelete.toast) _pendingDelete.toast.remove();
+        _pendingDelete = null;
+      }
+
+      // Hide the row immediately
+      var row = document.querySelector('.customer-item[data-id="' + id + '"]');
+      if (row) { row.style.display = 'none'; row.dataset.pendingDelete = '1'; }
+
+      // Build undo toast
+      var container = document.getElementById('toastContainer');
+      var toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.style.borderColor = 'rgba(255,107,107,.4)';
+      toast.innerHTML = '<span style="flex:1;">Deleted <strong>' + esc(name) + '</strong></span><button style="background:var(--napa-yellow);color:#111;border:none;border-radius:6px;padding:4px 12px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;" id="undoDeleteBtn">Undo</button>';
+      container.appendChild(toast);
+
+      var pending = {
+        id: id,
+        toast: toast,
+        timer: setTimeout(function() { _commitDelete(id, name, toast); }, 5000),
+      };
+      _pendingDelete = pending;
+
+      toast.querySelector('#undoDeleteBtn').addEventListener('click', function() {
+        clearTimeout(pending.timer);
+        _pendingDelete = null;
+        // Restore row
+        if (row) { row.style.display = ''; delete row.dataset.pendingDelete; }
+        toast.classList.add('fadeout');
+        setTimeout(function() { toast.remove(); }, 300);
+        showToast('Restored ' + name, 'success');
+      });
+    };
+
+    async function _commitDelete(id, name, toast) {
+      _pendingDelete = null;
+      // Fade out the undo toast
+      if (toast) { toast.classList.add('fadeout'); setTimeout(function() { toast.remove(); }, 300); }
       try {
         const resp = await fetch(`${WORKER_BASE}/admin/customers/${id}/delete`, { method: "POST", headers: authHeaders() });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
-          alert(`Delete failed: ${err.error || resp.statusText}`);
+          showToast('Delete failed: ' + (err.error || resp.statusText), 'error');
+          loadCustomers(); // restore list
           return;
         }
         loadCustomers();
       } catch (e) {
-        alert(`Delete failed: ${e.message}\n\nURL: ${WORKER_BASE}/admin/customers/${id}/delete\nPlease check DevTools Network tab for details.`);
+        showToast('Delete failed: ' + e.message, 'error');
+        loadCustomers();
       }
-    };
+    }
 
     // ─── Invite (with preview modal) ───────────────────────
     const inviteModal = document.getElementById("inviteModal");
@@ -2479,13 +2721,16 @@ Occasional deals &amp; promotions</textarea>
         const campaigns = await resp.json();
 
         if (campaigns.length === 0) {
-          campaignList.innerHTML = '<div class="empty">No campaigns sent yet.</div>';
+          campaignList.innerHTML = '<div class="empty">No campaigns yet.</div>';
           return;
         }
 
         campaignList.innerHTML = campaigns.map(c => {
-          const isPromo = c.promo_type === "promo";
-          const typeBadge = isPromo
+          const isDraft = c.status === 'draft';
+          const isPromo = c.promo_type === "promo" || c.promo_type === "compose";
+          const typeBadge = isDraft
+            ? '<span class="badge" style="background:rgba(255,200,0,.15);color:var(--napa-yellow);">DRAFT</span>'
+            : isPromo
             ? '<span class="badge badge-promo">PROMO</span>'
             : '<span class="badge badge-manual">MANUAL</span>';
 
@@ -2519,6 +2764,21 @@ Occasional deals &amp; promotions</textarea>
                   ${hasScheduled ? `<div style="margin-top:8px;text-align:right;"><button class="btn-danger" style="padding:6px 12px;font-size:11px;" onclick="event.stopPropagation();cancelAllPromoEvents(${c.id})">Cancel All Remaining</button></div>` : ''}
                 </div>
               </div>`;
+          }
+
+          if (isDraft) {
+            return `
+              <div class="campaign-item" style="border-left:3px solid var(--napa-yellow);">
+                <div class="campaign-name">${esc(c.name)} ${typeBadge}</div>
+                <div class="campaign-meta">
+                  Saved ${new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                </div>
+                <div style="margin-top:8px;display:flex;gap:8px;">
+                  <button class="btn-primary" style="padding:6px 16px;font-size:13px;" onclick="event.stopPropagation();loadDraft(${c.id})">Edit Draft</button>
+                  <button class="btn-danger" style="padding:6px 12px;font-size:13px;" onclick="event.stopPropagation();deleteDraft(${c.id})">Delete</button>
+                </div>
+              </div>
+            `;
           }
 
           return `
@@ -2565,6 +2825,66 @@ Occasional deals &amp; promotions</textarea>
       } catch { alert("Failed to cancel."); }
     };
 
+    window.loadDraft = async function(id) {
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/campaigns/${id}`, { headers: authHeaders() });
+        const data = await resp.json();
+        if (data.error) { alert(data.error); return; }
+
+        // Parse draft data
+        var draftMessages = [];
+        try { draftMessages = JSON.parse(data.draft_data || '[]'); } catch { }
+        if (!draftMessages.length) draftMessages = [{ body: data.body || '', media_url: data.media_url, media_type: 'none', send_now: true, send_at: null }];
+
+        // Restore composer state
+        composerDraftId = id;
+        composerMessages = draftMessages.map(function(m) {
+          var mediaType = m.media_type || 'none';
+          if (!mediaType || mediaType === 'none') {
+            if (m.media_url === SMS_LOGO_URL) mediaType = 'logo';
+            else if (m.media_url) mediaType = 'library';
+          }
+          return { body: m.body || '', mediaType: mediaType, mediaUrl: m.media_url || null, sendNow: !!m.send_now, sendAt: m.send_at || null };
+        });
+        document.getElementById('composerName').value = data.name || '';
+
+        // Restore settings from promo_meta
+        var meta = {};
+        try { meta = JSON.parse(data.promo_meta || '{}'); } catch { }
+        document.getElementById('composerPriority').checked = !!meta.priority_only;
+        document.getElementById('composerEmailFallback').checked = !!meta.email_fallback;
+        if (meta.dev_mode) {
+          document.getElementById('composerDevMode').checked = true;
+          document.getElementById('composerDevFields').style.display = 'block';
+          if (meta.dev_phone) document.getElementById('composerDevPhone').value = meta.dev_phone;
+          if (meta.dev_email) document.getElementById('composerDevEmail').value = meta.dev_email;
+        }
+
+        // Show draft status
+        var statusEl = document.getElementById('composerDraftStatus');
+        statusEl.textContent = 'Editing draft — saved ' + new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        statusEl.style.display = 'block';
+
+        // Switch to composer tab and render
+        document.querySelectorAll('.tab-btn').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === 'send'); });
+        document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+        document.getElementById('tab-send').classList.add('active');
+        composerShowView('composer');
+        composerRender();
+        composerUpdateRecipients();
+        document.getElementById('composerView').scrollIntoView({ behavior: 'smooth' });
+      } catch (e) { alert('Failed to load draft: ' + e.message); }
+    };
+
+    window.deleteDraft = async function(id) {
+      if (!confirm('Delete this draft?')) return;
+      try {
+        await fetch(`${WORKER_BASE}/admin/campaigns/${id}`, { method: 'DELETE', headers: authHeaders() });
+        showToast('Draft deleted', 'success');
+        loadCampaigns();
+      } catch { alert('Failed to delete draft.'); }
+    };
+
     // ─── Campaign Detail Modal ───────────────────────────────
     const campaignModal = document.getElementById("campaignModal");
     const campaignDetailTitle = document.getElementById("campaignDetailTitle");
@@ -2579,7 +2899,7 @@ Occasional deals &amp; promotions</textarea>
         const resp = await fetch(`${WORKER_BASE}/admin/campaigns/${id}`, { headers: authHeaders() });
         const data = await resp.json();
 
-        const isPromo = data.promo_type === "promo";
+        const isPromo = data.promo_type === "promo" || data.promo_type === "compose";
         const typeBadge = isPromo
           ? '<span class="badge badge-promo">PROMO</span>'
           : '<span class="badge badge-manual">MANUAL</span>';
@@ -2591,15 +2911,6 @@ Occasional deals &amp; promotions</textarea>
             ${data.store_filter ? (STORE_NAMES[data.store_filter] || data.store_filter) : "All Stores"}
             ${data.sequence_preset ? " &middot; Sequence: " + data.sequence_preset : ""}
           </div>
-          <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:14px;white-space:pre-wrap;">${esc(data.body)}</div>
-          ${data.media_url ? `<div style="margin-bottom:16px;"><img src="${esc(data.media_url)}" alt="Media" style="max-width:200px;border-radius:8px;" /></div>` : ''}
-          <div class="campaign-stats" style="margin-bottom:16px;">
-            <span>Recipients: <strong>${data.recipient_count}</strong></span>
-            <span>Sent: <strong>${data.sent_count}</strong></span>
-            <span style="color:var(--green);">Delivered: <strong>${data.delivered_count}</strong></span>
-            <span style="color:var(--red);">Failed: <strong>${data.failed_count}</strong></span>
-            ${(data.email_count || 0) > 0 ? `<span style="color:#8cc4ff;">Emailed: <strong>${data.email_count}</strong>${data.email_failed_count > 0 ? ` (${data.email_failed_count} failed)` : ''}</span>` : ''}
-          </div>
         `;
 
         // Show promo events if applicable
@@ -2607,24 +2918,52 @@ Occasional deals &amp; promotions</textarea>
           try {
             const evResp = await fetch(`${WORKER_BASE}/admin/promo/events?campaign_id=${id}`, { headers: authHeaders() });
             const events = await evResp.json();
+
+            // Aggregate stats from events
+            const totalSent = events.reduce((s, e) => s + (e.sent_count || 0), 0);
+            const totalFailed = events.reduce((s, e) => s + (e.failed_count || 0), 0);
+            const scheduledLeft = events.filter(e => e.status === "scheduled").length;
+            html += `<div class="campaign-stats" style="margin-bottom:16px;">
+              <span>Sent: <strong>${totalSent}</strong></span>
+              <span style="color:var(--red);">Failed: <strong>${totalFailed}</strong></span>
+              ${scheduledLeft > 0 ? `<span style="color:var(--napa-yellow);">Scheduled: <strong>${scheduledLeft}</strong></span>` : ''}
+              ${(data.email_count || 0) > 0 ? `<span style="color:#8cc4ff;">Emailed: <strong>${data.email_count}</strong>${data.email_failed_count > 0 ? ` (${data.email_failed_count} failed)` : ''}</span>` : ''}
+            </div>`;
             if (events.length > 0) {
-              html += '<h2 style="font-size:14px;">Sequence Events</h2>';
+              html += '<h2 style="font-size:14px;">Messages</h2>';
               html += events.map(e => {
                 const statusClass = e.status === "sent" ? "event-sent" : e.status === "cancelled" ? "event-cancelled" : "event-scheduled";
                 const dateStr = new Date(e.send_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-                return `<div class="event-row">
-                  <div>
-                    <strong>${esc(e.label)}</strong>
-                    <span style="color:var(--dim);margin-left:8px;">${dateStr}</span>
+                const isScheduled = e.status === "scheduled";
+                return `<div class="event-row" style="flex-direction:column;align-items:stretch;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                      <strong>${esc(e.label)}</strong>
+                      <span style="color:var(--dim);margin-left:8px;">${dateStr}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      ${e.status === "sent" ? `<span style="font-size:12px;">${e.sent_count} sent, ${e.failed_count} failed</span>` : ''}
+                      ${isScheduled ? `<button class="btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="campaignEditEvent(${e.id})">Edit</button><button class="btn-secondary" style="padding:4px 10px;font-size:12px;color:var(--red);border-color:rgba(255,80,80,.3);" onclick="campaignCancelEvent(${e.id},this)">Cancel</button>` : ''}
+                      <span class="event-status ${statusClass}" id="eventStatus_${e.id}">${e.status}</span>
+                    </div>
                   </div>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    ${e.status === "sent" ? `<span style="font-size:12px;">${e.sent_count} sent, ${e.failed_count} failed</span>` : ''}
-                    <span class="event-status ${statusClass}">${e.status}</span>
-                  </div>
+                  <div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.6);white-space:pre-wrap;max-height:60px;overflow:hidden;">${esc(e.body || '')}</div>
+                  ${e.media_url ? `<img src="${esc(e.media_url)}" style="margin-top:6px;max-width:120px;border-radius:6px;" />` : ''}
+                  <div id="eventEdit_${e.id}" style="display:none;"></div>
                 </div>`;
               }).join('');
             }
           } catch { /* events fetch failed, show basic view */ }
+        } else {
+          // Non-compose campaigns: show body + stats from campaign row
+          html += `<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:14px;white-space:pre-wrap;">${esc(data.body)}</div>`;
+          if (data.media_url) html += `<div style="margin-bottom:16px;"><img src="${esc(data.media_url)}" alt="Media" style="max-width:200px;border-radius:8px;" /></div>`;
+          html += `<div class="campaign-stats" style="margin-bottom:16px;">
+            <span>Recipients: <strong>${data.recipient_count}</strong></span>
+            <span>Sent: <strong>${data.sent_count}</strong></span>
+            <span style="color:var(--green);">Delivered: <strong>${data.delivered_count}</strong></span>
+            <span style="color:var(--red);">Failed: <strong>${data.failed_count}</strong></span>
+          </div>`;
         }
 
         if (data.messages && data.messages.length > 0) {
@@ -2647,12 +2986,134 @@ Occasional deals &amp; promotions</textarea>
       campaignModal.classList.remove("open");
     });
 
+    window.campaignEditEvent = function(eventId) {
+      const container = document.getElementById("eventEdit_" + eventId);
+      if (!container) return;
+      // Find the event row's current body/media from the displayed text
+      const row = container.closest(".event-row");
+      const bodyText = row.querySelector("div[style*='white-space:pre-wrap']")?.textContent || "";
+      const mediaImg = row.querySelector("img");
+      const mediaUrl = mediaImg ? mediaImg.src : "";
+
+      container.style.display = "block";
+      container.innerHTML = `
+        <div style="margin-top:10px;padding:12px;background:rgba(0,0,0,.25);border-radius:8px;border:1px solid rgba(255,255,255,.1);">
+          <label style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px;display:block;">Message Text</label>
+          <textarea id="eventBody_${eventId}" style="width:100%;min-height:80px;font-size:14px;">${esc(bodyText)}</textarea>
+          <label style="font-size:12px;color:rgba(255,255,255,.5);margin:8px 0 4px;display:block;">Image URL (optional)</label>
+          <input id="eventMedia_${eventId}" type="text" value="${esc(mediaUrl)}" placeholder="https://..." style="width:100%;font-size:13px;" />
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button class="btn-primary" style="padding:6px 16px;font-size:13px;" onclick="campaignSaveEvent(${eventId})">Save</button>
+            <button class="btn-secondary" style="padding:6px 16px;font-size:13px;" onclick="document.getElementById('eventEdit_${eventId}').style.display='none'">Cancel</button>
+          </div>
+          <div id="eventEditError_${eventId}" class="error" style="display:none;margin-top:8px;"></div>
+        </div>
+      `;
+    };
+
+    window.campaignSaveEvent = async function(eventId) {
+      const body = document.getElementById("eventBody_" + eventId).value;
+      const media_url = document.getElementById("eventMedia_" + eventId).value.trim();
+      const errorEl = document.getElementById("eventEditError_" + eventId);
+
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/promo/events/${eventId}`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: JSON.stringify({ body, media_url: media_url || null }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json();
+          errorEl.textContent = err.error || "Failed to save.";
+          errorEl.style.display = "block";
+          return;
+        }
+        // Refresh the campaign detail by re-opening it
+        const campaignId = campaignDetailTitle.closest(".modal")?.querySelector("[data-campaign-id]")?.dataset.campaignId;
+        // Find the campaign ID from the event row's parent context — just reload the modal
+        const row = document.getElementById("eventEdit_" + eventId).closest(".event-row");
+        const bodyDisplay = row.querySelector("div[style*='white-space:pre-wrap']");
+        if (bodyDisplay) bodyDisplay.textContent = body;
+        const imgEl = row.querySelector("img");
+        if (media_url && imgEl) { imgEl.src = media_url; }
+        else if (media_url && !imgEl) { row.querySelector("div[style*='white-space:pre-wrap']").insertAdjacentHTML("afterend", `<img src="${esc(media_url)}" style="margin-top:6px;max-width:120px;border-radius:6px;" />`); }
+        else if (!media_url && imgEl) { imgEl.remove(); }
+        document.getElementById("eventEdit_" + eventId).style.display = "none";
+      } catch {
+        errorEl.textContent = "Network error.";
+        errorEl.style.display = "block";
+      }
+    };
+
+    window.campaignCancelEvent = async function(eventId, btn) {
+      if (!confirm("Cancel this scheduled message?")) return;
+      try {
+        const resp = await fetch(`${WORKER_BASE}/admin/promo/events/${eventId}`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: JSON.stringify({ status: "cancelled" }),
+        });
+        if (!resp.ok) { alert("Failed to cancel."); return; }
+        // Update UI inline
+        const row = btn.closest(".event-row");
+        const statusEl = document.getElementById("eventStatus_" + eventId);
+        if (statusEl) { statusEl.textContent = "cancelled"; statusEl.className = "event-status event-cancelled"; }
+        // Remove Edit/Cancel buttons
+        row.querySelectorAll("button").forEach(b => b.remove());
+        // Hide any open edit form
+        var editEl = document.getElementById("eventEdit_" + eventId);
+        if (editEl) editEl.style.display = "none";
+      } catch { alert("Network error."); }
+    };
+
     // Close modals on overlay click
-    [customerModal, campaignModal, inviteModal].forEach(modal => {
+    var allModals = [customerModal, campaignModal, inviteModal, document.getElementById('campaignReviewModal')];
+    allModals.forEach(modal => {
       modal.addEventListener("click", (e) => {
         if (e.target === modal) modal.classList.remove("open");
       });
     });
+
+    // ─── Escape key closes topmost modal/overlay ─────────────
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      // Check overlays in priority order (topmost first)
+      var overlays = [
+        document.getElementById('csTextEditOverlay'),
+        document.getElementById('csProductEditOverlay'),
+        document.getElementById('csCropperOverlay'),
+        document.getElementById('campaignReviewModal'),
+        inviteModal,
+        customerModal,
+        campaignModal,
+      ];
+      // Also check dynamically created lib-overlays
+      var libOverlay = document.querySelector('.lib-overlay');
+      if (libOverlay) { libOverlay.remove(); return; }
+      for (var i = 0; i < overlays.length; i++) {
+        if (overlays[i] && (overlays[i].classList.contains('open'))) {
+          overlays[i].classList.remove('open');
+          return;
+        }
+      }
+    });
+
+    // ─── Focus trapping for modals ──────────────────────────
+    function trapFocus(modal) {
+      var focusable = modal.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      modal.addEventListener('keydown', function(e) {
+        if (e.key !== 'Tab') return;
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      });
+    }
+    allModals.forEach(function(modal) { if (modal) trapFocus(modal); });
 
     // ═══════════════════════════════════════════════════════════
     // Creative Studio v4 — Guided MMS Image Builder
@@ -2660,25 +3121,26 @@ Occasional deals &amp; promotions</textarea>
 
     const CS_BRAND_GRAPHICS = [
       // Blue — file defaults to id if not set
-      { id: 'blue-top-chevron',    color: 'blue',  position: 'top',    allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
-      { id: 'blue-bottom-chevron', color: 'blue',  position: 'bottom', allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
-      { id: 'blue-top-half',       color: 'blue',  position: 'top',    allowsImage: false, allowsTexture: false, w: 598, h: 800, x: 0, y: 0 },
-      { id: 'blue-top-ramp',       color: 'blue',  position: 'top',    allowsImage: true,  allowsTexture: false, w: 640, h: 336, x: 0, y: 0 },
-      { id: 'blue-bottom-dip',     color: 'blue',  position: 'bottom', allowsImage: true,  allowsTexture: false, w: 640, h: 306, x: 0, y: 494 },
-      { id: 'blue-top-badge',      color: 'blue',  position: 'top',    allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 0, file: 'blue-both-badge' },
-      { id: 'blue-bottom-badge',   color: 'blue',  position: 'bottom', allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 669, file: 'blue-both-badge' },
-      { id: 'blue-top-corner',     color: 'blue',  position: 'top',    allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
-      { id: 'blue-bottom-corner',  color: 'blue',  position: 'bottom', allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
+      // allowsPhoto = can use uploaded/library photo bg; allowsBolt = can use bolt graphic bg; allowsVideo = can use video bg
+      { id: 'blue-top-chevron',    color: 'blue',  position: 'top',    allowsPhoto: false, allowsBolt: true,  allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'blue-bottom-chevron', color: 'blue',  position: 'bottom', allowsPhoto: false, allowsBolt: true,  allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'blue-top-half',       color: 'blue',  position: 'top',    allowsPhoto: false, allowsBolt: false, allowsVideo: false, w: 598, h: 800, x: 0, y: 0 },
+      { id: 'blue-top-ramp',       color: 'blue',  position: 'top',    allowsPhoto: true,  allowsBolt: false, allowsVideo: false, w: 640, h: 336, x: 0, y: 0 },
+      { id: 'blue-bottom-dip',     color: 'blue',  position: 'bottom', allowsPhoto: true,  allowsBolt: false, allowsVideo: false, w: 640, h: 306, x: 0, y: 494 },
+      { id: 'blue-top-badge',      color: 'blue',  position: 'top',    allowsPhoto: true,  allowsBolt: false, allowsVideo: false, w: 418.45, h: 131, x: 110.78, y: 0, file: 'blue-both-badge' },
+      { id: 'blue-bottom-badge',   color: 'blue',  position: 'bottom', allowsPhoto: true,  allowsBolt: false, allowsVideo: true,  w: 418.45, h: 131, x: 110.78, y: 669, vw: 294, vh: 92, vx: 78, vy: 695, file: 'blue-both-badge' },
+      { id: 'blue-top-corner',     color: 'blue',  position: 'top',    allowsPhoto: false, allowsBolt: false, allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'blue-bottom-corner',  color: 'blue',  position: 'bottom', allowsPhoto: false, allowsBolt: false, allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
       // Black
-      { id: 'black-top-chevron',    color: 'black', position: 'top',    allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
-      { id: 'black-bottom-chevron', color: 'black', position: 'bottom', allowsImage: false, allowsTexture: true,  w: 640, h: 800, x: 0, y: 0 },
-      { id: 'black-top-half',       color: 'black', position: 'top',    allowsImage: false, allowsTexture: false, w: 598, h: 800, x: 0, y: 0 },
-      { id: 'black-top-ramp',       color: 'black', position: 'top',    allowsImage: true,  allowsTexture: false, w: 640, h: 336, x: 0, y: 0 },
-      { id: 'black-bottom-dip',     color: 'black', position: 'bottom', allowsImage: true,  allowsTexture: false, w: 640, h: 306, x: 0, y: 494 },
-      { id: 'black-top-badge',      color: 'black', position: 'top',    allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 0, file: 'black-both-badge' },
-      { id: 'black-bottom-badge',   color: 'black', position: 'bottom', allowsImage: true,  allowsTexture: false, w: 418.45, h: 131, x: 110.78, y: 669, file: 'black-both-badge' },
-      { id: 'black-top-corner',     color: 'black', position: 'top',    allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
-      { id: 'black-bottom-corner',  color: 'black', position: 'bottom', allowsImage: false, allowsTexture: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-top-chevron',    color: 'black', position: 'top',    allowsPhoto: false, allowsBolt: true,  allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-bottom-chevron', color: 'black', position: 'bottom', allowsPhoto: false, allowsBolt: true,  allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-top-half',       color: 'black', position: 'top',    allowsPhoto: false, allowsBolt: false, allowsVideo: false, w: 598, h: 800, x: 0, y: 0 },
+      { id: 'black-top-ramp',       color: 'black', position: 'top',    allowsPhoto: true,  allowsBolt: false, allowsVideo: false, w: 640, h: 336, x: 0, y: 0 },
+      { id: 'black-bottom-dip',     color: 'black', position: 'bottom', allowsPhoto: true,  allowsBolt: false, allowsVideo: false, w: 640, h: 306, x: 0, y: 494 },
+      { id: 'black-top-badge',      color: 'black', position: 'top',    allowsPhoto: true,  allowsBolt: false, allowsVideo: false, w: 418.45, h: 131, x: 110.78, y: 0, file: 'black-both-badge' },
+      { id: 'black-bottom-badge',   color: 'black', position: 'bottom', allowsPhoto: true,  allowsBolt: false, allowsVideo: true,  w: 418.45, h: 131, x: 110.78, y: 669, vw: 294, vh: 92, vx: 78, vy: 695, file: 'black-both-badge' },
+      { id: 'black-top-corner',     color: 'black', position: 'top',    allowsPhoto: false, allowsBolt: false, allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
+      { id: 'black-bottom-corner',  color: 'black', position: 'bottom', allowsPhoto: false, allowsBolt: false, allowsVideo: false, w: 640, h: 800, x: 0, y: 0 },
     ];
 
     const CS_COLORS = {
@@ -2696,14 +3158,25 @@ Occasional deals &amp; promotions</textarea>
 
     // State
     let csState = {
+      mediaMode: 'image',    // 'image' or 'video'
       color: 'blue',
       graphicId: null,
-      bgType: null,
+      bgType: null,          // 'graphic' | 'bolt' | 'photo' | 'video'
       bgValue: null,
       bgImageData: null,
       bgRawImage: null,  // full original for in-place positioning
       bgNatW: 0, bgNatH: 0,  // natural dimensions of uploaded bg
       bgScale: 1, bgX: 0, bgY: 0,  // pan/zoom state for upload bg
+      // Video bg state
+      videoSource: null,     // 'generate' | 'upload' | 'library'
+      videoScript: '',       // HeyGen script text
+      videoUrl: null,        // source video URL (from HeyGen, upload, or library)
+      videoStatus: null,     // null | 'generating' | 'done' | 'failed'
+      videoId: null,         // HeyGen video_id for polling
+      videoError: null,
+      _videoPollTimer: null,
+      _videoElapsedTimer: null,
+      _videoStartTime: null,
       offerType: null,
       offerMode: null,       // 'text' | 'price' | 'starting'
       offerHasBadge: true,
@@ -2728,6 +3201,7 @@ Occasional deals &amp; promotions</textarea>
       { body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }
     ];
     var composerActiveMessageIndex = null;
+    var composerDraftId = null;
     var SMS_LOGO_URL = 'https://gkk-napa.com/assets/sms-logo.png';
 
     window.composerShowView = function(view) {
@@ -2754,7 +3228,9 @@ Occasional deals &amp; promotions</textarea>
         // Body
         html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Message Text <span style="font-weight:400;color:rgba(255,255,255,.3);">(optional if media attached)</span></label>';
         html += '<textarea class="composer-msg-body" data-index="' + i + '" maxlength="1500" placeholder="Type your message..." style="min-height:80px;" oninput="composerUpdateBody(' + i + ',this)">' + (msg.body || '') + '</textarea>';
-        html += '<div style="font-size:11px;color:rgba(255,255,255,.3);margin:2px 0 8px;">' + (msg.body || '').length + '/1,500 &mdash; "Reply STOP to opt out." appended automatically</div>';
+        var _segInfo = smsSegmentInfo((msg.body || '') + '\nReply STOP to opt out.');
+        var _segColor = _segInfo.segments > 1 ? (_segInfo.segments > 3 ? 'var(--red)' : 'var(--orange)') : 'rgba(255,255,255,.3)';
+        html += '<div style="font-size:11px;color:rgba(255,255,255,.3);margin:2px 0 8px;">' + (msg.body || '').length + '/1,500 &mdash; <span style="color:' + _segColor + ';">' + _segInfo.segments + ' SMS segment' + (_segInfo.segments !== 1 ? 's' : '') + '</span> &mdash; "Reply STOP to opt out." appended automatically</div>';
 
         // Media
         html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Media</label>';
@@ -2772,10 +3248,10 @@ Occasional deals &amp; promotions</textarea>
           html += '<label><input type="radio" name="composerTiming0" value="now" style="width:auto;accent-color:var(--napa-yellow);"' + (msg.sendNow ? ' checked' : '') + ' onchange="composerSetTiming(' + i + ',true)"> Send Now</label>';
           html += '<label><input type="radio" name="composerTiming0" value="schedule" style="width:auto;accent-color:var(--napa-yellow);"' + (!msg.sendNow ? ' checked' : '') + ' onchange="composerSetTiming(' + i + ',false)"> Schedule</label>';
           if (!msg.sendNow) {
-            html += '<input type="datetime-local" value="' + (msg.sendAt || '') + '" onchange="composerSetSendAt(' + i + ',this.value)" />';
+            html += '<input type="datetime-local" step="600" value="' + (msg.sendAt || '') + '" onchange="composerSetSendAt(' + i + ',this.value)" />';
           }
         } else {
-          html += '<input type="datetime-local" value="' + (msg.sendAt || '') + '" onchange="composerSetSendAt(' + i + ',this.value)" />';
+          html += '<input type="datetime-local" step="600" value="' + (msg.sendAt || '') + '" onchange="composerSetSendAt(' + i + ',this.value)" />';
           html += '<span style="font-size:11px;color:rgba(255,255,255,.3);">Sent within 5 min of scheduled time</span>';
         }
         html += '</div>';
@@ -2784,8 +3260,12 @@ Occasional deals &amp; promotions</textarea>
 
         // ── Right column: preview + test send ──
         var mediaUrl = null;
+        var isVideo = false;
         if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
-        else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+        else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) {
+          mediaUrl = msg.mediaUrl;
+          isVideo = /\.(mp4|mov|webm|3gp)(\?|$)/i.test(msg.mediaUrl);
+        }
         var hasBody = msg.body && msg.body.trim();
         var hasContent = hasBody || mediaUrl;
 
@@ -2794,11 +3274,14 @@ Occasional deals &amp; promotions</textarea>
         html += '<div class="composer-phone" id="composerPhone' + i + '">';
         if (hasContent) {
           if (hasBody) {
-            html += '<div class="composer-phone-bubble">' + (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span></div>';
+            html += '<div class="composer-phone-bubble">' + (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div>';
           }
-          if (mediaUrl) {
+          if (isVideo && mediaUrl) {
+            html += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
+          } else if (mediaUrl) {
             html += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
           }
+          html += '<div class="composer-phone-bubble" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;">Reply STOP to opt out.</div>';
         } else {
           html += '<div class="composer-phone-empty">Message preview<br>will appear here</div>';
         }
@@ -2843,16 +3326,22 @@ Occasional deals &amp; promotions</textarea>
       if (!phone) return;
       var msg = composerMessages[index];
       var mediaUrl = null;
+      var isVideo = false;
       if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
-      else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+      else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) {
+        mediaUrl = msg.mediaUrl;
+        isVideo = /\.(mp4|mov|webm|3gp)(\?|$)/i.test(msg.mediaUrl);
+      }
       var hasBody = msg.body && msg.body.trim();
       var hasContent = hasBody || mediaUrl;
       var h = '';
       if (hasContent) {
         if (hasBody) {
-          h += '<div class="composer-phone-bubble">' + msg.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span></div>';
+          h += '<div class="composer-phone-bubble">' + msg.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><br>Reply STOP to opt out.</div>';
         }
-        if (mediaUrl) {
+        if (isVideo && mediaUrl) {
+          h += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
+        } else if (mediaUrl) {
           h += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
         }
       } else {
@@ -2887,6 +3376,8 @@ Occasional deals &amp; promotions</textarea>
     var _libSort = 'newest';
     var _libIndex = null;
     var _libOverlay = null;
+    var _libBgPickerMode = false;  // true when picking bg for Studio
+    var _libBgPickerType = null;   // 'photo' or 'video'
 
     function _libRenderGrid() {
       var grid = document.getElementById('libGrid');
@@ -2941,10 +3432,40 @@ Occasional deals &amp; promotions</textarea>
       // Click handlers
       grid.querySelectorAll('.lib-cell').forEach(function(cell) {
         cell.addEventListener('click', function(e) {
-          if (e.target.closest('.lib-delete')) return; // handled separately
-          composerMessages[_libIndex].mediaUrl = cell.dataset.url;
-          composerMessages[_libIndex].mediaType = 'library';
-          composerRender();
+          if (e.target.closest('.lib-delete')) return;
+          var url = cell.dataset.url;
+          if (_libBgPickerMode) {
+            // Studio bg picker mode
+            if (_libBgPickerType === 'video') {
+              csState.videoUrl = url;
+              csState.videoSource = 'library';
+              csState.bgType = 'video';
+              csState.videoStatus = 'done';
+            } else {
+              // Photo bg from library
+              var img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = function() {
+                var scale = Math.max(640 / img.width, 800 / img.height);
+                csState.bgType = 'photo';
+                csState.bgRawImage = url;
+                csState.bgNatW = img.width;
+                csState.bgNatH = img.height;
+                csState.bgScale = scale;
+                csState.bgX = (640 - img.width * scale) / 2;
+                csState.bgY = (800 - img.height * scale) / 2;
+                csUpdatePreview();
+              };
+              img.src = url;
+            }
+            csRebuildBgOptions();
+            csUpdatePreview();
+          } else {
+            // Composer library picker
+            composerMessages[_libIndex].mediaUrl = url;
+            composerMessages[_libIndex].mediaType = 'library';
+            composerRender();
+          }
           if (_libOverlay) _libOverlay.remove();
         });
       });
@@ -2964,34 +3485,44 @@ Occasional deals &amp; promotions</textarea>
       });
     }
 
-    window.composerOpenLibrary = function(index) {
-      _libIndex = index;
-      _libFilter = 'all';
+    function _libOpenOverlay(bgPickerMode) {
+      _libBgPickerMode = !!bgPickerMode;
       _libSearch = '';
       _libSort = 'newest';
       _libAllItems = [];
 
-      composerMessages[index].mediaType = 'library';
-      composerMessages[index].mediaUrl = null;
-      composerRender();
+      // Set default filter based on mode
+      if (_libBgPickerMode) {
+        _libFilter = _libBgPickerType === 'video' ? 'video' : 'image';
+      } else {
+        _libFilter = 'all';
+      }
+
+      var title = _libBgPickerMode ? ('Select ' + (_libBgPickerType === 'video' ? 'Video' : 'Photo')) : 'Media Library';
 
       var overlay = document.createElement('div');
       overlay.className = 'lib-overlay';
       _libOverlay = overlay;
 
+      var filterHtml = '';
+      if (!_libBgPickerMode) {
+        // Show all filter tabs in composer mode
+        filterHtml = '<div class="lib-filters">' +
+          '<button class="lib-filter-btn active" data-filter="all">All</button>' +
+          '<button class="lib-filter-btn" data-filter="image">Images</button>' +
+          '<button class="lib-filter-btn" data-filter="video">Videos</button>' +
+        '</div>';
+      }
+
       overlay.innerHTML =
         '<div class="lib-panel">' +
           '<div class="lib-header">' +
-            '<h3 style="margin:0;font-size:18px;font-weight:700;">Media Library</h3>' +
+            '<h3 style="margin:0;font-size:18px;font-weight:700;">' + title + '</h3>' +
             '<button class="lib-close" onclick="this.closest(\'.lib-overlay\').remove()">&times;</button>' +
           '</div>' +
           '<div class="lib-toolbar">' +
             '<input type="search" id="libSearchInput" placeholder="Search by name..." class="lib-search" />' +
-            '<div class="lib-filters">' +
-              '<button class="lib-filter-btn active" data-filter="all">All</button>' +
-              '<button class="lib-filter-btn" data-filter="image">Images</button>' +
-              '<button class="lib-filter-btn" data-filter="video">Videos</button>' +
-            '</div>' +
+            filterHtml +
             '<select id="libSortSelect" class="lib-sort">' +
               '<option value="newest">Newest First</option>' +
               '<option value="oldest">Oldest First</option>' +
@@ -3028,6 +3559,21 @@ Occasional deals &amp; promotions</textarea>
       }).catch(function() {
         document.getElementById('libGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--red);">Failed to load library.</div>';
       });
+    }
+
+    window.composerOpenLibrary = function(index) {
+      _libIndex = index;
+      _libBgPickerType = null;
+      composerMessages[index].mediaType = 'library';
+      composerMessages[index].mediaUrl = null;
+      composerRender();
+      _libOpenOverlay(false);
+    };
+
+    window.composerToggleDev = function() {
+      var on = document.getElementById('composerDevMode').checked;
+      document.getElementById('composerDevFields').style.display = on ? '' : 'none';
+      composerUpdateRecipients();
     };
 
     window.composerSetTiming = function(index, sendNow) {
@@ -3043,7 +3589,7 @@ Occasional deals &amp; promotions</textarea>
     window.composerTestSend = function(index) {
       var msg = composerMessages[index];
       var dest = (document.getElementById('composerTestDest' + index).value || '').trim();
-      if (!dest) { alert('Enter a phone number or email.'); return; }
+      if (!dest) { showToast('Enter a phone number or email.', 'error'); return; }
       var mediaUrl = null;
       if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
       else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
@@ -3054,26 +3600,39 @@ Occasional deals &amp; promotions</textarea>
         fetch(WORKER_BASE + '/admin/send-test-email', {
           method: 'POST',
           headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ email: dest, sms_text: msg.body, image_url: mediaUrl, subject: 'Campaign Test Preview' })
+          body: JSON.stringify({ email: dest, sms_text: msg.body, image_url: mediaUrl, subject: 'G&KK NAPA - SAVINGS ALERT!' })
         }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data.error) alert('Test failed: ' + data.error);
-          else alert('Test email sent to ' + dest + '!');
-        }).catch(function(e) { alert('Error: ' + e.message); });
+          if (data.error) showToast('Test failed: ' + data.error, 'error');
+          else showToast('Test email sent to ' + dest, 'success');
+        }).catch(function(e) { showToast('Error: ' + e.message, 'error'); });
       } else {
         fetch(WORKER_BASE + '/admin/send-test', {
           method: 'POST',
           headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
           body: JSON.stringify({ body: msg.body, phone: dest, image_url: mediaUrl })
         }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data.error) alert('Test failed: ' + data.error);
-          else alert('Test SMS sent!');
-        }).catch(function(e) { alert('Error: ' + e.message); });
+          if (data.error) showToast('Test failed: ' + data.error, 'error');
+          else showToast('Test SMS sent!', 'success');
+        }).catch(function(e) { showToast('Error: ' + e.message, 'error'); });
       }
     };
 
     window.composerUpdateRecipients = function() {
+      var devMode = document.getElementById('composerDevMode').checked;
       var priority = document.getElementById('composerPriority').checked;
       var emailChecked = document.getElementById('composerEmailFallback').checked;
+
+      if (devMode) {
+        document.getElementById('composerSmsNum').textContent = '1';
+        var emailChip = document.getElementById('composerEmailCount');
+        if (emailChecked) {
+          emailChip.style.display = '';
+          document.getElementById('composerEmailNum').textContent = '1';
+        } else {
+          emailChip.style.display = 'none';
+        }
+        return;
+      }
 
       // SMS count (subscribed)
       var smsUrl = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
@@ -3130,6 +3689,34 @@ Occasional deals &amp; promotions</textarea>
       });
     };
 
+    // ─── Toast notification system ──────────────────────────
+    function showToast(message, type) {
+      type = type || 'success';
+      var container = document.getElementById('toastContainer');
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(function() {
+        toast.classList.add('fadeout');
+        setTimeout(function() { toast.remove(); }, 300);
+      }, 4000);
+    }
+
+    // ─── SMS Segment Calculator ─────────────────────────────
+    function smsSegmentInfo(text) {
+      if (!text) return { chars: 0, segments: 0, limit: 160 };
+      // Check if GSM-7 or UCS-2
+      var gsm7 = /^[\x20-\x7E\n\r]*$/.test(text); // simplified GSM check
+      var charLimit = gsm7 ? 160 : 70;
+      var concatLimit = gsm7 ? 153 : 67;
+      var len = text.length;
+      var segments;
+      if (len <= charLimit) segments = 1;
+      else segments = Math.ceil(len / concatLimit);
+      return { chars: len, segments: segments, limit: charLimit };
+    }
+
     window.composerSubmit = function() {
       var name = document.getElementById('composerName').value.trim();
       if (!name) { composerShowError('Campaign name is required.'); return; }
@@ -3152,41 +3739,151 @@ Occasional deals &amp; promotions</textarea>
         apiMessages.push({ body: msg.body || '', media_url: mediaUrl, send_now: i === 0 && msg.sendNow, send_at: sendAt });
       }
 
+      var devMode = document.getElementById('composerDevMode').checked;
+      var devPhone = (document.getElementById('composerDevPhone').value || '').trim();
+      var devEmail = (document.getElementById('composerDevEmail').value || '').trim();
+
+      if (devMode && !devPhone && !devEmail) { composerShowError('Test Mode: enter a phone number or email.'); return; }
+
+      // Build review summary
+      var smsCount = document.getElementById('composerSmsNum').textContent || '0';
+      var emailCount = document.getElementById('composerEmailNum').textContent || '0';
+      var emailChecked = document.getElementById('composerEmailFallback').checked;
       var sendNowCount = apiMessages.filter(function(m) { return m.send_now; }).length;
       var schedCount = apiMessages.length - sendNowCount;
-      var confirmMsg = 'Send this campaign?\n\n';
-      if (sendNowCount > 0) confirmMsg += '• ' + sendNowCount + ' message(s) sent immediately\n';
-      if (schedCount > 0) confirmMsg += '• ' + schedCount + ' message(s) scheduled\n';
-      if (!confirm(confirmMsg)) return;
 
-      var btn = document.getElementById('composerSendBtn');
+      var html = '';
+      if (devMode) {
+        html += '<div style="background:rgba(255,200,0,.08);border:1px dashed rgba(255,200,0,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#f59e0b;">Test Mode — sending only to you</div>';
+      }
+      html += '<div class="review-row"><span class="review-label">Campaign</span><span class="review-value">' + esc(name) + '</span></div>';
+      if (devMode) {
+        if (devPhone) html += '<div class="review-row"><span class="review-label">Test SMS to</span><span style="color:#fff;">' + esc(devPhone) + '</span></div>';
+        if (devEmail) html += '<div class="review-row"><span class="review-label">Test email to</span><span style="color:#fff;">' + esc(devEmail) + '</span></div>';
+      } else {
+        html += '<div class="review-row"><span class="review-label">SMS recipients</span><span class="review-value">' + smsCount + '</span></div>';
+        if (emailChecked) html += '<div class="review-row"><span class="review-label">Email recipients</span><span class="review-value">' + emailCount + '</span></div>';
+      }
+      html += '<div class="review-row"><span class="review-label">Messages</span><span style="color:#fff;">' + apiMessages.length + ' (' + (sendNowCount > 0 ? sendNowCount + ' now' : '') + (sendNowCount > 0 && schedCount > 0 ? ', ' : '') + (schedCount > 0 ? schedCount + ' scheduled' : '') + ')</span></div>';
+
+      // Message summaries
+      for (var j = 0; j < apiMessages.length; j++) {
+        var am = apiMessages[j];
+        var timing = am.send_now ? 'Send immediately' : new Date(am.send_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        html += '<div class="review-msg-card">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;"><strong style="color:var(--napa-yellow);">Message ' + (j + 1) + '</strong><span style="font-size:12px;color:rgba(255,255,255,.4);">' + timing + '</span></div>';
+        if (am.body) html += '<div class="review-msg-body">' + esc(am.body) + '</div>';
+        if (am.media_url) html += '<div style="margin-top:4px;font-size:12px;color:rgba(255,255,255,.4);">+ media attached</div>';
+        html += '</div>';
+      }
+
+      if (schedCount > 0) {
+        html += '<div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.4);">Scheduled messages can be viewed and edited in the <strong style="color:var(--napa-yellow);">Campaigns</strong> tab before they go out.</div>';
+      }
+
+      document.getElementById('campaignReviewBody').innerHTML = html;
+      var reviewModal = document.getElementById('campaignReviewModal');
+      reviewModal.classList.add('open');
+
+      // Store payload for confirm
+      reviewModal._payload = {
+        name: devMode ? '[TEST] ' + name : name,
+        email_subject: 'G&KK NAPA - SAVINGS ALERT!',
+        priority_only: document.getElementById('composerPriority').checked,
+        email_fallback: emailChecked,
+        messages: apiMessages
+      };
+      if (composerDraftId) reviewModal._payload.draft_id = composerDraftId;
+      if (devMode) {
+        reviewModal._payload.dev_mode = true;
+        if (devPhone) reviewModal._payload.dev_phone = devPhone;
+        if (devEmail) reviewModal._payload.dev_email = devEmail;
+      }
+    };
+
+    document.getElementById('btnReviewCancel').addEventListener('click', function() {
+      document.getElementById('campaignReviewModal').classList.remove('open');
+    });
+
+    document.getElementById('btnReviewConfirm').addEventListener('click', function() {
+      var reviewModal = document.getElementById('campaignReviewModal');
+      var payload = reviewModal._payload;
+      if (!payload) return;
+
+      var btn = document.getElementById('btnReviewConfirm');
       btn.disabled = true; btn.textContent = 'Sending...';
       composerShowError(''); composerShowSuccess('');
 
       fetch(WORKER_BASE + '/admin/campaign-compose', {
         method: 'POST',
         headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          name: name,
-          email_subject: 'G&KK NAPA Savings Alert',
-          priority_only: document.getElementById('composerPriority').checked,
-          email_fallback: document.getElementById('composerEmailFallback').checked,
-          messages: apiMessages
-        })
+        body: JSON.stringify(payload)
       }).then(function(r) { return r.json(); }).then(function(data) {
+        reviewModal.classList.remove('open');
         if (data.error) { composerShowError(data.error); return; }
         var msg = 'Campaign created!';
         if (data.sent > 0) msg += ' Sent to ' + data.sent + ' subscribers.';
         if (data.scheduled > 0) msg += ' ' + data.scheduled + ' message(s) scheduled.';
         composerShowSuccess(msg);
+        showToast(msg, 'success');
         // Reset composer
         composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }];
+        composerDraftId = null;
         document.getElementById('composerName').value = '';
+        document.getElementById('composerDraftStatus').style.display = 'none';
         composerRender();
       }).catch(function(e) {
+        reviewModal.classList.remove('open');
         composerShowError('Error: ' + e.message);
       }).finally(function() {
-        btn.disabled = false; btn.textContent = 'Send / Schedule Campaign';
+        btn.disabled = false; btn.textContent = 'Confirm & Send';
+      });
+    });
+
+    window.composerSaveDraft = function() {
+      var name = document.getElementById('composerName').value.trim();
+      if (!name) { composerShowError('Campaign name is required to save a draft.'); return; }
+
+      var draftMessages = [];
+      for (var i = 0; i < composerMessages.length; i++) {
+        var msg = composerMessages[i];
+        var mediaUrl = null;
+        if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
+        else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
+        draftMessages.push({ body: msg.body || '', media_url: mediaUrl, media_type: msg.mediaType, send_now: i === 0 && msg.sendNow, send_at: msg.sendAt || null });
+      }
+
+      var payload = {
+        name: name,
+        messages: draftMessages,
+        priority_only: document.getElementById('composerPriority').checked,
+        email_fallback: document.getElementById('composerEmailFallback').checked,
+        email_subject: 'G&KK NAPA - SAVINGS ALERT!',
+        dev_mode: document.getElementById('composerDevMode').checked,
+        dev_phone: (document.getElementById('composerDevPhone').value || '').trim(),
+        dev_email: (document.getElementById('composerDevEmail').value || '').trim()
+      };
+      if (composerDraftId) payload.draft_id = composerDraftId;
+
+      var btn = document.getElementById('composerDraftBtn');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      composerShowError('');
+
+      fetch(WORKER_BASE + '/admin/campaign-draft', {
+        method: 'POST',
+        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload)
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { composerShowError(data.error); return; }
+        composerDraftId = data.draft_id;
+        var statusEl = document.getElementById('composerDraftStatus');
+        statusEl.textContent = 'Draft saved — ' + new Date().toLocaleTimeString();
+        statusEl.style.display = 'block';
+        showToast('Draft saved', 'success');
+      }).catch(function(e) {
+        composerShowError('Error saving draft: ' + e.message);
+      }).finally(function() {
+        btn.disabled = false; btn.textContent = 'Save Draft';
       });
     };
 
@@ -3212,7 +3909,28 @@ Occasional deals &amp; promotions</textarea>
 
     // Initialize composer on load
     composerRender();
-    composerUpdateRecipients();
+
+    // ─── Graphic Filter Checkboxes ───
+    window.csApplyGraphicFilter = function() {
+      // Reset selection when filters change
+      csState.graphicId = null;
+      csState.bgType = null;
+      csState.bgValue = null;
+      csState.bgRawImage = null;
+      csState.videoSource = null;
+      csState.videoUrl = null;
+      csRebuildGraphicGrid();
+      csHideStepsAfter('csStepGraphic');
+      document.getElementById('csBgSection').style.display = 'none';
+      document.getElementById('csPlaceholder').style.display = 'flex';
+      csUpdatePreview();
+    };
+
+    // Helper: is current selection a video-only graphic?
+    function csIsVideoMode() {
+      var g = CS_BRAND_GRAPHICS.find(function(gr) { return gr.id === csState.graphicId; });
+      return g && csState.bgType === 'video';
+    }
 
     // ─── Color Selection ───
     window.csSelectColor = function(color) {
@@ -3230,7 +3948,14 @@ Occasional deals &amp; promotions</textarea>
     // ─── Graphic Grid ───
     function csRebuildGraphicGrid() {
       const grid = document.getElementById('csGraphicGrid');
-      const graphics = CS_BRAND_GRAPHICS.filter(g => g.color === csState.color);
+      var graphics = CS_BRAND_GRAPHICS.filter(g => g.color === csState.color);
+      // Apply checkbox filters
+      var filterPhoto = document.getElementById('csFilterPhoto') && document.getElementById('csFilterPhoto').checked;
+      var filterVideo = document.getElementById('csFilterVideo') && document.getElementById('csFilterVideo').checked;
+      var filterBolt = document.getElementById('csFilterBolt') && document.getElementById('csFilterBolt').checked;
+      if (filterPhoto) graphics = graphics.filter(g => g.allowsPhoto);
+      if (filterVideo) graphics = graphics.filter(g => g.allowsVideo);
+      if (filterBolt) graphics = graphics.filter(g => g.allowsBolt);
       grid.innerHTML = graphics.map(g => {
         const svgFile = g.file || g.id;
         const pos = g.position;
@@ -3250,8 +3975,8 @@ Occasional deals &amp; promotions</textarea>
       // Show bg section and auto-select first solid color
       document.getElementById('csBgSection').style.display = 'block';
       var defaultColor = csState.color === 'blue' ? '#F9C842' : '#D8AC4B';
-      if (!csState.bgType || csState.bgType !== 'upload') {
-        csSelectBg('solid', defaultColor);
+      if (!csState.bgType || (csState.bgType !== 'photo' && csState.bgType !== 'video')) {
+        csSelectBg('graphic', defaultColor);
       }
       // Hide placeholder
       document.getElementById('csPlaceholder').style.display = 'none';
@@ -3265,24 +3990,42 @@ Occasional deals &amp; promotions</textarea>
       const container = document.getElementById('csBgOptions');
       let html = '';
 
-      // Color swatches
-      const activeVal = csState.bgValue;
-      if (c === 'blue') {
-        html += '<div class="cs-bg-swatch' + (activeVal === '#F9C842' ? ' active' : '') + '" style="background:#F9C842;" data-bg="solid" data-val="#F9C842" onclick="csSelectBg(\'solid\',\'#F9C842\')" title="Yellow"></div>';
-        html += '<div class="cs-bg-swatch' + (activeVal === '#D1D3D4' ? ' active' : '') + '" style="background:#D1D3D4;" data-bg="solid" data-val="#D1D3D4" onclick="csSelectBg(\'solid\',\'#D1D3D4\')" title="Silver"></div>';
-      } else {
-        html += '<div class="cs-bg-swatch' + (activeVal === '#D8AC4B' ? ' active' : '') + '" style="background:#D8AC4B;" data-bg="solid" data-val="#D8AC4B" onclick="csSelectBg(\'solid\',\'#D8AC4B\')" title="Gold"></div>';
+      // Check which filters are active
+      var fPhoto = document.getElementById('csFilterPhoto') && document.getElementById('csFilterPhoto').checked;
+      var fVideo = document.getElementById('csFilterVideo') && document.getElementById('csFilterVideo').checked;
+      var fBolt = document.getElementById('csFilterBolt') && document.getElementById('csFilterBolt').checked;
+      var anyFilter = fPhoto || fVideo || fBolt;
+
+      // When filters are active, only show bg types that match checked filters
+      var showGraphic = !anyFilter;  // solid colors only when no filter is active
+      var showBolt = g && g.allowsBolt && (!anyFilter || fBolt);
+      var showPhoto = g && g.allowsPhoto && (!anyFilter || fPhoto);
+      var showVideo = g && g.allowsVideo && (!anyFilter || fVideo);
+
+      if (showGraphic) {
+        const activeVal = csState.bgValue;
+        if (c === 'blue') {
+          html += '<div class="cs-bg-swatch' + (activeVal === '#F9C842' && csState.bgType === 'graphic' ? ' active' : '') + '" style="background:#F9C842;" data-bg="graphic" data-val="#F9C842" onclick="csSelectBg(\'graphic\',\'#F9C842\')" title="Yellow"></div>';
+          html += '<div class="cs-bg-swatch' + (activeVal === '#D1D3D4' && csState.bgType === 'graphic' ? ' active' : '') + '" style="background:#D1D3D4;" data-bg="graphic" data-val="#D1D3D4" onclick="csSelectBg(\'graphic\',\'#D1D3D4\')" title="Silver"></div>';
+        } else {
+          html += '<div class="cs-bg-swatch' + (activeVal === '#D8AC4B' && csState.bgType === 'graphic' ? ' active' : '') + '" style="background:#D8AC4B;" data-bg="graphic" data-val="#D8AC4B" onclick="csSelectBg(\'graphic\',\'#D8AC4B\')" title="Gold"></div>';
+        }
       }
 
-      // Texture (only for corner shapes)
-      if (g && g.allowsTexture) {
+      // ── Bolt Graphic ──
+      if (showBolt) {
         const texColor = c === 'blue' ? '#F9C842' : '#D8AC4B';
-        html += '<div class="cs-bg-swatch cs-texture-' + c + '" style="background-color:' + texColor + ';" data-bg="texture" onclick="csSelectBg(\'texture\',\'' + texColor + '\')" title="Texture"></div>';
+        html += '<div class="cs-bg-swatch cs-texture-' + c + (csState.bgType === 'bolt' ? ' active' : '') + '" style="background-color:' + texColor + ';" data-bg="bolt" onclick="csSelectBg(\'bolt\',\'' + texColor + '\')" title="Bolt Graphic"></div>';
       }
 
-      // Upload (only for shapes that allow image)
-      if (g && g.allowsImage) {
-        html += '<div class="cs-bg-upload-btn" onclick="document.getElementById(\'csBgFileInput\').click()" title="Upload Photo">+</div>';
+      // ── Photo bg icon ──
+      if (showPhoto) {
+        html += '<div class="cs-bg-upload-btn' + (csState.bgType === 'photo' ? ' active' : '') + '" onclick="csOpenPhotoBgModal()" title="Photo Background"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>';
+      }
+
+      // ── Video bg icon ──
+      if (showVideo) {
+        html += '<div class="cs-bg-upload-btn' + (csState.bgType === 'video' ? ' active' : '') + '" onclick="csOpenVideoBgModal()" title="Video Background"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
       }
 
       container.innerHTML = html;
@@ -3292,13 +4035,14 @@ Occasional deals &amp; promotions</textarea>
     document.getElementById('csBgFileInput').addEventListener('change', function() {
       const file = this.files[0];
       if (!file) return;
+      this.value = ''; // reset so same file can be re-selected
       const reader = new FileReader();
       reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
           // Compute cover-fill scale and center
           var scale = Math.max(640 / img.width, 800 / img.height);
-          csState.bgType = 'upload';
+          csState.bgType = 'photo';
           csState.bgValue = null;
           csState.bgRawImage = e.target.result;
           csState.bgImageData = e.target.result;
@@ -3322,7 +4066,9 @@ Occasional deals &amp; promotions</textarea>
       var canvas = document.getElementById('csCanvas');
 
       canvas.addEventListener('mousedown', function(e) {
-        if (csState.bgType !== 'upload' || !csState.bgRawImage) return;
+        if (csState.bgType !== 'photo' || !csState.bgRawImage) return;
+        // Don't intercept clicks on inputs, buttons, or interactive overlays
+        if (e.target.closest('input, button, .cs-prev-offer-bar, .cs-prev-title-bar, .cs-prev-body-clickable, .cs-editable')) return;
         dragging = true;
         origX = csState.bgX; origY = csState.bgY;
         startX = e.clientX; startY = e.clientY;
@@ -3343,7 +4089,7 @@ Occasional deals &amp; promotions</textarea>
       });
 
       canvas.addEventListener('wheel', function(e) {
-        if (csState.bgType !== 'upload' || !csState.bgRawImage) return;
+        if (csState.bgType !== 'photo' || !csState.bgRawImage) return;
         e.preventDefault();
         var rect = canvas.getBoundingClientRect();
         var mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -3380,9 +4126,337 @@ Occasional deals &amp; promotions</textarea>
       csState.bgRawImage = null;
       // Highlight
       document.querySelectorAll('#csBgOptions .cs-bg-swatch, #csBgOptions .cs-bg-upload-btn').forEach(s => s.classList.remove('active'));
-      const sel = document.querySelector('#csBgOptions [data-bg="' + type + '"]' + (type === 'solid' ? '[data-val="' + value + '"]' : ''));
+      const sel = document.querySelector('#csBgOptions [data-bg="' + type + '"]' + (type === 'graphic' ? '[data-val="' + value + '"]' : ''));
       if (sel) sel.classList.add('active');
       csUpdatePreview();
+    };
+
+    // ─── ADD PHOTO Background Modal ───
+    var _csBgModal = null;
+
+    window.csOpenPhotoBgModal = function() {
+      _csCloseBgModal();
+      var overlay = document.createElement('div');
+      overlay.className = 'cs-bg-modal-overlay';
+      var html = '<div class="cs-bg-modal">';
+      html += '<h3 style="color:var(--napa-yellow);font-size:18px;margin:0 0 14px;">ADD PHOTO</h3>';
+      html += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
+      html += '<button class="cs-bg-modal-src active" id="csBgPhotoSrcUpload" onclick="csBgPhotoSetSrc(\'upload\')">Upload Photo</button>';
+      html += '<button class="cs-bg-modal-src" id="csBgPhotoSrcLibrary" onclick="csBgPhotoSetSrc(\'library\')">From Library</button>';
+      html += '</div>';
+      html += '<div id="csBgPhotoContent">';
+      html += '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;">Image</div>';
+      html += '<input type="file" id="csBgPhotoFileInput" accept="image/*" style="width:100%;margin-bottom:10px;" />';
+      html += '<div id="csBgPhotoPreview" style="min-height:100px;background:rgba(255,255,255,.05);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:10px;margin-top:16px;">';
+      html += '<button class="btn-secondary" style="flex:1;padding:12px;font-size:15px;font-weight:700;" onclick="_csCloseBgModal()">Cancel</button>';
+      html += '<button class="btn-primary" id="csBgPhotoSaveBtn" style="flex:1;padding:12px;font-size:15px;font-weight:700;" onclick="csBgPhotoSave()" disabled>Save</button>';
+      html += '</div>';
+      html += '</div>';
+      overlay.innerHTML = html;
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) _csCloseBgModal(); });
+      document.body.appendChild(overlay);
+      _csBgModal = overlay;
+
+      // Wire file input
+      document.getElementById('csBgPhotoFileInput').addEventListener('change', function() {
+        var file = this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          _csBgModal._photoData = ev.target.result;
+          document.getElementById('csBgPhotoPreview').innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%;max-height:200px;object-fit:contain;" />';
+          document.getElementById('csBgPhotoSaveBtn').disabled = false;
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    window.csBgPhotoSetSrc = function(src) {
+      document.getElementById('csBgPhotoSrcUpload').classList.toggle('active', src === 'upload');
+      document.getElementById('csBgPhotoSrcLibrary').classList.toggle('active', src === 'library');
+      if (src === 'library') {
+        _csCloseBgModal();
+        _libIndex = null;
+        _libBgPickerType = 'photo';
+        _libFilter = 'image';
+        _libOpenOverlay(true);
+      }
+    };
+
+    window.csBgPhotoSave = function() {
+      if (!_csBgModal || !_csBgModal._photoData) return;
+      var dataUrl = _csBgModal._photoData;
+      var img = new Image();
+      img.onload = function() {
+        var scale = Math.max(640 / img.width, 800 / img.height);
+        csState.bgType = 'photo';
+        csState.bgRawImage = dataUrl;
+        csState.bgNatW = img.width;
+        csState.bgNatH = img.height;
+        csState.bgScale = scale;
+        csState.bgX = (640 - img.width * scale) / 2;
+        csState.bgY = (800 - img.height * scale) / 2;
+        document.querySelectorAll('.cs-bg-swatch').forEach(function(s) { s.classList.remove('active'); });
+        csRebuildBgOptions();
+        csUpdatePreview();
+      };
+      img.src = dataUrl;
+      _csCloseBgModal();
+    };
+
+    // ─── ADD VIDEO Background Modal ───
+    window.csOpenVideoBgModal = function() {
+      _csCloseBgModal();
+      var overlay = document.createElement('div');
+      overlay.className = 'cs-bg-modal-overlay';
+      var activeSource = csState.videoSource || 'script';
+      var html = '<div class="cs-bg-modal">';
+      html += '<h3 style="color:var(--napa-yellow);font-size:18px;margin:0 0 14px;">ADD VIDEO</h3>';
+      html += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
+      html += '<button class="cs-bg-modal-src' + (activeSource === 'upload' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'upload\')">Upload</button>';
+      html += '<button class="cs-bg-modal-src' + (activeSource === 'library' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'library\')">From Library</button>';
+      html += '<button class="cs-bg-modal-src' + (activeSource === 'script' || activeSource === 'generate' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'script\')">From Script</button>';
+      html += '</div>';
+      html += '<div id="csBgVideoContent">';
+      if (activeSource === 'script' || activeSource === 'generate') {
+        html += _csBuildScriptPanel();
+      } else if (activeSource === 'upload') {
+        html += '<input type="file" id="csBgVideoFileInputModal" accept="video/mp4,video/quicktime,video/webm" style="width:100%;" />';
+      }
+      html += '</div>';
+      html += '<div style="display:flex;gap:10px;margin-top:16px;">';
+      var isGenerating = csState.videoStatus === 'generating';
+      html += '<button class="btn-secondary" style="flex:1;padding:12px;font-size:' + (isGenerating ? '13' : '15') + 'px;font-weight:700;" onclick="_csCloseBgModal()">' + (isGenerating ? 'Close \u2014 video will keep generating' : 'Cancel') + '</button>';
+      html += '<button class="btn-primary" id="csBgVideoSaveBtn" style="flex:1;padding:12px;font-size:15px;font-weight:700;" onclick="csBgVideoSave()"' + (csState.videoStatus === 'done' && csState.videoUrl ? '' : ' disabled') + '>Save</button>';
+      html += '</div>';
+      html += '</div>';
+      overlay.innerHTML = html;
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) _csCloseBgModal(); });
+      document.body.appendChild(overlay);
+      _csBgModal = overlay;
+
+      // Wire upload input if visible
+      var uploadInput = document.getElementById('csBgVideoFileInputModal');
+      if (uploadInput) _csWireVideoUploadInput(uploadInput);
+    };
+
+    function _csBuildScriptPanel() {
+      var wordCount = csState.videoScript ? csState.videoScript.trim().split(/\s+/).filter(function(w){return w;}).length : 0;
+      var charCount = (csState.videoScript || '').length;
+      var overLimit = charCount > 200;
+      var h = '';
+      h += '<textarea id="csVideoScript" maxlength="250" placeholder="Type what Brian should say..." style="min-height:100px;width:100%;box-sizing:border-box;" oninput="csState.videoScript=this.value;_csUpdateScriptCounter();">' + (csState.videoScript || '') + '</textarea>';
+      h += '<div id="csScriptCounter" style="font-size:11px;margin-top:2px;text-align:right;color:' + (overLimit ? 'var(--red)' : 'rgba(255,255,255,.3)') + ';">' + charCount + '/200</div>';
+
+      if (csState.videoStatus === 'generating') {
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--napa-yellow);"><span class="video-spinner"></span> Generating video... <span id="csVideoElapsed" style="color:rgba(255,255,255,.3);"></span></div>';
+        h += '<div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.4);">This usually takes 1–3 minutes. You can close this window and keep working.</div>';
+      } else if (csState.videoStatus === 'done' && csState.videoUrl) {
+        h += '<div style="margin-top:8px;font-size:13px;color:var(--green);">Video ready!</div>';
+        h += '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-top:4px;" onclick="csGenerateVideo()">Regenerate</button>';
+      } else if (csState.videoStatus === 'failed') {
+        h += '<div style="margin-top:8px;font-size:13px;color:var(--red);">Failed: ' + (csState.videoError || 'Unknown error') + '</div>';
+        h += '<button class="btn-primary" style="padding:6px 12px;font-size:12px;margin-top:4px;" onclick="csGenerateVideo()">Retry</button>';
+      } else {
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
+        h += '<button class="btn-primary" style="padding:8px 16px;font-size:13px;" onclick="csGenerateVideo()"' + (csState.videoScript && csState.videoScript.trim() ? '' : ' disabled') + ' id="csVideoGenBtn">Generate Video</button>';
+        h += '</div>';
+      }
+      return h;
+    }
+
+    window._csUpdateScriptCounter = function() {
+      var el = document.getElementById('csScriptCounter');
+      var btn = document.getElementById('csVideoGenBtn');
+      if (el) {
+        var c = (csState.videoScript || '').length;
+        el.textContent = c + '/200';
+        el.style.color = c > 200 ? 'var(--red)' : 'rgba(255,255,255,.3)';
+      }
+      if (btn) btn.disabled = !(csState.videoScript && csState.videoScript.trim());
+    };
+
+    window.csBgVideoSetSrc = function(src) {
+      if (src === 'library') {
+        _csCloseBgModal();
+        _libIndex = null;
+        _libBgPickerType = 'video';
+        _libFilter = 'video';
+        _libOpenOverlay(true);
+        return;
+      }
+      csState.videoSource = src;
+      var content = document.getElementById('csBgVideoContent');
+      if (!content) return;
+      // Update source buttons
+      document.querySelectorAll('.cs-bg-modal-src').forEach(function(b) { b.classList.remove('active'); });
+      var idx = src === 'upload' ? 0 : (src === 'library' ? 1 : 2);
+      var btns = _csBgModal.querySelectorAll('.cs-bg-modal-src');
+      if (btns[idx]) btns[idx].classList.add('active');
+
+      if (src === 'upload') {
+        content.innerHTML = '<input type="file" id="csBgVideoFileInputModal" accept="video/mp4,video/quicktime,video/webm" style="width:100%;" />';
+        _csWireVideoUploadInput(document.getElementById('csBgVideoFileInputModal'));
+      } else if (src === 'script') {
+        content.innerHTML = _csBuildScriptPanel();
+      }
+    };
+
+    function _csWireVideoUploadInput(input) {
+      input.addEventListener('change', function() {
+        var file = this.files[0];
+        if (!file) return;
+        csState.videoUrl = URL.createObjectURL(file);
+        csState.bgType = 'video';
+        csState.videoSource = 'upload';
+        csState.videoStatus = 'done';
+        var saveBtn = document.getElementById('csBgVideoSaveBtn');
+        if (saveBtn) saveBtn.disabled = false;
+        // Upload to Cloudinary in background
+        var formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'gkk_napa_mms');
+        formData.append('resource_type', 'video');
+        fetch('https://api.cloudinary.com/v1_1/dxkrjbycr/video/upload', {
+          method: 'POST', body: formData
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.secure_url) {
+            csState.videoUrl = data.secure_url;
+            fetch(WORKER_BASE + '/admin/media-library', {
+              method: 'POST',
+              headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ url: data.secure_url, label: file.name.replace(/\.[^.]+$/, '') })
+            });
+            showToast('Video uploaded!', 'success');
+          }
+        }).catch(function(e) { showToast('Video upload failed: ' + e.message, 'error'); });
+      });
+    }
+
+    window.csBgVideoSave = function() {
+      if (!csState.videoUrl) return;
+      csState.bgType = 'video';
+      csRebuildBgOptions();
+      csUpdatePreview();
+      _csCloseBgModal();
+    };
+
+    function _csCloseBgModal() {
+      if (_csBgModal) { _csBgModal.remove(); _csBgModal = null; }
+    }
+
+    // Open library to pick bg photo or video
+    window.csOpenBgLibrary = function(type) {
+      _libIndex = null;
+      _libBgPickerType = type;
+      _libFilter = type === 'video' ? 'video' : 'image';
+      _libOpenOverlay(true);
+    };
+
+    // HeyGen video generation
+    window.csGenerateVideo = function() {
+      var script = (csState.videoScript || '').trim();
+      if (!script) { showToast('Enter a script first.', 'error'); return; }
+
+      var testCheckbox = document.getElementById('csVideoTestMode');
+      var isTest = testCheckbox ? testCheckbox.checked : false;
+
+      csState.videoStatus = 'generating';
+      csState.videoError = null;
+      csState.videoUrl = null;
+      csState._videoStartTime = Date.now();
+      // Refresh modal content
+      var content = document.getElementById('csBgVideoContent');
+      if (content) content.innerHTML = _csBuildScriptPanel();
+
+      fetch(WORKER_BASE + '/admin/video/create', {
+        method: 'POST',
+        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ script: script, test_mode: isTest })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) {
+          csState.videoStatus = 'failed';
+          csState.videoError = data.error;
+          var c = document.getElementById('csBgVideoContent');
+          if (c) c.innerHTML = _csBuildScriptPanel();
+          return;
+        }
+        csState.videoId = data.video_id;
+        csState._videoPollTimer = setInterval(function() { _csVideoPoll(); }, 6000);
+        csState._videoElapsedTimer = setInterval(function() {
+          var el = document.getElementById('csVideoElapsed');
+          if (el) {
+            var secs = Math.round((Date.now() - csState._videoStartTime) / 1000);
+            var m = Math.floor(secs / 60);
+            var s = secs % 60;
+            el.textContent = (m > 0 ? m + 'm ' : '') + s + 's';
+          }
+        }, 1000);
+        showToast('Video generating — you can work on other parts while you wait.', 'info');
+      }).catch(function(e) {
+        csState.videoStatus = 'failed';
+        csState.videoError = e.message;
+        var c = document.getElementById('csBgVideoContent');
+        if (c) c.innerHTML = _csBuildScriptPanel();
+      });
+    };
+
+    function _csVideoPoll() {
+      if (!csState.videoId || csState.videoStatus !== 'generating') return;
+      fetch(WORKER_BASE + '/admin/video/status?video_id=' + encodeURIComponent(csState.videoId), {
+        headers: authHeaders()
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.status === 'completed' && data.video_url) {
+          csState.videoStatus = 'done';
+          csState.videoUrl = data.video_url;
+          csState.bgType = 'video';
+          _csVideoStopTimers();
+          // Refresh modal if open
+          var c = document.getElementById('csBgVideoContent');
+          if (c) c.innerHTML = _csBuildScriptPanel();
+          var saveBtn = document.getElementById('csBgVideoSaveBtn');
+          if (saveBtn) saveBtn.disabled = false;
+          csRebuildBgOptions();
+          csUpdatePreview();
+          showToast("Brian's video is ready!", 'success');
+        } else if (data.status === 'failed') {
+          csState.videoStatus = 'failed';
+          csState.videoError = data.error || 'Video generation failed';
+          _csVideoStopTimers();
+          var c2 = document.getElementById('csBgVideoContent');
+          if (c2) c2.innerHTML = _csBuildScriptPanel();
+        }
+      }).catch(function() { /* network error — keep polling */ });
+    }
+
+    function _csVideoStopTimers() {
+      if (csState._videoPollTimer) { clearInterval(csState._videoPollTimer); csState._videoPollTimer = null; }
+      if (csState._videoElapsedTimer) { clearInterval(csState._videoElapsedTimer); csState._videoElapsedTimer = null; }
+    }
+
+    window.csCancelVideo = function() {
+      _csVideoStopTimers();
+      csState.videoStatus = null;
+      csState.videoId = null;
+      csState.videoUrl = null;
+      csState.videoError = null;
+      var c = document.getElementById('csBgVideoContent');
+      if (c) c.innerHTML = _csBuildScriptPanel();
+    };
+
+    // Save composited video to library
+    window.csSaveVideoToLibrary = function(url) {
+      fetch(WORKER_BASE + '/admin/media-library', {
+        method: 'POST',
+        headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ url: url, label: (csState.titleText || 'Video MMS').substring(0, 80) })
+      }).then(function() {
+        showToast('Saved to library!', 'success');
+      }).catch(function() {
+        showToast('Failed to save to library.', 'error');
+      });
     };
 
     // ─── Offer Selection (visual) ───
@@ -3415,6 +4489,9 @@ Occasional deals &amp; promotions</textarea>
       }
       csState.offerMode = mode;
       document.querySelectorAll('.cs-offer-visual-btn').forEach(b => b.classList.toggle('active', b.dataset.offer === mode));
+      // Update 9-item button visibility
+      var btn9 = document.getElementById('csBodyCount9Btn');
+      if (btn9) btn9.style.display = mode === 'none' ? '' : 'none';
       if (mode === 'none') {
         csState.offerType = 'none';
         csUpdatePreview();
@@ -4043,19 +5120,31 @@ Occasional deals &amp; promotions</textarea>
     window.csStepNext = function(stepId) {
       if (stepId === 'csStepGraphic') {
         if (!csState.graphicId || !csState.bgType) return;
+        // For video bg, require a video to be ready
+        if (csState.bgType === 'video' && !csState.videoUrl) {
+          showToast('Generate or select a video first.', 'error');
+          return;
+        }
         document.getElementById('csStepGraphic').classList.add('completed');
         csShowStep('csStepOffer');
       } else if (stepId === 'csStepOffer') {
         if (!csState.offerMode) return;
         document.getElementById('csStepOffer').classList.add('completed');
-        csShowStep('csStepBody');
-        // Show 9-item option only when no offer bar
-        var btn9 = document.getElementById('csBodyCount9Btn');
-        if (btn9) btn9.style.display = csState.offerMode === 'none' ? '' : 'none';
-        // Show "None" products option only when background is an uploaded photo
-        var btn0 = document.getElementById('csBodyCount0Btn');
-        if (btn0) btn0.style.display = csState.bgType === 'upload' ? '' : 'none';
-        document.getElementById('csActions').style.display = 'flex';
+        if (csState.bgType === 'video') {
+          // Skip Products step for video — go straight to actions
+          csState.bodyCount = 0;
+          csState.bodyItems = [];
+          document.getElementById('csActions').style.display = 'flex';
+        } else {
+          csShowStep('csStepBody');
+          // Show 9-item option only when no offer bar
+          var btn9 = document.getElementById('csBodyCount9Btn');
+          if (btn9) btn9.style.display = csState.offerMode === 'none' ? '' : 'none';
+          // Show "None" products option only when background is an uploaded photo
+          var btn0 = document.getElementById('csBodyCount0Btn');
+          if (btn0) btn0.style.display = csState.bgType === 'photo' ? '' : 'none';
+          document.getElementById('csActions').style.display = 'flex';
+        }
       }
     };
 
@@ -4100,6 +5189,9 @@ Occasional deals &amp; promotions</textarea>
       const prevOfferBar = document.getElementById('csPrevOfferBar');
       if (!csState.offerType) return;
       const cfg = CS_OFFER_TYPES[csState.offerType];
+      // Scale factor for video mode (450/640 ≈ 0.703)
+      var vm = csState.bgType === 'video';
+      var s = function(v) { return Math.round(vm ? v * 0.703 : v); };
 
       if (cfg.hasPrice) {
         // Restore left/right containers
@@ -4109,14 +5201,14 @@ Occasional deals &amp; promotions</textarea>
 
         const big = !cfg.hasStartingAt;
         const i = 'border:0;outline:0;background:transparent;padding:0;margin:0;border-radius:0;font-family:inherit;font-weight:inherit;color:inherit;';
-        const startAt = cfg.hasStartingAt ? '<div style="color:#fff;font-weight:900;font-size:30px;text-transform:uppercase;line-height:1;">STARTING AT</div>' : '';
+        const startAt = cfg.hasStartingAt ? '<div style="color:#fff;font-weight:900;font-size:' + s(30) + 'px;text-transform:uppercase;line-height:1;">STARTING AT</div>' : '';
         leftEl.innerHTML = startAt +
           '<div style="display:flex;align-items:flex-start;line-height:1;font-weight:900;color:#fff;">' +
-            '<span style="font-size:' + (big ? 59 : 49) + 'px;">$</span>' +
-            '<input id="csInlineDollars" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerDollars || '') + '" placeholder="0" maxlength="3" inputmode="numeric" style="' + i + 'font-size:' + (big ? 101 : 84) + 'px;line-height:.9;width:' + Math.max(1, (csState.offerDollars || '').length) + 'ch;height:.9em;" />' +
+            '<span style="font-size:' + s(big ? 59 : 49) + 'px;">$</span>' +
+            '<input id="csInlineDollars" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerDollars || '') + '" placeholder="0" maxlength="3" inputmode="numeric" style="' + i + 'font-size:' + s(big ? 101 : 84) + 'px;line-height:.9;width:' + Math.max(1, (csState.offerDollars || '').length) + 'ch;height:.9em;" />' +
             '<span style="display:inline-flex;flex-direction:column;line-height:1;">' +
-              '<input id="csInlineCents" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerCents || '') + '" placeholder="99" maxlength="2" inputmode="numeric" style="' + i + 'font-size:' + (big ? 60 : 50) + 'px;width:2ch;height:1em;" />' +
-              '<input id="csInlineUnit" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerUnit || '') + '" placeholder="/each" maxlength="10" style="' + i + 'font-weight:300;font-size:' + (big ? 28 : 23) + 'px;line-height:1;width:8ch;height:1.25em;" />' +
+              '<input id="csInlineCents" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerCents || '') + '" placeholder="99" maxlength="2" inputmode="numeric" style="' + i + 'font-size:' + s(big ? 60 : 50) + 'px;width:2ch;height:1em;" />' +
+              '<input id="csInlineUnit" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerUnit || '') + '" placeholder="/each" maxlength="10" style="' + i + 'font-weight:300;font-size:' + s(big ? 28 : 23) + 'px;line-height:1;width:8ch;height:1.25em;" />' +
             '</span>' +
           '</div>';
 
@@ -4125,11 +5217,12 @@ Occasional deals &amp; promotions</textarea>
           const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#fff';
           const isUpTo = cfg.hasStartingAt;
           const numTop = isUpTo ? '70%' : '61%';
-          const numSize = isUpTo ? 65 : 78;
-          const pctSize = isUpTo ? 32 : 34;
-          const pctTop = isUpTo ? '14px' : '18px';
+          const numSize = s(isUpTo ? 65 : 78);
+          const pctSize = s(isUpTo ? 32 : 34);
+          const pctTop = s(isUpTo ? 14 : 18) + 'px';
+          var badgeW = s(171), badgeH = s(151);
           rightEl.innerHTML =
-            '<div style="position:relative;width:171px;height:151px;">' +
+            '<div style="position:relative;width:' + badgeW + 'px;height:' + badgeH + 'px;">' +
               '<img src="/assets/mms/offer-badges/' + cfg.badge + '.svg" style="width:100%;height:100%;" />' +
               '<div style="position:absolute;top:' + numTop + ';left:0;right:0;transform:translateY(-50%);color:' + badgeTextColor + ';font-weight:900;line-height:1;text-align:center;">' +
                 '<span style="position:relative;font-size:' + numSize + 'px;letter-spacing:-.5px;">' +
@@ -4183,18 +5276,44 @@ Occasional deals &amp; promotions</textarea>
       const prevOfferBar = document.getElementById('csPrevOfferBar');
       const canvas = document.getElementById('csCanvas');
 
+      // ── Toggle video-mode aspect ratio ──
+      var isVideoMode = csState.bgType === 'video';
+      canvas.classList.toggle('video-mode', isVideoMode);
+      var wrap = canvas.closest('.cs-canvas-wrap');
+      if (wrap) wrap.classList.toggle('video-mode', isVideoMode);
+      var canvasW = isVideoMode ? 450 : 640;
+      var canvasH = 800;
+
       // ── Background (always update, even without graphic) ──
       prevBg.className = 'cs-prev-bg';
       prevBg.style.backgroundImage = '';
-      if (csState.bgType === 'solid') {
+      // Remove any existing video element in bg
+      var existingVid = prevBg.querySelector('video');
+      if (existingVid) existingVid.remove();
+
+      if (csState.bgType === 'video' && csState.videoUrl) {
+        prevBg.style.backgroundColor = '#000';
+        // Insert video element for preview
+        var vid = prevBg.querySelector('video');
+        if (!vid) {
+          vid = document.createElement('video');
+          vid.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;z-index:10;';
+          vid.muted = true;
+          vid.loop = true;
+          vid.playsInline = true;
+          vid.autoplay = true;
+          vid.controls = true;
+          prevBg.appendChild(vid);
+        }
+        if (vid.src !== csState.videoUrl) vid.src = csState.videoUrl;
+      } else if (csState.bgType === 'graphic') {
         prevBg.style.backgroundColor = csState.bgValue;
-      } else if (csState.bgType === 'texture') {
-        // Use the actual pattern SVG as background
+      } else if (csState.bgType === 'bolt') {
         const patternFile = csState.color === 'blue' ? 'yellow-pattern-bg-full' : 'gold-pattern-bg-full';
         prevBg.style.backgroundImage = 'url(/assets/mms/' + patternFile + '.svg)';
         prevBg.style.backgroundSize = '100% 100%';
         prevBg.style.backgroundColor = csState.bgValue;
-      } else if (csState.bgType === 'upload' && csState.bgRawImage) {
+      } else if (csState.bgType === 'photo' && csState.bgRawImage) {
         prevBg.style.backgroundImage = 'url(' + csState.bgRawImage + ')';
         prevBg.style.backgroundSize = (csState.bgNatW * csState.bgScale) + 'px ' + (csState.bgNatH * csState.bgScale) + 'px';
         prevBg.style.backgroundPosition = csState.bgX + 'px ' + csState.bgY + 'px';
@@ -4203,8 +5322,8 @@ Occasional deals &amp; promotions</textarea>
       } else {
         prevBg.style.backgroundColor = '#ddd';
       }
-      // Toggle drag hint + cursor
-      var isBgUpload = csState.bgType === 'upload' && csState.bgRawImage;
+      // Toggle drag hint + cursor (only for photo bg)
+      var isBgUpload = csState.bgType === 'photo' && csState.bgRawImage;
       canvas.classList.toggle('bg-draggable', !!isBgUpload);
       var hint = document.getElementById('csBgHint');
       if (hint) hint.style.display = isBgUpload ? 'block' : 'none';
@@ -4221,11 +5340,15 @@ Occasional deals &amp; promotions</textarea>
       const svgFile = g.file || g.id;
       prevGraphic.src = '/assets/mms/brand-graphics/' + svgFile + '.svg';
       prevGraphic.style.display = 'block';
-      // Position the graphic
-      const pctX = (g.x / 640 * 100).toFixed(2);
-      const pctY = (g.y / 800 * 100).toFixed(2);
-      const pctW = (g.w / 640 * 100).toFixed(2);
-      const pctH = (g.h / 800 * 100).toFixed(2);
+      // Position the graphic (use video coords when in video mode)
+      var gx = isVideoMode && g.vx != null ? g.vx : g.x;
+      var gy = isVideoMode && g.vy != null ? g.vy : g.y;
+      var gw = isVideoMode && g.vw != null ? g.vw : g.w;
+      var gh = isVideoMode && g.vh != null ? g.vh : g.h;
+      const pctX = (gx / canvasW * 100).toFixed(2);
+      const pctY = (gy / canvasH * 100).toFixed(2);
+      const pctW = (gw / canvasW * 100).toFixed(2);
+      const pctH = (gh / canvasH * 100).toFixed(2);
       prevGraphic.style.left = pctX + '%';
       prevGraphic.style.top = pctY + '%';
       prevGraphic.style.width = pctW + '%';
@@ -4246,15 +5369,17 @@ Occasional deals &amp; promotions</textarea>
         const cfg = CS_OFFER_TYPES[csState.offerType];
         prevOfferBar.style.display = 'flex';
 
-        // Position: near the brand graphic/logo, not the title bar
+        // Position: directly adjacent to the brand graphic/badge
         if (g.position === 'top') {
-          prevOfferBar.style.top = '16.375%';
+          prevOfferBar.style.top = isVideoMode ? '11.5%' : '16.375%';
           prevOfferBar.style.bottom = 'auto';
         } else {
           prevOfferBar.style.top = 'auto';
-          prevOfferBar.style.bottom = '16.375%';
+          // Offer bar sits right on top of badge (image: 16.375%, video: 13.1% = badge at vy 695/800)
+          prevOfferBar.style.bottom = isVideoMode ? '13.1%' : '16.375%';
         }
-        prevOfferBar.style.height = '18.875%';
+        // Keep offer bar same pixel height (151px) in both modes
+        prevOfferBar.style.height = isVideoMode ? '13.3%' : '18.875%';
         prevOfferBar.style.padding = '0 3.9%';
 
         if (!cfg.hasPrice) {
@@ -4262,7 +5387,8 @@ Occasional deals &amp; promotions</textarea>
           const txt = csState.offerText || 'Huge Discounts on all Motor Oil Brands!!';
           const isGrayBg = csState.bgValue === '#D1D3D4';
           const textColor = isGrayBg ? '#F9C842' : '#fff';
-          prevOfferBar.innerHTML = '<div style="width:100%;text-align:center;color:' + textColor + ';font-weight:900;font-size:60px;line-height:1.2;" class="cs-editable" contenteditable="true" id="csPrevOfferTextEdit">' + txt + '</div>';
+          var offerFontSize = isVideoMode ? 42 : 60;
+          prevOfferBar.innerHTML = '<div style="width:100%;text-align:center;color:' + textColor + ';font-weight:900;font-size:' + offerFontSize + 'px;line-height:1.2;" class="cs-editable" contenteditable="true" id="csPrevOfferTextEdit">' + txt + '</div>';
           const el = document.getElementById('csPrevOfferTextEdit');
           if (el) {
             let offerLastGood = txt;
@@ -4278,14 +5404,29 @@ Occasional deals &amp; promotions</textarea>
             });
           }
         }
-        // Price types: HTML already built by csBuildOfferBar(), just position
+        // Price types: rebuild if video mode changed (font sizes differ)
+        if (cfg.hasPrice) csBuildOfferBar();
       } else {
         prevOfferBar.style.display = 'none';
       }
 
-      // ── Body ──
+      // ── Subtitle Zone (video mode only) ──
+      var subZone = document.getElementById('csPrevSubtitleZone');
+      if (isVideoMode) {
+        // Matches Creatomate template: subtitles centered around 55-65% from top
+        subZone.style.top = '53%';
+        subZone.style.bottom = 'auto';
+        subZone.style.height = '14%';
+        subZone.style.display = 'flex';
+      } else {
+        subZone.style.display = 'none';
+      }
+
+      // ── Body (hidden in video mode — no products) ──
       const prevBody = document.getElementById('csPrevBody');
-      if (csState.bodyCount > 0 && csState.bodyItems.length > 0) {
+      if (isVideoMode) {
+        prevBody.style.display = 'none';
+      } else if (csState.bodyCount > 0 && csState.bodyItems.length > 0) {
         var noOffer = !csState.offerType || csState.offerType === 'none';
         var bodyTop, bodyHeight;
         if (noOffer) {
@@ -4312,8 +5453,8 @@ Occasional deals &amp; promotions</textarea>
           prevBody.style.padding = '0';
           prevBody.style.gap = '0';
           prevBody.style.flexWrap = 'nowrap';
-          prevBody.style.alignItems = 'stretch';
-          prevBody.style.justifyContent = 'flex-start';
+          prevBody.style.alignItems = 'center';
+          prevBody.style.justifyContent = 'center';
 
 
           if (layout === 'text-image') {
@@ -4326,9 +5467,9 @@ Occasional deals &amp; promotions</textarea>
               : '<div onclick="csShowPrice()" style="cursor:pointer;color:rgba(255,255,255,.45);font-size:14px;padding:4px 0;flex-shrink:0;"><span style="font-size:16px;">+</span> Add cut price</div>';
             if (isNapa) {
               // NAPA: 25px padding each side, two 295px halves
-              prevBody.style.background = 'rgba(0,0,0,.3)';
+              prevBody.style.background = '';
               prevBody.innerHTML =
-                '<div style="display:flex;width:100%;height:352px;padding:0 25px;box-sizing:border-box;">' +
+                '<div style="display:flex;width:100%;height:352px;padding:0 25px;box-sizing:border-box;background:rgba(0,0,0,.3);">' +
                   '<div style="width:295px;min-width:295px;display:flex;flex-direction:column;padding:16px 10px 16px 0;box-sizing:border-box;overflow:hidden;">' +
                     priceHtml +
                     '<div class="cs-editable cs-body-name" contenteditable="true" id="csPrevBodyName" style="color:#fff;font-weight:600;font-size:40px;line-height:1.2;flex:1;overflow:hidden;word-break:break-word;">' + (item.name || 'Product Name') + '</div>' +
@@ -4358,10 +5499,10 @@ Occasional deals &amp; promotions</textarea>
           } else {
             // Image only: 590x352 centered (25px padding each side) — clickable
             prevBody.style.justifyContent = 'center';
-            prevBody.style.padding = '0 25px';
-            prevBody.style.background = 'rgba(0,0,0,.3)';
+            prevBody.style.padding = '0';
+            prevBody.style.background = '';
             prevBody.innerHTML =
-              '<div class="cs-prev-body-clickable" style="width:590px;height:352px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="csEditBodyItem(0)">' +
+              '<div class="cs-prev-body-clickable" style="width:100%;height:352px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);padding:0 25px;box-sizing:border-box;" onclick="csEditBodyItem(0)">' +
                 (item.image ? '<img src="' + item.image + '" style="max-width:100%;max-height:100%;object-fit:contain;" /><div class="cs-img-hover-overlay"><span>&#128247;</span>Click to change</div>' : placeholderImg) +
               '</div>';
           }
@@ -4371,13 +5512,13 @@ Occasional deals &amp; promotions</textarea>
           prevBody.style.padding = '0';
           prevBody.style.gap = '0';
           prevBody.style.flexWrap = 'nowrap';
-          prevBody.style.alignItems = 'stretch';
-          prevBody.style.justifyContent = 'flex-start';
+          prevBody.style.alignItems = 'center';
+          prevBody.style.justifyContent = 'center';
 
           if (layout4 === 'image-only') {
             // 4-Item Photo Only — 2×2 grid, linear gradient bg
-            prevBody.style.background = 'linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%)';
-            var gridHtml = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;">';
+            prevBody.style.background = '';
+            var gridHtml = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;background:linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%);">';
             // NAPA: align images toward center; Upload: center in cell
             var cellAligns = [
               { jc: 'flex-end',  ai: 'flex-end'  },  // 0: top-left → push right+down
@@ -4405,8 +5546,8 @@ Occasional deals &amp; promotions</textarea>
 
           } else {
             // 4-Item Text-Image — 2×2 grid: left=image(147×176), right=price bar(148×56)+desc(148×120)
-            prevBody.style.background = 'rgba(0,0,0,0.3)';
-            var tiHtml = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 25px;box-sizing:border-box;">';
+            prevBody.style.background = '';
+            var tiHtml = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 25px;box-sizing:border-box;background:rgba(0,0,0,0.3);">';
             for (var ti = 0; ti < 4; ti++) {
               var tItem = csState.bodyItems[ti] || {};
               // Price bar content (display only — editing via popup)
@@ -4458,13 +5599,13 @@ Occasional deals &amp; promotions</textarea>
           prevBody.style.padding = '0';
           prevBody.style.gap = '0';
           prevBody.style.flexWrap = 'nowrap';
-          prevBody.style.alignItems = 'stretch';
-          prevBody.style.justifyContent = 'flex-start';
+          prevBody.style.alignItems = 'center';
+          prevBody.style.justifyContent = 'center';
 
           if (layout6 === 'image-only') {
             // 6-Item Photo Only — 3×2 grid, linear gradient bg
-            prevBody.style.background = 'linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%)';
-            var grid6Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;">';
+            prevBody.style.background = '';
+            var grid6Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;background:linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%);">';
             for (var g6 = 0; g6 < 6; g6++) {
               var g6Item = csState.bodyItems[g6] || {};
               var imgStyle6 = 'max-width:180px;max-height:163px;object-fit:contain;';
@@ -4482,8 +5623,8 @@ Occasional deals &amp; promotions</textarea>
 
           } else {
             // 6-Item Text-Image — 3×2 grid: image (176×120) + price bar (176×56)
-            prevBody.style.background = 'rgba(0,0,0,0.3)';
-            var ti6Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 8px;box-sizing:border-box;column-gap:48px;row-gap:0;">';
+            prevBody.style.background = '';
+            var ti6Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:352px;padding:0 8px;box-sizing:border-box;column-gap:48px;row-gap:0;background:rgba(0,0,0,0.3);">';
             for (var t6 = 0; t6 < 6; t6++) {
               var t6Item = csState.bodyItems[t6] || {};
               // Price bar content
@@ -4526,12 +5667,12 @@ Occasional deals &amp; promotions</textarea>
           prevBody.style.padding = '0';
           prevBody.style.gap = '0';
           prevBody.style.flexWrap = 'nowrap';
-          prevBody.style.alignItems = 'stretch';
-          prevBody.style.justifyContent = 'flex-start';
+          prevBody.style.alignItems = 'center';
+          prevBody.style.justifyContent = 'center';
 
           if (layout9 === 'image-only') {
-            prevBody.style.background = 'linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%)';
-            var grid9Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:' + bodyHeight + 'px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;">';
+            prevBody.style.background = '';
+            var grid9Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:' + bodyHeight + 'px;padding:0 25px;box-sizing:border-box;justify-content:space-between;align-content:space-between;background:linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 80%);">';
             for (var g9 = 0; g9 < 9; g9++) {
               var g9Item = csState.bodyItems[g9] || {};
               grid9Html += '<div class="cs-prev-body-clickable" style="width:180px;height:180px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;" onclick="csEditBodyItem(' + g9 + ')">';
@@ -4547,8 +5688,8 @@ Occasional deals &amp; promotions</textarea>
             prevBody.innerHTML = grid9Html;
           } else {
             // Text-Image: 3×3 grid, 176×176 cells (image 176×120 + price bar 176×56)
-            prevBody.style.background = 'rgba(0,0,0,0.3)';
-            var ti9Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:' + bodyHeight + 'px;padding:23px 8px;box-sizing:border-box;column-gap:48px;row-gap:0;">';
+            prevBody.style.background = '';
+            var ti9Html = '<div style="display:flex;flex-wrap:wrap;width:100%;height:' + bodyHeight + 'px;padding:23px 8px;box-sizing:border-box;column-gap:48px;row-gap:0;background:rgba(0,0,0,0.3);">';
             for (var t9 = 0; t9 < 9; t9++) {
               var t9Item = csState.bodyItems[t9] || {};
               var priceBar9 = '';
@@ -4723,6 +5864,103 @@ Occasional deals &amp; promotions</textarea>
       // Capture any inline-edited text (name, price) from the preview before rendering
       csUpdatePreview(false);
 
+      // ── Video bg: Creatomate composite ──
+      if (csState.bgType === 'video') {
+        try {
+          if (!csState.videoUrl) throw new Error('No video selected or generated');
+          const g = CS_BRAND_GRAPHICS.find(gr => gr.id === csState.graphicId);
+          if (!g) throw new Error('No graphic selected');
+
+          // Read title/rules from DOM
+          var titleVal = document.getElementById('csPrevTitleText').value || csState.titleText;
+          var rulesVal = document.getElementById('csPrevRulesText').value || csState.rulesText;
+
+          // Build offer bar text
+          var offerText = null;
+          if (csState.offerMode === 'text' && csState.offerText) {
+            offerText = csState.offerText;
+          } else if (csState.offerMode === 'price' || csState.offerMode === 'starting') {
+            var parts = [];
+            if (csState.offerMode === 'starting') parts.push('Starting At');
+            parts.push('$' + csState.offerDollars + (csState.offerCents ? '.' + csState.offerCents : ''));
+            if (csState.offerUnit) parts.push(csState.offerUnit);
+            if (csState.offerSave) parts.push('SAVE ' + csState.offerSave + '%');
+            offerText = parts.join(' ');
+          }
+
+          // Call worker composite endpoint (uses Creatomate template)
+          var compositeResp = await fetch(WORKER_BASE + '/admin/video/composite', {
+            method: 'POST',
+            headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              video_url: csState.videoUrl,
+              badge_color: g.color,
+              title_text: titleVal,
+              rules_text: rulesVal,
+              offer_text: offerText || null,
+            }),
+          });
+          var compositeData = await compositeResp.json();
+          if (compositeData.error) throw new Error(compositeData.error);
+
+          // Poll for completion
+          var renderId = compositeData.render_id;
+          var finalUrl = null;
+          for (var pollCount = 0; pollCount < 60; pollCount++) {
+            await new Promise(function(r) { setTimeout(r, 3000); });
+            var statusResp = await fetch(WORKER_BASE + '/admin/video/composite-status?render_id=' + encodeURIComponent(renderId), {
+              headers: authHeaders(),
+            });
+            var statusData = await statusResp.json();
+            if (statusData.status === 'succeeded' && statusData.url) {
+              finalUrl = statusData.url;
+              break;
+            } else if (statusData.status === 'failed') {
+              throw new Error(statusData.error || 'Composite rendering failed');
+            }
+            // Update button text with progress
+            btn.textContent = 'Rendering video... ' + (pollCount * 3) + 's';
+          }
+          if (!finalUrl) throw new Error('Composite timed out');
+
+          // Show result
+          var rendered = document.getElementById('csRendered');
+          rendered.style.display = 'block';
+          rendered.querySelector('#csRenderInfo').textContent = '';
+          var renderedImg = document.getElementById('csRenderedImg');
+          renderedImg.style.display = 'none';
+
+          // Show video instead of image
+          var existingVid = rendered.querySelector('video.cs-rendered-video');
+          if (existingVid) existingVid.remove();
+          var vidEl = document.createElement('video');
+          vidEl.className = 'cs-rendered-video';
+          vidEl.src = finalUrl;
+          vidEl.controls = true;
+          vidEl.playsInline = true;
+          vidEl.style.cssText = 'width:100%;max-width:360px;border-radius:8px;margin-bottom:8px;';
+          renderedImg.parentNode.insertBefore(vidEl, renderedImg);
+
+          // Show action buttons
+          var actionsDiv = rendered.querySelector('.cs-rendered-actions') || document.createElement('div');
+          actionsDiv.className = 'cs-rendered-actions';
+          actionsDiv.innerHTML =
+            '<button class="btn-primary" onclick="csSaveVideoToLibrary(\'' + finalUrl + '\')">Save to Library</button> ' +
+            '<button class="btn-secondary" onclick="this.parentNode.previousElementSibling.remove();this.parentNode.parentNode.style.display=\'none\';">Discard</button> ' +
+            '<button class="btn-primary" onclick="csSaveVideoToLibrary(\'' + finalUrl + '\');csAttachToComposer(\'' + finalUrl + '\')">Save & Use in Campaign</button>';
+          if (!rendered.querySelector('.cs-rendered-actions')) rendered.appendChild(actionsDiv);
+
+          rendered.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        } catch (err) {
+          showToast('Video generation failed: ' + err.message, 'error');
+        }
+        btn.textContent = 'Generate';
+        btn.disabled = false;
+        return;
+      }
+
+      // ── Image mode: Canvas rendering (existing code) ──
       try {
         const g = CS_BRAND_GRAPHICS.find(gr => gr.id === csState.graphicId);
         if (!g) throw new Error('No graphic selected');
@@ -4735,12 +5973,12 @@ Occasional deals &amp; promotions</textarea>
         ctx.scale(SCALE, SCALE);
 
         // 1. Background
-        if (csState.bgType === 'upload' && csState.bgRawImage) {
+        if (csState.bgType === 'photo' && csState.bgRawImage) {
           const bgImg = await csLoadImage(csState.bgRawImage);
           var sw = bgImg.width * csState.bgScale;
           var sh = bgImg.height * csState.bgScale;
           ctx.drawImage(bgImg, csState.bgX, csState.bgY, sw, sh);
-        } else if (csState.bgType === 'texture') {
+        } else if (csState.bgType === 'bolt') {
           // Use the actual pattern SVG
           const patternFile = csState.color === 'blue' ? 'yellow-pattern-bg-full' : 'gold-pattern-bg-full';
           try {
@@ -5506,13 +6744,25 @@ Occasional deals &amp; promotions</textarea>
 
     // ─── Reset ───
     window.csReset = function() {
+      // Stop any video timers
+      _csVideoStopTimers();
       csState = {
-        color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null, bgRawImage: null, bgNatW: 0, bgNatH: 0, bgScale: 1, bgX: 0, bgY: 0,
+        mediaMode: 'image', color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null, bgRawImage: null, bgNatW: 0, bgNatH: 0, bgScale: 1, bgX: 0, bgY: 0,
+        videoSource: null, videoScript: '', videoUrl: null, videoStatus: null, videoId: null, videoError: null, _videoPollTimer: null, _videoElapsedTimer: null, _videoStartTime: null,
         offerType: null, offerMode: null, offerHasBadge: true, offerBadgeColor: 'yellow',
         offerDollars: '', offerCents: '', offerUnit: '', offerSave: '', offerText: '',
         titleText: 'SALE EVENT', rulesText: 'In store only, while supplies last',
         bodyCount: null, bodyItems: [],
       };
+      // Reset filter checkboxes
+      var fp = document.getElementById('csFilterPhoto');
+      var fv = document.getElementById('csFilterVideo');
+      var fb = document.getElementById('csFilterBolt');
+      if (fp) fp.checked = false;
+      if (fv) fv.checked = false;
+      if (fb) fb.checked = false;
+      // Restore Products step visibility
+      document.getElementById('csStepBody').style.display = '';
       document.querySelectorAll('.cs-color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === 'blue'));
       document.querySelectorAll('.cs-step').forEach(s => s.classList.remove('completed', 'collapsed'));
       csRebuildGraphicGrid();
@@ -5522,8 +6772,11 @@ Occasional deals &amp; promotions</textarea>
       document.getElementById('csPrevGraphic').style.display = 'none';
       document.getElementById('csPrevTitleBar').style.display = 'none';
       document.getElementById('csPrevOfferBar').style.display = 'none';
-      document.getElementById('csPrevBg').style.backgroundColor = '';
-      document.getElementById('csPrevBg').style.backgroundImage = '';
+      var _prevBg = document.getElementById('csPrevBg');
+      _prevBg.style.backgroundColor = '';
+      _prevBg.style.backgroundImage = '';
+      var _vidEl = _prevBg.querySelector('video');
+      if (_vidEl) _vidEl.remove();
       document.getElementById('csRendered').style.display = 'none';
       document.getElementById('csPrevOfferBar').innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
       document.getElementById('csPrevTitleText').value = 'SALE EVENT';
@@ -5535,6 +6788,32 @@ Occasional deals &amp; promotions</textarea>
 
     // ─── Init ───
     csRebuildGraphicGrid();
+
+    // ─── Responsive canvas scaling ───
+    function csScaleCanvas() {
+      var wrap = document.querySelector('.cs-canvas-wrap');
+      var canvas = document.getElementById('csCanvas');
+      if (!wrap || !canvas) return;
+      var wrapW = wrap.clientWidth;
+      if (wrapW >= 640) {
+        canvas.style.transform = '';
+        canvas.style.transformOrigin = '';
+        wrap.style.height = '';
+      } else {
+        var scale = wrapW / 640;
+        canvas.style.transform = 'scale(' + scale + ')';
+        canvas.style.transformOrigin = 'top left';
+        wrap.style.height = Math.round(800 * scale) + 'px';
+      }
+    }
+    window.addEventListener('resize', csScaleCanvas);
+    // Run on view switch too
+    var _origShowView = window.composerShowView;
+    window.composerShowView = function(view) {
+      _origShowView(view);
+      if (view === 'studio') setTimeout(csScaleCanvas, 50);
+    };
+    csScaleCanvas();
 
 
     // ─── Phone formatting ──────────────────────────────────────

@@ -35,7 +35,7 @@ function getCorsHeaders(request) {
   const origin = request.headers.get("Origin");
   return {
     "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : "https://gkk-napa.com",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }
@@ -521,15 +521,6 @@ async function processScheduledEvents(env) {
 
       const promoMeta = campaign.promo_meta ? JSON.parse(campaign.promo_meta) : {};
 
-      // Query eligible customers (same logic as handleSendCampaign)
-      let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
-      const binds = [];
-      if (campaign.store_filter) { customerSql += " AND store = ?"; binds.push(campaign.store_filter); }
-      if (promoMeta.priority_only) { customerSql += " AND is_priority = 1"; }
-
-      const stmt = env.DB.prepare(customerSql);
-      const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
-
       let sentCount = 0;
       let failedCount = 0;
 
@@ -537,63 +528,101 @@ async function processScheduledEvents(env) {
       let finalBody = event.body;
       finalBody = await shortenUrlsInText(finalBody, env);
 
-      for (const customer of customers.results) {
-        const result = await sendSms(env, customer.phone, finalBody, event.media_url);
-
-        await env.DB.prepare(
-          "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
-        ).bind(
-          result.ok ? result.sid : null,
-          customer.id,
-          event.campaign_id,
-          finalBody,
-          result.ok ? (result.status || "queued") : "failed",
-          result.ok ? null : (result.error || "send_failed"),
-          now, now
-        ).run();
-
-        if (result.ok) sentCount++;
-        else failedCount++;
-      }
-
-      // Email fallback for scheduled events
-      if (promoMeta.email_fallback && env.RESEND_API_KEY) {
-        let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
-        if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
-        const emailCustomers = await env.DB.prepare(emailSql).all();
-
-        for (const customer of emailCustomers.results) {
-          const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
-          const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
-          const displayPhone = canSms
-            ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
-            : null;
-          let subscribeUrl;
-          if (canSms) {
-            const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
-            subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
-          } else {
-            subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
-          }
-          const emailMedia = event.media_url && !event.media_url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) ? event.media_url : null;
-          const html = buildCampaignEmail(greeting, event.body, subscribeUrl, displayPhone, emailMedia);
-
+      if (promoMeta.dev_mode) {
+        // Dev mode: send only to dev_phone / dev_email
+        if (promoMeta.dev_phone) {
+          const phone = promoMeta.dev_phone.replace(/\D/g, "");
+          const formattedPhone = phone.length === 10 ? "+1" + phone : "+" + phone;
+          const result = await sendSms(env, formattedPhone, finalBody, event.media_url);
+          if (result.ok) sentCount++; else failedCount++;
+        }
+        if (promoMeta.dev_email && promoMeta.email_fallback && env.RESEND_API_KEY) {
+          const emailMedia = videoToThumbnail(event.media_url);
+          const html = buildCampaignEmail("Dev Tester", event.body, "https://gkk-napa.com/sms/subscribe", null, emailMedia);
           try {
             await fetch("https://api.resend.com/emails", {
               method: "POST",
               headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
               body: JSON.stringify({
                 from: env.FROM_EMAIL,
-                to: [customer.email],
+                to: [promoMeta.dev_email],
                 reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
                 subject: promoMeta.email_subject || `${campaign.name} \u2014 G&KK NAPA`,
                 html,
               }),
             });
           } catch (e) {
-            console.error(JSON.stringify({ tag: "CRON_EMAIL_ERROR", customer_id: customer.id, error: e.message }));
+            console.error(JSON.stringify({ tag: "CRON_DEV_EMAIL_ERROR", error: e.message }));
           }
-          await new Promise(r => setTimeout(r, 600));
+        }
+      } else {
+        // Normal mode: query eligible customers
+        let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+        const binds = [];
+        if (campaign.store_filter) { customerSql += " AND store = ?"; binds.push(campaign.store_filter); }
+        if (promoMeta.priority_only) { customerSql += " AND is_priority = 1"; }
+
+        const stmt = env.DB.prepare(customerSql);
+        const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+
+        for (const customer of customers.results) {
+          const result = await sendSms(env, customer.phone, finalBody, event.media_url);
+
+          await env.DB.prepare(
+            "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+          ).bind(
+            result.ok ? result.sid : null,
+            customer.id,
+            event.campaign_id,
+            finalBody,
+            result.ok ? (result.status || "queued") : "failed",
+            result.ok ? null : (result.error || "send_failed"),
+            now, now
+          ).run();
+
+          if (result.ok) sentCount++;
+          else failedCount++;
+        }
+
+        // Email fallback for scheduled events
+        if (promoMeta.email_fallback && env.RESEND_API_KEY) {
+          let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
+          if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
+          const emailCustomers = await env.DB.prepare(emailSql).all();
+
+          for (const customer of emailCustomers.results) {
+            const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
+            const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+            const displayPhone = canSms
+              ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
+              : null;
+            let subscribeUrl;
+            if (canSms) {
+              const shortCode = customer.short_code || await ensureShortCode(env.DB, customer.id);
+              subscribeUrl = `https://gkk-napa.com/s/${shortCode}`;
+            } else {
+              subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
+            }
+            const emailMedia = videoToThumbnail(event.media_url);
+            const html = buildCampaignEmail(greeting, event.body, subscribeUrl, displayPhone, emailMedia);
+
+            try {
+              await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  from: env.FROM_EMAIL,
+                  to: [customer.email],
+                  reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
+                  subject: promoMeta.email_subject || `${campaign.name} \u2014 G&KK NAPA`,
+                  html,
+                }),
+              });
+            } catch (e) {
+              console.error(JSON.stringify({ tag: "CRON_EMAIL_ERROR", customer_id: customer.id, error: e.message }));
+            }
+            await new Promise(r => setTimeout(r, 600));
+          }
         }
       }
 
@@ -601,6 +630,15 @@ async function processScheduledEvents(env) {
       await env.DB.prepare(
         "UPDATE campaign_events SET status = 'sent', sent_count = ?, failed_count = ? WHERE id = ?"
       ).bind(sentCount, failedCount, event.id).run();
+
+      // Update campaign totals (aggregate from all events)
+      await env.DB.prepare(`
+        UPDATE campaigns SET
+          recipient_count = COALESCE((SELECT SUM(sent_count + failed_count) FROM campaign_events WHERE campaign_id = ?), 0),
+          sent_count = COALESCE((SELECT SUM(sent_count) FROM campaign_events WHERE campaign_id = ?), 0),
+          failed_count = COALESCE((SELECT SUM(failed_count) FROM campaign_events WHERE campaign_id = ?), 0)
+        WHERE id = ?
+      `).bind(event.campaign_id, event.campaign_id, event.campaign_id, event.campaign_id).run();
 
       console.log(JSON.stringify({ tag: "CRON_EVENT_SENT", event_id: event.id, campaign_id: event.campaign_id, sent: sentCount, failed: failedCount }));
     } catch (e) {
@@ -795,6 +833,12 @@ export default {
         return jsonOk(corsHeaders, { ok: true });
       }
 
+      // ── Admin: POST /admin/campaign-draft ──
+      if (request.method === "POST" && path === "/admin/campaign-draft") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleCampaignDraft(request, env, corsHeaders);
+      }
+
       // ── Admin: GET /admin/campaigns ──
       if (request.method === "GET" && path === "/admin/campaigns") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -805,6 +849,17 @@ export default {
       if (request.method === "GET" && path.match(/^\/admin\/campaigns\/\d+$/)) {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
         return handleGetCampaign(path, env, corsHeaders);
+      }
+
+      // ── Admin: DELETE /admin/campaigns/:id ──
+      if (request.method === "DELETE" && path.match(/^\/admin\/campaigns\/\d+$/)) {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        const id = parseInt(path.split('/').pop());
+        const campaign = await env.DB.prepare("SELECT status FROM campaigns WHERE id = ?").bind(id).first();
+        if (!campaign) return jsonError(corsHeaders, "Campaign not found.", 404);
+        if (campaign.status !== 'draft') return jsonError(corsHeaders, "Only draft campaigns can be deleted.", 400);
+        await env.DB.prepare("DELETE FROM campaigns WHERE id = ?").bind(id).run();
+        return jsonOk(corsHeaders, { ok: true });
       }
 
       // ── Twilio: POST /twilio/status ──
@@ -862,6 +917,12 @@ export default {
       if (request.method === "GET" && path === "/admin/promo/events") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
         return handlePromoEvents(url, env, corsHeaders);
+      }
+
+      // ── Admin: PATCH /admin/promo/events/:id ──
+      if (request.method === "PATCH" && path.match(/^\/admin\/promo\/events\/\d+$/)) {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handlePromoEventUpdate(path, request, env, corsHeaders);
       }
 
       // ── Admin: POST /admin/napa-lookup ──
@@ -942,6 +1003,30 @@ export default {
       if (request.method === "GET" && path === "/admin/creatives") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
         return handleListCreatives(env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/video/create ──
+      if (request.method === "POST" && path === "/admin/video/create") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleVideoCreate(request, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/video/status ──
+      if (request.method === "GET" && path === "/admin/video/status") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleVideoStatus(request, env, corsHeaders);
+      }
+
+      // ── Admin: POST /admin/video/composite ──
+      if (request.method === "POST" && path === "/admin/video/composite") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleVideoComposite(request, env, corsHeaders);
+      }
+
+      // ── Admin: GET /admin/video/composite-status ──
+      if (request.method === "GET" && path === "/admin/video/composite-status") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleVideoCompositeStatus(request, env, corsHeaders);
       }
 
       return jsonError(corsHeaders, "Not found", 404);
@@ -1799,6 +1884,18 @@ const QR_CODE_URL = "https://gkk-napa.com/assets/sms_qrcode.svg";
 
 const SMS_LOGO_EMAIL = "https://gkk-napa.com/assets/sms-logo.png";
 
+function videoToThumbnail(url) {
+  if (!url) return null;
+  const isVideo = url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || url.includes('/video/');
+  if (!isVideo) return url;
+  // Cloudinary: replace /video/upload/ with /video/upload/so_0,f_jpg/ to get poster frame
+  if (url.includes('cloudinary.com') && url.includes('/video/upload/')) {
+    return url.replace('/video/upload/', '/video/upload/so_0,f_jpg/');
+  }
+  // Non-Cloudinary video — can't generate thumbnail, skip media
+  return null;
+}
+
 function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl) {
   // Detect if media is the SMS logo (not a real creative)
   const isLogo = mediaUrl && mediaUrl.includes('sms-logo');
@@ -1951,10 +2048,10 @@ async function handleSendTestEmail(request, env, corsHeaders) {
   if (!email || !email.includes("@")) return jsonError(corsHeaders, "Valid email address is required.", 400);
   if (!sms_text && !image_url) return jsonError(corsHeaders, "Message text or image is required.", 400);
 
-  const emailSubject = subject || "G&KK NAPA Savings Alert";
+  const emailSubject = subject || "G&KK NAPA - SAVINGS ALERT!";
 
-  // Use the same branded template as real campaign emails
-  const html = buildCampaignEmail("there", sms_text || "", "https://gkk-napa.com/sms/subscribe", null, image_url || null);
+  // Use the same branded template as real campaign emails (video → thumbnail for email)
+  const html = buildCampaignEmail("there", sms_text || "", "https://gkk-napa.com/sms/subscribe", null, videoToThumbnail(image_url) || null);
 
   try {
     const resp = await fetch("https://api.resend.com/emails", {
@@ -2082,9 +2179,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
         subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
       }
 
-      // Only include image media in email (not video)
-      const emailMedia = mediaUrl && !mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) && !mediaUrl.includes('/video/')
-        ? mediaUrl : null;
+      const emailMedia = videoToThumbnail(mediaUrl);
 
       const html = buildCampaignEmail(greeting, messageBody.trim(), subscribeUrl, displayPhone, emailMedia);
 
@@ -2139,7 +2234,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
 // ─── Campaign Composer ─────────────────────────────────────────
 async function handleCampaignCompose(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, store, priority_only, email_fallback, email_subject, messages } = body;
+  const { name, store, priority_only, email_fallback, email_subject, messages, dev_mode, dev_phone, dev_email, draft_id } = body;
 
   if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
   if (!messages || !Array.isArray(messages) || messages.length === 0) return jsonError(corsHeaders, "At least one message is required.", 400);
@@ -2154,14 +2249,25 @@ async function handleCampaignCompose(request, env, corsHeaders) {
   }
 
   const now = new Date().toISOString();
-  const emailSubj = email_subject || "G&KK NAPA Savings Alert";
-  const promoMeta = JSON.stringify({ priority_only: !!priority_only, email_fallback: !!email_fallback, email_subject: emailSubj });
+  const emailSubj = email_subject || "G&KK NAPA - SAVINGS ALERT!";
+  const metaObj = { priority_only: !!priority_only, email_fallback: !!email_fallback, email_subject: emailSubj };
+  if (dev_mode) { metaObj.dev_mode = true; if (dev_phone) metaObj.dev_phone = dev_phone; if (dev_email) metaObj.dev_email = dev_email; }
+  const promoMeta = JSON.stringify(metaObj);
   const firstMsg = messages[0];
 
-  const campaignResult = await env.DB.prepare(
-    "INSERT INTO campaigns (name, body, store_filter, recipient_count, promo_type, promo_meta, media_url, created_at) VALUES (?, ?, ?, 0, 'compose', ?, ?, ?)"
-  ).bind(name.trim(), firstMsg.body || "", store || null, promoMeta, firstMsg.media_url || null, now).run();
-  const campaignId = campaignResult.meta.last_row_id;
+  let campaignId;
+  if (draft_id) {
+    // Convert draft to active campaign
+    await env.DB.prepare(
+      "UPDATE campaigns SET name = ?, body = ?, store_filter = ?, promo_type = 'compose', promo_meta = ?, media_url = ?, status = 'active', draft_data = NULL, created_at = ? WHERE id = ? AND status = 'draft'"
+    ).bind(name.trim(), firstMsg.body || "", store || null, promoMeta, firstMsg.media_url || null, now, draft_id).run();
+    campaignId = draft_id;
+  } else {
+    const campaignResult = await env.DB.prepare(
+      "INSERT INTO campaigns (name, body, store_filter, recipient_count, promo_type, promo_meta, media_url, status, created_at) VALUES (?, ?, ?, 0, 'compose', ?, ?, 'active', ?)"
+    ).bind(name.trim(), firstMsg.body || "", store || null, promoMeta, firstMsg.media_url || null, now).run();
+    campaignId = campaignResult.meta.last_row_id;
+  }
 
   const eventIds = [];
   for (let i = 0; i < messages.length; i++) {
@@ -2177,49 +2283,72 @@ async function handleCampaignCompose(request, env, corsHeaders) {
   let sentCount = 0, failedCount = 0, emailSent = 0, emailFailed = 0;
 
   if (firstMsg.send_now) {
-    let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
-    const binds = [];
-    if (store) { customerSql += " AND store = ?"; binds.push(store); }
-    if (priority_only) { customerSql += " AND is_priority = 1"; }
-    const stmt = env.DB.prepare(customerSql);
-    const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
-
     let fullMessage = firstMsg.body ? firstMsg.body.trim() : "";
     if (fullMessage) {
       fullMessage = await shortenUrlsInText(fullMessage, env);
       fullMessage += "\n\nReply STOP to opt out.";
     }
 
-    for (const customer of customers.results) {
-      const result = await sendSms(env, customer.phone, fullMessage, firstMsg.media_url);
-      await env.DB.prepare(
-        "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
-      ).bind(result.ok ? result.sid : null, customer.id, campaignId, fullMessage, result.ok ? (result.status || "queued") : "failed", result.ok ? null : (result.error || "send_failed"), now, now).run();
-      if (result.ok) sentCount++; else failedCount++;
-    }
-
-    if (email_fallback && env.RESEND_API_KEY) {
-      let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
-      if (priority_only) { emailSql += " AND is_priority = 1"; }
-      const emailCustomers = await env.DB.prepare(emailSql).all();
-
-      for (const customer of emailCustomers.results) {
-        const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
-        const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
-        const displayPhone = canSms ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : null;
-        const shortCode = canSms ? (customer.short_code || await ensureShortCode(env.DB, customer.id)) : null;
-        const subscribeUrl = canSms ? `https://gkk-napa.com/s/${shortCode}` : 'https://gkk-napa.com/sms/subscribe';
-        const emailMedia = firstMsg.media_url && !firstMsg.media_url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) ? firstMsg.media_url : null;
-        const html = buildCampaignEmail(greeting, firstMsg.body || "", subscribeUrl, displayPhone, emailMedia);
+    if (dev_mode) {
+      // Dev mode: send only to the specified phone/email
+      if (dev_phone) {
+        const phone = dev_phone.replace(/\D/g, "");
+        const formattedPhone = phone.length === 10 ? "+1" + phone : "+" + phone;
+        const result = await sendSms(env, formattedPhone, fullMessage, firstMsg.media_url);
+        if (result.ok) sentCount++; else failedCount++;
+      }
+      if (dev_email && email_fallback && env.RESEND_API_KEY) {
+        const emailMedia = videoToThumbnail(firstMsg.media_url);
+        const html = buildCampaignEmail("Dev Tester", firstMsg.body || "", "https://gkk-napa.com/sms/subscribe", null, emailMedia);
         try {
           const resp = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: emailSubj, html }),
+            body: JSON.stringify({ from: env.FROM_EMAIL, to: [dev_email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: emailSubj, html }),
           });
           if (resp.ok) emailSent++; else emailFailed++;
         } catch (e) { emailFailed++; }
-        await new Promise(r => setTimeout(r, 600));
+      }
+    } else {
+      // Normal mode: send to all eligible customers
+      let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+      const binds = [];
+      if (store) { customerSql += " AND store = ?"; binds.push(store); }
+      if (priority_only) { customerSql += " AND is_priority = 1"; }
+      const stmt = env.DB.prepare(customerSql);
+      const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+
+      for (const customer of customers.results) {
+        const result = await sendSms(env, customer.phone, fullMessage, firstMsg.media_url);
+        await env.DB.prepare(
+          "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+        ).bind(result.ok ? result.sid : null, customer.id, campaignId, fullMessage, result.ok ? (result.status || "queued") : "failed", result.ok ? null : (result.error || "send_failed"), now, now).run();
+        if (result.ok) sentCount++; else failedCount++;
+      }
+
+      if (email_fallback && env.RESEND_API_KEY) {
+        let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
+        if (priority_only) { emailSql += " AND is_priority = 1"; }
+        const emailCustomers = await env.DB.prepare(emailSql).all();
+
+        for (const customer of emailCustomers.results) {
+          const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
+          const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+          const displayPhone = canSms ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : null;
+          const shortCode = canSms ? (customer.short_code || await ensureShortCode(env.DB, customer.id)) : null;
+          const subscribeUrl = canSms ? `https://gkk-napa.com/s/${shortCode}` : 'https://gkk-napa.com/sms/subscribe';
+          const emailMedia = videoToThumbnail(firstMsg.media_url);
+          const html = buildCampaignEmail(greeting, firstMsg.body || "", subscribeUrl, displayPhone, emailMedia);
+          try {
+            const resp = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: emailSubj, html }),
+            });
+            if (resp.ok) emailSent++; else emailFailed++;
+          } catch (e) { emailFailed++; }
+          await new Promise(r => setTimeout(r, 600));
+        }
       }
     }
 
@@ -2650,7 +2779,7 @@ async function handlePromoSchedule(request, env, corsHeaders) {
           let subscribeUrl = canSms
             ? `https://gkk-napa.com/s/${customer.short_code || await ensureShortCode(env.DB, customer.id)}`
             : 'https://gkk-napa.com/sms/subscribe';
-          const emailMedia = mediaUrl && !mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) ? mediaUrl : null;
+          const emailMedia = videoToThumbnail(mediaUrl);
           const html = buildCampaignEmail(greeting, firstEvent.body, subscribeUrl, displayPhone, emailMedia);
           try {
             const resp = await fetch("https://api.resend.com/emails", {
@@ -2707,6 +2836,33 @@ async function handlePromoCancel(path, env, corsHeaders) {
   ).bind(campaignId).run();
 
   return jsonOk(corsHeaders, { cancelled: result.meta.changes });
+}
+
+async function handlePromoEventUpdate(path, request, env, corsHeaders) {
+  const eventId = parseInt(path.split("/").pop());
+
+  // Only allow editing scheduled events
+  const event = await env.DB.prepare("SELECT * FROM campaign_events WHERE id = ?").bind(eventId).first();
+  if (!event) return jsonError(corsHeaders, "Event not found.", 404);
+  if (event.status !== "scheduled") return jsonError(corsHeaders, "Only scheduled events can be edited.", 400);
+
+  const updates = await request.json();
+  const fields = [];
+  const values = [];
+
+  if (updates.status === "cancelled") { fields.push("status = ?"); values.push("cancelled"); }
+  if (updates.body !== undefined) { fields.push("body = ?"); values.push(updates.body); }
+  if (updates.media_url !== undefined) { fields.push("media_url = ?"); values.push(updates.media_url || null); }
+  if (updates.label !== undefined) { fields.push("label = ?"); values.push(updates.label); }
+  if (updates.send_at !== undefined) { fields.push("send_at = ?"); values.push(updates.send_at); }
+
+  if (fields.length === 0) return jsonError(corsHeaders, "No fields to update.", 400);
+
+  values.push(eventId);
+  await env.DB.prepare(`UPDATE campaign_events SET ${fields.join(", ")} WHERE id = ?`).bind(...values).run();
+
+  const updated = await env.DB.prepare("SELECT * FROM campaign_events WHERE id = ?").bind(eventId).first();
+  return jsonOk(corsHeaders, updated);
 }
 
 async function handlePromoEvents(url, env, corsHeaders) {
@@ -2861,15 +3017,54 @@ async function handleSaveToLibrary(request, env, corsHeaders) {
   return jsonOk(corsHeaders, { ok: true });
 }
 
+async function handleCampaignDraft(request, env, corsHeaders) {
+  const body = await request.json();
+  const { draft_id, name, messages, priority_only, email_fallback, email_subject, dev_mode, dev_phone, dev_email } = body;
+
+  if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
+
+  // Ensure draft columns exist
+  try { await env.DB.prepare("ALTER TABLE campaigns ADD COLUMN status TEXT NOT NULL DEFAULT 'active'").run(); } catch { }
+  try { await env.DB.prepare("ALTER TABLE campaigns ADD COLUMN draft_data TEXT").run(); } catch { }
+
+  const now = new Date().toISOString();
+  const metaObj = { priority_only: !!priority_only, email_fallback: !!email_fallback, email_subject: email_subject || "G&KK NAPA - SAVINGS ALERT!" };
+  if (dev_mode) { metaObj.dev_mode = true; if (dev_phone) metaObj.dev_phone = dev_phone; if (dev_email) metaObj.dev_email = dev_email; }
+  const promoMeta = JSON.stringify(metaObj);
+  const draftData = JSON.stringify(messages || []);
+  const firstMsg = messages && messages.length > 0 ? messages[0] : {};
+
+  if (draft_id) {
+    // Update existing draft
+    const existing = await env.DB.prepare("SELECT id, status FROM campaigns WHERE id = ?").bind(draft_id).first();
+    if (!existing) return jsonError(corsHeaders, "Draft not found.", 404);
+    if (existing.status !== 'draft') return jsonError(corsHeaders, "Campaign is not a draft.", 400);
+    await env.DB.prepare(
+      "UPDATE campaigns SET name = ?, body = ?, promo_meta = ?, media_url = ?, draft_data = ? WHERE id = ?"
+    ).bind(name.trim(), firstMsg.body || "", promoMeta, firstMsg.media_url || null, draftData, draft_id).run();
+    return jsonOk(corsHeaders, { draft_id: draft_id, updated: true });
+  } else {
+    // Create new draft
+    const result = await env.DB.prepare(
+      "INSERT INTO campaigns (name, body, store_filter, recipient_count, promo_type, promo_meta, media_url, status, draft_data, created_at) VALUES (?, ?, ?, 0, 'compose', ?, ?, 'draft', ?, ?)"
+    ).bind(name.trim(), firstMsg.body || "", null, promoMeta, firstMsg.media_url || null, draftData, now).run();
+    return jsonOk(corsHeaders, { draft_id: result.meta.last_row_id, created: true });
+  }
+}
+
 async function handleListCampaigns(env, corsHeaders) {
+  // Ensure draft columns exist
+  try { await env.DB.prepare("ALTER TABLE campaigns ADD COLUMN status TEXT NOT NULL DEFAULT 'active'").run(); } catch { }
+  try { await env.DB.prepare("ALTER TABLE campaigns ADD COLUMN draft_data TEXT").run(); } catch { }
+
   const campaigns = await env.DB.prepare(
-    "SELECT * FROM campaigns ORDER BY created_at DESC"
+    "SELECT * FROM campaigns ORDER BY CASE WHEN status = 'draft' THEN 0 ELSE 1 END, created_at DESC"
   ).all();
 
   // For promo campaigns, attach event summary
   const results = [];
   for (const c of campaigns.results) {
-    if (c.promo_type === "promo") {
+    if (c.promo_type === "promo" || c.promo_type === "compose") {
       const events = await env.DB.prepare(
         "SELECT id, event_index, label, status, sent_count, failed_count, send_at FROM campaign_events WHERE campaign_id = ? ORDER BY event_index ASC"
       ).bind(c.id).all();
@@ -3123,4 +3318,210 @@ async function handleListCreatives(env, corsHeaders) {
     "SELECT id, name, status, template_id, updated_at, created_at FROM promo_creatives ORDER BY updated_at DESC"
   ).all();
   return jsonOk(corsHeaders, rows.results);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Video MMS — HeyGen Talking Photo
+// ═══════════════════════════════════════════════════════════════
+
+const HEYGEN_API_KEY = "OWQxZDRjZmUxMmI4NDIzMDg2NjI3NTRmYWJlNTdmMTgtMTc1OTM0MjExNQ==";
+const HEYGEN_VOICE_ID = "846b356ee5dd41379d521cb7f612775f";
+const HEYGEN_TALKING_PHOTO_ID = "0b74ce8af81540c2b81a4acbf7ef0dfc";
+
+async function handleVideoCreate(request, env, corsHeaders) {
+  const body = await request.json();
+  const { script, test_mode } = body;
+
+  if (!script || !script.trim()) {
+    return jsonError(corsHeaders, "Script text is required.", 400);
+  }
+  if (script.length > 3000) {
+    return jsonError(corsHeaders, "Script must be under 3000 characters.", 400);
+  }
+
+  const payload = {
+    video_inputs: [
+      {
+        character: {
+          type: "talking_photo",
+          talking_photo_id: HEYGEN_TALKING_PHOTO_ID,
+        },
+        voice: {
+          type: "text",
+          input_text: script.trim(),
+          voice_id: HEYGEN_VOICE_ID,
+        },
+      },
+    ],
+    caption: false,
+    dimension: { width: 1280, height: 720 },
+  };
+
+  // test mode creates a free low-quality preview
+  if (test_mode) payload.test = true;
+
+  try {
+    const resp = await fetch("https://api.heygen.com/v2/video/generate", {
+      method: "POST",
+      headers: {
+        "X-Api-Key": HEYGEN_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await resp.json();
+
+    // v2 success: { error: null, data: { video_id: "..." } }
+    // v2 error:   { error: { code: "...", message: "..." } }
+    if (!resp.ok || data.error) {
+      console.error("HeyGen create error:", JSON.stringify(data));
+      const errMsg = (data.error && data.error.message) || data.message || JSON.stringify(data);
+      return jsonError(corsHeaders, "HeyGen: " + errMsg, resp.status || 500);
+    }
+
+    return jsonOk(corsHeaders, {
+      video_id: data.data.video_id,
+      status: "pending",
+    });
+  } catch (err) {
+    console.error("HeyGen create failed:", err.message);
+    return jsonError(corsHeaders, "Failed to create video: " + err.message, 500);
+  }
+}
+
+async function handleVideoStatus(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const videoId = url.searchParams.get("video_id");
+
+  if (!videoId) {
+    return jsonError(corsHeaders, "video_id is required.", 400);
+  }
+
+  try {
+    const resp = await fetch(
+      `https://api.heygen.com/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`,
+      {
+        headers: { "X-Api-Key": HEYGEN_API_KEY },
+      }
+    );
+
+    const data = await resp.json();
+
+    if (!resp.ok || (data.code && data.code !== 100)) {
+      console.error("HeyGen status error:", JSON.stringify(data));
+      return jsonError(corsHeaders, data.message || (data.error && data.error.message) || "HeyGen API error", resp.status || 500);
+    }
+
+    return jsonOk(corsHeaders, {
+      status: data.data.status,
+      video_url: data.data.video_url || null,
+      thumbnail_url: data.data.thumbnail_url || null,
+      duration: data.data.duration || null,
+      error: data.data.error || null,
+    });
+  } catch (err) {
+    console.error("HeyGen status failed:", err.message);
+    return jsonError(corsHeaders, "Failed to check video status: " + err.message, 500);
+  }
+}
+
+// ── Creatomate Video Composite ──
+const CREATOMATE_API_KEY = "754b059fc6f045ea9f16cbbdacd691bec27dec04525ad3a8a0d7cdf74136980793efce4b8aafee5312b097973d74b0a4";
+
+const CREATOMATE_TEMPLATE_ID = "1bfdbb82-e348-48bb-98fc-d4e7978eb277";
+
+async function handleVideoComposite(request, env, corsHeaders) {
+  try {
+    const body = await request.json();
+    const { video_url, badge_color, title_text, rules_text, offer_text } = body;
+
+    if (!video_url) return jsonError(corsHeaders, "video_url required", 400);
+
+    // Build modifications for the Creatomate template
+    const modifications = {
+      "avatar-video.source": video_url,
+    };
+
+    // Show the correct badge (blue or black), hide the other
+    if (badge_color === "black") {
+      modifications["black-badge.visible"] = true;
+      modifications["blue-badge.visible"] = false;
+    } else {
+      // Default to blue
+      modifications["blue-badge.visible"] = true;
+      modifications["black-badge.visible"] = false;
+    }
+
+    // Title and rules text
+    if (title_text) modifications["title-text.text"] = title_text;
+    if (rules_text) modifications["rules-text.text"] = rules_text;
+
+    // Offer bar text (hide if empty)
+    if (offer_text) {
+      modifications["offer-text.text"] = offer_text;
+      modifications["offer-text.visible"] = true;
+      modifications["behind-offer-text.visible"] = true;
+    } else {
+      modifications["offer-text.visible"] = false;
+      modifications["behind-offer-text.visible"] = false;
+    }
+
+    const renderPayload = {
+      template_id: CREATOMATE_TEMPLATE_ID,
+      modifications: modifications,
+    };
+
+    const resp = await fetch("https://api.creatomate.com/v2/renders", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + CREATOMATE_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(renderPayload),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) {
+      console.error("Creatomate error:", JSON.stringify(data));
+      return jsonError(corsHeaders, "Creatomate render failed: " + (data.message || resp.status), 500);
+    }
+
+    // Returns array of renders; take first
+    const render = Array.isArray(data) ? data[0] : data;
+    return jsonOk(corsHeaders, {
+      render_id: render.id,
+      status: render.status,
+      url: render.url || null,
+    });
+  } catch (err) {
+    console.error("Creatomate composite failed:", err.message);
+    return jsonError(corsHeaders, "Failed to start video composite: " + err.message, 500);
+  }
+}
+
+async function handleVideoCompositeStatus(request, env, corsHeaders) {
+  try {
+    const url = new URL(request.url);
+    const renderId = url.searchParams.get("render_id");
+    if (!renderId) return jsonError(corsHeaders, "render_id required", 400);
+
+    const resp = await fetch("https://api.creatomate.com/v1/renders/" + renderId, {
+      headers: { "Authorization": "Bearer " + CREATOMATE_API_KEY },
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) {
+      return jsonError(corsHeaders, "Creatomate status check failed", 500);
+    }
+
+    return jsonOk(corsHeaders, {
+      status: data.status,
+      url: data.url || null,
+      error: data.error_message || null,
+    });
+  } catch (err) {
+    console.error("Creatomate status failed:", err.message);
+    return jsonError(corsHeaders, "Failed to check composite status: " + err.message, 500);
+  }
 }
