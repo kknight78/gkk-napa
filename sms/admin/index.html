@@ -5960,6 +5960,19 @@ Occasional deals &amp; promotions</textarea>
           }
           if (!finalUrl) throw new Error('Composite timed out');
 
+          // Upload to Cloudinary so MMS compression transforms work at send time
+          btn.textContent = 'Uploading to Cloudinary...';
+          try {
+            var uploadResp = await fetch('https://api.cloudinary.com/v1_1/dxkrjbycr/video/upload', {
+              method: 'POST',
+              body: (function() { var fd = new FormData(); fd.append('file', finalUrl); fd.append('upload_preset', 'gkk_napa_mms'); fd.append('resource_type', 'video'); return fd; })(),
+            });
+            var uploadData = await uploadResp.json();
+            if (uploadData.secure_url) finalUrl = uploadData.secure_url;
+          } catch (uploadErr) {
+            console.warn('Cloudinary video upload failed, using Creatomate URL directly:', uploadErr);
+          }
+
           // Show result
           var rendered = document.getElementById('csRendered');
           rendered.style.display = 'block';

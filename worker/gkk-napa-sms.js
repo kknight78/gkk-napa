@@ -147,22 +147,17 @@ const WORKER_URL = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
 // Carrier MMS limits: T-Mobile 1 MB send, Verizon 3.5 MB.
 // Target < 950 KB to stay safely under the 1 MB floor.
 // 320px wide, 150 kbps video + 32 kbps audio ≈ 22 KB/s ≈ 900 KB for 40s.
-const CLOUDINARY_CLOUD = 'dxkrjbycr';
 const MMS_VIDEO_TRANSFORMS = 'w_320,q_auto:low,br_150k,ac_aac,ab_32k,f_mp4,vc_h264';
 
 function compressVideoUrl(mediaUrl) {
   if (!mediaUrl) return mediaUrl;
-  const isVideo = mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || mediaUrl.includes('/video/');
-  if (!isVideo) return mediaUrl;
-
-  // Cloudinary-hosted video — strip existing transforms, apply MMS ones
+  // Only transform Cloudinary video URLs — strip any existing transforms first
   const match = mediaUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)((?:[a-z][a-z0-9_]*[,:][^/]+\/)*)(v\d+\/.+)$/);
   if (match) {
     return `${match[1]}${MMS_VIDEO_TRANSFORMS}/${match[3]}`;
   }
-
-  // Non-Cloudinary video (Creatomate, HeyGen, etc.) — use Cloudinary fetch to transcode on-the-fly
-  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/video/fetch/${MMS_VIDEO_TRANSFORMS}/${mediaUrl}`;
+  // Non-Cloudinary URLs pass through — videos should be uploaded to Cloudinary first
+  return mediaUrl;
 }
 
 // ─── Media proxy (strips content-type params for Twilio) ────
