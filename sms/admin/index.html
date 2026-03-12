@@ -1538,7 +1538,10 @@
 
         <!-- ── Creative Studio View (toggled from Composer) ── -->
         <div id="creativeStudioView" style="display:none;">
-          <button class="btn-secondary" onclick="composerShowView('composer')" style="margin-bottom:12px;">&larr; Back to Campaign Composer</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <h2 style="margin:0;font-size:20px;color:var(--napa-yellow);">Creative Studio</h2>
+            <button class="btn-secondary" onclick="composerShowView('composer')">&larr; Back to Campaign Composer</button>
+          </div>
           <div class="cs-layout">
 
             <!-- ═══ LEFT: Wizard Steps ═══ -->
@@ -1552,11 +1555,12 @@
                 </div>
                 <div class="cs-step-body">
                   <div style="margin-bottom:10px;">
-                    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin-bottom:6px;">Compatible with background:</div>
+                    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin-bottom:6px;">Background type:</div>
                     <div style="display:flex;align-items:center;gap:14px;font-size:13px;">
-                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="checkbox" id="csFilterPhoto" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Photo</label>
-                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="checkbox" id="csFilterVideo" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Video</label>
-                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="checkbox" id="csFilterBolt" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Bolt Graphic</label>
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="all" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()" checked> All</label>
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="bolt" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Bolt</label>
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="photo" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Photo</label>
+                      <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="video" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Video</label>
                     </div>
                   </div>
                   <div class="cs-color-toggle">
@@ -3949,13 +3953,12 @@ Occasional deals &amp; promotions</textarea>
     function csRebuildGraphicGrid() {
       const grid = document.getElementById('csGraphicGrid');
       var graphics = CS_BRAND_GRAPHICS.filter(g => g.color === csState.color);
-      // Apply checkbox filters
-      var filterPhoto = document.getElementById('csFilterPhoto') && document.getElementById('csFilterPhoto').checked;
-      var filterVideo = document.getElementById('csFilterVideo') && document.getElementById('csFilterVideo').checked;
-      var filterBolt = document.getElementById('csFilterBolt') && document.getElementById('csFilterBolt').checked;
-      if (filterPhoto) graphics = graphics.filter(g => g.allowsPhoto);
-      if (filterVideo) graphics = graphics.filter(g => g.allowsVideo);
-      if (filterBolt) graphics = graphics.filter(g => g.allowsBolt);
+      // Apply radio filter
+      var sel = document.querySelector('input[name="csGraphicFilter"]:checked');
+      var filterVal = sel ? sel.value : 'all';
+      if (filterVal === 'photo') graphics = graphics.filter(g => g.allowsPhoto);
+      else if (filterVal === 'video') graphics = graphics.filter(g => g.allowsVideo);
+      else if (filterVal === 'bolt') graphics = graphics.filter(g => g.allowsBolt);
       grid.innerHTML = graphics.map(g => {
         const svgFile = g.file || g.id;
         const pos = g.position;
@@ -3990,17 +3993,16 @@ Occasional deals &amp; promotions</textarea>
       const container = document.getElementById('csBgOptions');
       let html = '';
 
-      // Check which filters are active
-      var fPhoto = document.getElementById('csFilterPhoto') && document.getElementById('csFilterPhoto').checked;
-      var fVideo = document.getElementById('csFilterVideo') && document.getElementById('csFilterVideo').checked;
-      var fBolt = document.getElementById('csFilterBolt') && document.getElementById('csFilterBolt').checked;
-      var anyFilter = fPhoto || fVideo || fBolt;
+      // Check which radio filter is active
+      var sel = document.querySelector('input[name="csGraphicFilter"]:checked');
+      var filterVal = sel ? sel.value : 'all';
+      var anyFilter = filterVal !== 'all';
 
-      // When filters are active, only show bg types that match checked filters
+      // When a filter is active, only show bg types that match
       var showGraphic = !anyFilter;  // solid colors only when no filter is active
-      var showBolt = g && g.allowsBolt && (!anyFilter || fBolt);
-      var showPhoto = g && g.allowsPhoto && (!anyFilter || fPhoto);
-      var showVideo = g && g.allowsVideo && (!anyFilter || fVideo);
+      var showBolt = g && g.allowsBolt && (!anyFilter || filterVal === 'bolt');
+      var showPhoto = g && g.allowsPhoto && (!anyFilter || filterVal === 'photo');
+      var showVideo = g && g.allowsVideo && (!anyFilter || filterVal === 'video');
 
       if (showGraphic) {
         const activeVal = csState.bgValue;
@@ -6754,13 +6756,9 @@ Occasional deals &amp; promotions</textarea>
         titleText: 'SALE EVENT', rulesText: 'In store only, while supplies last',
         bodyCount: null, bodyItems: [],
       };
-      // Reset filter checkboxes
-      var fp = document.getElementById('csFilterPhoto');
-      var fv = document.getElementById('csFilterVideo');
-      var fb = document.getElementById('csFilterBolt');
-      if (fp) fp.checked = false;
-      if (fv) fv.checked = false;
-      if (fb) fb.checked = false;
+      // Reset filter radio to "All"
+      var allRadio = document.querySelector('input[name="csGraphicFilter"][value="all"]');
+      if (allRadio) allRadio.checked = true;
       // Restore Products step visibility
       document.getElementById('csStepBody').style.display = '';
       document.querySelectorAll('.cs-color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === 'blue'));
