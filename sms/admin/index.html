@@ -961,8 +961,12 @@
     }
     .cs-offer-visual-btn:hover { border-color: rgba(255,255,255,.3); }
     .cs-offer-visual-btn.active { border-color: var(--napa-yellow); }
-    .cs-canvas-wrap { max-width: 640px; margin: 0 auto; overflow: hidden; transition: max-width .3s; }
+    .cs-canvas-wrap { max-width: 360px; margin: 0 auto; overflow: hidden; transition: max-width .3s; }
     .cs-canvas-wrap.video-mode { max-width: 450px; }
+    .cs-canvas-wrap.size-s { max-width: 240px; }
+    .cs-canvas-wrap.size-m { max-width: 360px; }
+    .cs-canvas-wrap.size-l { max-width: 640px; }
+    .cs-size-btn.active { background: rgba(255,255,255,.15) !important; color: var(--napa-yellow) !important; border-color: var(--napa-yellow) !important; }
     .cs-canvas {
       width: 640px; height: 800px;
       position: relative; overflow: hidden;
@@ -1663,6 +1667,11 @@
 
             <!-- ═══ RIGHT: Live Preview ═══ -->
             <div class="cs-preview">
+              <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:6px;">
+                <button class="cs-size-btn" data-size="s" onclick="csSetPreviewSize('s')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">S</button>
+                <button class="cs-size-btn active" data-size="m" onclick="csSetPreviewSize('m')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">M</button>
+                <button class="cs-size-btn" data-size="l" onclick="csSetPreviewSize('l')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">L</button>
+              </div>
               <div class="cs-canvas-wrap">
                 <div class="cs-canvas" id="csCanvas">
                   <div class="cs-canvas-placeholder" id="csPlaceholder">Select a brand graphic to start building</div>
@@ -6834,6 +6843,18 @@ Occasional deals &amp; promotions</textarea>
 
     // ─── Init ───
     csRebuildGraphicGrid();
+
+    // ─── Preview size toggle ───
+    window.csSetPreviewSize = function(size) {
+      var wrap = document.querySelector('.cs-canvas-wrap');
+      if (!wrap) return;
+      wrap.classList.remove('size-s', 'size-m', 'size-l');
+      wrap.classList.add('size-' + size);
+      document.querySelectorAll('.cs-size-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.size === size);
+      });
+      setTimeout(csScaleCanvas, 50);
+    };
 
     // ─── Responsive canvas scaling ───
     function csScaleCanvas() {
