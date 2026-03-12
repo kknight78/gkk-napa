@@ -144,15 +144,17 @@ const SMS_LOGO_URL = "https://gkk-napa.com/assets/sms-logo.png";
 const WORKER_URL = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
 
 // ─── Video compression (Cloudinary on-the-fly transforms) ───
-// Carrier MMS limit is ~600 KB. Cloudinary transforms compress server-side via URL params.
-const MMS_VIDEO_TRANSFORMS = 'w_360,q_auto,br_250k,f_mp4,vc_h264';
+// Carrier MMS limits: T-Mobile 1 MB send, Verizon 3.5 MB.
+// Target < 950 KB to stay safely under the 1 MB floor.
+// 320px wide, 150 kbps video + 32 kbps audio ≈ 22 KB/s ≈ 900 KB for 40s.
+const MMS_VIDEO_TRANSFORMS = 'w_320,q_auto:low,br_150k,ac_aac,ab_32k,f_mp4,vc_h264';
 
 function compressVideoUrl(mediaUrl) {
   if (!mediaUrl) return mediaUrl;
-  // Only transform Cloudinary video URLs
-  const match = mediaUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(v\d+\/.+)$/);
+  // Only transform Cloudinary video URLs — strip any existing transforms first
+  const match = mediaUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)((?:[a-z][a-z0-9_]*[,:][^/]+\/)*)(v\d+\/.+)$/);
   if (match) {
-    return `${match[1]}${MMS_VIDEO_TRANSFORMS}/${match[2]}`;
+    return `${match[1]}${MMS_VIDEO_TRANSFORMS}/${match[3]}`;
   }
   return mediaUrl;
 }
