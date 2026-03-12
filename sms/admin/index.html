@@ -961,11 +961,7 @@
     }
     .cs-offer-visual-btn:hover { border-color: rgba(255,255,255,.3); }
     .cs-offer-visual-btn.active { border-color: var(--napa-yellow); }
-    .cs-canvas-wrap { max-width: 360px; margin: 0 auto; overflow: hidden; transition: max-width .3s; }
-    .cs-canvas-wrap.video-mode { max-width: 450px; }
-    .cs-canvas-wrap.size-s { max-width: 240px; }
-    .cs-canvas-wrap.size-m { max-width: 360px; }
-    .cs-canvas-wrap.size-l { max-width: 640px; }
+    .cs-canvas-wrap { margin: 0 auto; overflow: hidden; }
     .cs-size-btn.active { background: rgba(255,255,255,.15) !important; color: var(--napa-yellow) !important; border-color: var(--napa-yellow) !important; }
     .cs-canvas {
       width: 640px; height: 800px;
@@ -1692,6 +1688,10 @@
                 </div>
               </div>
 
+              <div id="csVideoGeneratingBanner" style="display:none;padding:10px 14px;margin-top:8px;border-radius:10px;background:rgba(255,200,54,.08);border:1px solid rgba(255,200,54,.25);font-size:13px;color:var(--napa-yellow);text-align:center;">
+                <span class="spinner" style="display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:6px;"></span>
+                Generating video… <span id="csVideoElapsedPreview"></span>
+              </div>
               <div class="cs-actions-row" id="csActions" style="display:none;">
                 <button class="btn-primary" onclick="csGenerate()" id="csGenerateBtn">Generate</button>
                 <button class="btn-secondary" onclick="csReset()">Reset</button>
@@ -4430,14 +4430,16 @@ Occasional deals &amp; promotions</textarea>
         }
         csState.videoId = data.video_id;
         csState._videoPollTimer = setInterval(function() { _csVideoPoll(); }, 6000);
+        document.getElementById('csVideoGeneratingBanner').style.display = 'block';
         csState._videoElapsedTimer = setInterval(function() {
+          var secs = Math.round((Date.now() - csState._videoStartTime) / 1000);
+          var m = Math.floor(secs / 60);
+          var s = secs % 60;
+          var timeStr = (m > 0 ? m + 'm ' : '') + s + 's';
           var el = document.getElementById('csVideoElapsed');
-          if (el) {
-            var secs = Math.round((Date.now() - csState._videoStartTime) / 1000);
-            var m = Math.floor(secs / 60);
-            var s = secs % 60;
-            el.textContent = (m > 0 ? m + 'm ' : '') + s + 's';
-          }
+          if (el) el.textContent = timeStr;
+          var el2 = document.getElementById('csVideoElapsedPreview');
+          if (el2) el2.textContent = timeStr;
         }, 1000);
         showToast('Video generating — you can work on other parts while you wait.', 'info', genBtn);
       }).catch(function(e) {
@@ -4479,6 +4481,8 @@ Occasional deals &amp; promotions</textarea>
     function _csVideoStopTimers() {
       if (csState._videoPollTimer) { clearInterval(csState._videoPollTimer); csState._videoPollTimer = null; }
       if (csState._videoElapsedTimer) { clearInterval(csState._videoElapsedTimer); csState._videoElapsedTimer = null; }
+      var banner = document.getElementById('csVideoGeneratingBanner');
+      if (banner) banner.style.display = 'none';
     }
 
     window.csCancelVideo = function() {
@@ -6845,15 +6849,15 @@ Occasional deals &amp; promotions</textarea>
     csRebuildGraphicGrid();
 
     // ─── Preview size toggle ───
+    var CS_SIZES = { s: 240, m: 360, l: 640 };
+    var _csCurrentSize = 'm';
+
     window.csSetPreviewSize = function(size) {
-      var wrap = document.querySelector('.cs-canvas-wrap');
-      if (!wrap) return;
-      wrap.classList.remove('size-s', 'size-m', 'size-l');
-      wrap.classList.add('size-' + size);
+      _csCurrentSize = size;
       document.querySelectorAll('.cs-size-btn').forEach(function(b) {
         b.classList.toggle('active', b.dataset.size === size);
       });
-      setTimeout(csScaleCanvas, 50);
+      csScaleCanvas();
     };
 
     // ─── Responsive canvas scaling ───
@@ -6861,13 +6865,14 @@ Occasional deals &amp; promotions</textarea>
       var wrap = document.querySelector('.cs-canvas-wrap');
       var canvas = document.getElementById('csCanvas');
       if (!wrap || !canvas) return;
-      var wrapW = wrap.clientWidth;
-      if (wrapW >= 640) {
+      var targetW = CS_SIZES[_csCurrentSize] || 360;
+      wrap.style.maxWidth = targetW + 'px';
+      if (targetW >= 640) {
         canvas.style.transform = '';
         canvas.style.transformOrigin = '';
         wrap.style.height = '';
       } else {
-        var scale = wrapW / 640;
+        var scale = targetW / 640;
         canvas.style.transform = 'scale(' + scale + ')';
         canvas.style.transformOrigin = 'top left';
         wrap.style.height = Math.round(800 * scale) + 'px';
