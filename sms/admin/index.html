@@ -1538,10 +1538,8 @@
 
         <!-- ── Creative Studio View (toggled from Composer) ── -->
         <div id="creativeStudioView" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <h2 style="margin:0;font-size:20px;color:var(--napa-yellow);">Creative Studio</h2>
-            <button class="btn-secondary" onclick="composerShowView('composer')">&larr; Back to Campaign Composer</button>
-          </div>
+          <a href="#" onclick="composerShowView('composer');return false;" style="font-size:12px;color:rgba(255,255,255,.5);text-decoration:none;">&larr; Back to Campaign Composer</a>
+          <h2 style="margin:4px 0 12px;font-size:20px;color:var(--napa-yellow);">Creative Studio</h2>
           <div class="cs-layout">
 
             <!-- ═══ LEFT: Wizard Steps ═══ -->
