@@ -147,16 +147,22 @@ const WORKER_URL = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
 // Carrier MMS limits: T-Mobile 1 MB send, Verizon 3.5 MB.
 // Target < 950 KB to stay safely under the 1 MB floor.
 // 320px wide, 150 kbps video + 32 kbps audio ≈ 22 KB/s ≈ 900 KB for 40s.
+const CLOUDINARY_CLOUD = 'dxkrjbycr';
 const MMS_VIDEO_TRANSFORMS = 'w_320,q_auto:low,br_150k,ac_aac,ab_32k,f_mp4,vc_h264';
 
 function compressVideoUrl(mediaUrl) {
   if (!mediaUrl) return mediaUrl;
-  // Only transform Cloudinary video URLs — strip any existing transforms first
+  const isVideo = mediaUrl.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || mediaUrl.includes('/video/');
+  if (!isVideo) return mediaUrl;
+
+  // Cloudinary-hosted video — strip existing transforms, apply MMS ones
   const match = mediaUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)((?:[a-z][a-z0-9_]*[,:][^/]+\/)*)(v\d+\/.+)$/);
   if (match) {
     return `${match[1]}${MMS_VIDEO_TRANSFORMS}/${match[3]}`;
   }
-  return mediaUrl;
+
+  // Non-Cloudinary video (Creatomate, HeyGen, etc.) — use Cloudinary fetch to transcode on-the-fly
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/video/fetch/${MMS_VIDEO_TRANSFORMS}/${mediaUrl}`;
 }
 
 // ─── Media proxy (strips content-type params for Twilio) ────
@@ -178,7 +184,7 @@ async function handleMediaProxy(url) {
   // Only allow known media hosts to prevent open proxy abuse
   try {
     const parsed = new URL(targetUrl);
-    const allowed = ['res.cloudinary.com', 'cloudinary.com', 'f002.backblazeb2.com'];
+    const allowed = ['res.cloudinary.com', 'cloudinary.com', 'f002.backblazeb2.com', 'cdn.creatomate.com'];
     if (!allowed.some(h => parsed.hostname.endsWith(h))) {
       return new Response("Host not allowed", { status: 403 });
     }
