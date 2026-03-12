@@ -145,9 +145,9 @@ const WORKER_URL = "https://gkk-napa-sms.kellyraeknight78.workers.dev";
 
 // ─── Video compression (Cloudinary on-the-fly transforms) ───
 // Carrier MMS limits: T-Mobile 1 MB send, Verizon 3.5 MB.
-// Target < 950 KB to stay safely under the 1 MB floor.
-// 320px wide, 150 kbps video + 32 kbps audio ≈ 22 KB/s ≈ 900 KB for 40s.
-const MMS_VIDEO_TRANSFORMS = 'w_320,q_auto:low,br_150k,ac_aac,ab_32k,f_mp4,vc_h264';
+// Target < 950 KB to stay safely under the 1 MB T-Mobile floor.
+// Creatomate exports at 480×854; Cloudinary caps bitrate as safety net.
+const MMS_VIDEO_TRANSFORMS = 'w_480,q_auto,br_500k,ac_aac,f_mp4,vc_h264';
 
 function compressVideoUrl(mediaUrl) {
   if (!mediaUrl) return mediaUrl;
@@ -3473,6 +3473,9 @@ async function handleVideoComposite(request, env, corsHeaders) {
     const renderPayload = {
       template_id: CREATOMATE_TEMPLATE_ID,
       modifications: modifications,
+      // Export at 480×854 (9:16) for smaller MMS-friendly output
+      width: 480,
+      height: 854,
     };
 
     const resp = await fetch("https://api.creatomate.com/v2/renders", {

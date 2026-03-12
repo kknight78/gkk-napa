@@ -802,7 +802,7 @@
     /* ─── Creative Studio v4 ─── */
     .cs-layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: 320px auto;
       gap: 16px;
       align-items: start;
     }
@@ -961,8 +961,10 @@
     }
     .cs-offer-visual-btn:hover { border-color: rgba(255,255,255,.3); }
     .cs-offer-visual-btn.active { border-color: var(--napa-yellow); }
-    .cs-canvas-wrap { margin: 0 auto; overflow: hidden; }
+    .cs-canvas-wrap { overflow: hidden; }
+    .cs-size-btn:hover { color: #fff !important; border-color: rgba(255,255,255,.4) !important; }
     .cs-size-btn.active { background: rgba(255,255,255,.15) !important; color: var(--napa-yellow) !important; border-color: var(--napa-yellow) !important; }
+    .cs-mute-btn:hover { color: var(--napa-yellow) !important; border-color: var(--napa-yellow) !important; }
     .cs-canvas {
       width: 640px; height: 800px;
       position: relative; overflow: hidden;
@@ -1055,7 +1057,7 @@
     .cs-canvas-placeholder {
       position: absolute; inset: 0; z-index: 10;
       display: flex; align-items: center; justify-content: center;
-      color: rgba(255,255,255,.4); font-size: 14px; text-align: center; padding: 20px;
+      color: rgba(255,255,255,.4); font-size: 20px; text-align: center; padding: 20px;
     }
     .cs-actions-row { display: flex; gap: 8px; margin-top: 12px; }
     .cs-actions-row button { flex: 1; padding: 12px; font-size: 14px; }
@@ -1543,12 +1545,12 @@
 
         <!-- ── Creative Studio View (toggled from Composer) ── -->
         <div id="creativeStudioView" style="display:none;">
-          <a href="#" onclick="composerShowView('composer');return false;" style="font-size:12px;color:rgba(255,255,255,.5);text-decoration:none;">&larr; Back to Campaign Composer</a>
-          <h2 style="margin:4px 0 12px;font-size:20px;color:var(--napa-yellow);">Creative Studio</h2>
           <div class="cs-layout">
 
-            <!-- ═══ LEFT: Wizard Steps ═══ -->
+            <!-- ═══ LEFT: Title + Wizard Steps ═══ -->
             <div class="cs-controls">
+              <a href="#" onclick="composerShowView('composer');return false;" style="font-size:14px;color:rgba(255,255,255,.5);text-decoration:none;transition:color .15s;" onmouseover="this.style.color='var(--napa-yellow)'" onmouseout="this.style.color='rgba(255,255,255,.5)'">&larr; Back to Campaign Composer</a>
+              <h2 style="margin:4px 0 12px;font-size:20px;color:var(--napa-yellow);">Creative Studio</h2>
 
               <!-- Step 1: Brand Graphic + Background -->
               <div class="cs-step" id="csStepGraphic">
@@ -1663,11 +1665,6 @@
 
             <!-- ═══ RIGHT: Live Preview ═══ -->
             <div class="cs-preview">
-              <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:6px;">
-                <button class="cs-size-btn" data-size="s" onclick="csSetPreviewSize('s')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">S</button>
-                <button class="cs-size-btn active" data-size="m" onclick="csSetPreviewSize('m')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">M</button>
-                <button class="cs-size-btn" data-size="l" onclick="csSetPreviewSize('l')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">L</button>
-              </div>
               <div class="cs-canvas-wrap">
                 <div class="cs-canvas" id="csCanvas">
                   <div class="cs-canvas-placeholder" id="csPlaceholder">Select a brand graphic to start building</div>
@@ -1685,12 +1682,18 @@
                     <div id="csPrevOfferRight"></div>
                   </div>
                   <div class="cs-prev-body" id="csPrevBody" style="display:none;"></div>
+                  <div id="csVideoGeneratingBanner" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;padding:14px 24px;border-radius:8px;background:rgba(0,0,0,.8);border:1px solid rgba(255,200,54,.4);color:var(--napa-yellow);text-align:center;">
+                    <div style="font-size:18px;white-space:nowrap;">Generating video… <span id="csVideoElapsedPreview"></span></div>
+                    <button onclick="csCancelVideo()" style="margin-top:8px;padding:4px 14px;font-size:12px;border-radius:5px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.6);cursor:pointer;">Cancel</button>
+                  </div>
                 </div>
               </div>
-
-              <div id="csVideoGeneratingBanner" style="display:none;padding:10px 14px;margin-top:8px;border-radius:10px;background:rgba(255,200,54,.08);border:1px solid rgba(255,200,54,.25);font-size:13px;color:var(--napa-yellow);text-align:center;">
-                <span class="spinner" style="display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:6px;"></span>
-                Generating video… <span id="csVideoElapsedPreview"></span>
+              <!-- Controls bar below canvas (outside canvas-wrap so overflow:hidden doesn't clip) -->
+              <div id="csPreviewControls" style="display:flex;align-items:center;gap:4px;margin-top:6px;">
+                <button class="cs-size-btn" data-size="s" onclick="csSetPreviewSize('s')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">S</button>
+                <button class="cs-size-btn active" data-size="m" onclick="csSetPreviewSize('m')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">M</button>
+                <button class="cs-size-btn" data-size="l" onclick="csSetPreviewSize('l')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">L</button>
+                <button id="csVideoMuteBtn" class="cs-mute-btn" onclick="csToggleVideoMute()" style="display:none;margin-left:auto;padding:4px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;line-height:0;" title="Unmute"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></button>
               </div>
               <div class="cs-actions-row" id="csActions" style="display:none;">
                 <button class="btn-primary" onclick="csGenerate()" id="csGenerateBtn">Generate</button>
@@ -1698,7 +1701,7 @@
               </div>
 
               <div class="cs-rendered" id="csRendered" style="display:none;">
-                <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:6px;">RENDERED IMAGE:</div>
+                <div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:6px;" id="csRenderedLabel">RENDERED MMS:</div>
                 <img id="csRenderedImg" />
                 <div style="margin-top:8px;font-size:12px;color:var(--dim);" id="csRenderInfo"></div>
               </div>
@@ -3374,6 +3377,30 @@ Occasional deals &amp; promotions</textarea>
 
     window.composerUpdateBody = function(index, el) {
       composerMessages[index].body = el.value;
+      // Fast-path: update just the text bubble without rebuilding media (avoids video reload)
+      var phone = document.getElementById('composerPhone' + index);
+      if (phone) {
+        var bubble = phone.querySelector('.composer-phone-bubble');
+        var media = phone.querySelector('.composer-phone-media');
+        if (media && el.value.trim()) {
+          // Media exists — just update or insert the text bubble
+          var escaped = el.value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+          var html = escaped + '<br><br>Reply STOP to opt out.';
+          if (bubble) {
+            bubble.innerHTML = html;
+          } else {
+            var div = document.createElement('div');
+            div.className = 'composer-phone-bubble';
+            div.innerHTML = html;
+            phone.insertBefore(div, phone.firstChild);
+          }
+          return;
+        } else if (media && !el.value.trim() && bubble) {
+          bubble.remove();
+          return;
+        }
+      }
+      // Fallback: full rebuild (no media, or structural change needed)
       composerUpdatePreview(index);
     };
 
@@ -4255,11 +4282,13 @@ Occasional deals &amp; promotions</textarea>
       var overlay = document.createElement('div');
       overlay.className = 'cs-bg-modal-overlay';
       var activeSource = csState.videoSource || 'script';
+      var isGen = csState.videoStatus === 'generating';
+      var disOther = isGen ? ' disabled style="opacity:.4;cursor:not-allowed;"' : '';
       var html = '<div class="cs-bg-modal">';
       html += '<h3 style="color:var(--napa-yellow);font-size:18px;margin:0 0 14px;">ADD VIDEO</h3>';
       html += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
-      html += '<button class="cs-bg-modal-src' + (activeSource === 'upload' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'upload\')">Upload</button>';
-      html += '<button class="cs-bg-modal-src' + (activeSource === 'library' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'library\')">From Library</button>';
+      html += '<button class="cs-bg-modal-src' + (activeSource === 'upload' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'upload\')"' + disOther + '>Upload</button>';
+      html += '<button class="cs-bg-modal-src' + (activeSource === 'library' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'library\')"' + disOther + '>From Library</button>';
       html += '<button class="cs-bg-modal-src' + (activeSource === 'script' || activeSource === 'generate' ? ' active' : '') + '" onclick="csBgVideoSetSrc(\'script\')">From Script</button>';
       html += '</div>';
       html += '<div id="csBgVideoContent">';
@@ -4322,6 +4351,11 @@ Occasional deals &amp; promotions</textarea>
     };
 
     window.csBgVideoSetSrc = function(src) {
+      // Block source switching while HeyGen is generating
+      if (csState.videoStatus === 'generating') {
+        showToast('Video is generating — please wait or cancel first.', 'info', document.querySelector('.cs-bg-modal-src'));
+        return;
+      }
       if (src === 'library') {
         _csCloseBgModal();
         _libIndex = null;
@@ -4363,7 +4397,7 @@ Occasional deals &amp; promotions</textarea>
         formData.append('file', file);
         formData.append('upload_preset', 'gkk_napa_mms');
         formData.append('resource_type', 'video');
-        fetch('https://api.cloudinary.com/v1_1/dxkrjbycr/video/upload', {
+        fetch('https://api.cloudinary.com/v1_1/dtpqxuwby/video/upload', {
           method: 'POST', body: formData
         }).then(function(r) { return r.json(); }).then(function(data) {
           if (data.secure_url) {
@@ -4452,6 +4486,22 @@ Occasional deals &amp; promotions</textarea>
 
     function _csVideoPoll() {
       if (!csState.videoId || csState.videoStatus !== 'generating') return;
+      // Auto-stop polling after 5 minutes but keep state so user can retry
+      if (csState._videoStartTime && (Date.now() - csState._videoStartTime > 5 * 60 * 1000)) {
+        _csVideoStopTimers();
+        // Don't clear videoStatus — leave as 'generating' so Check Again works
+        showToast('Polling stopped after 5 min — use "Check Again" to see if it finished.', 'info', document.getElementById('csBgSection'));
+        var c = document.getElementById('csBgVideoContent');
+        if (c) c.innerHTML = _csBuildScriptPanel();
+        // Update banner to show check-again prompt
+        var banner = document.getElementById('csVideoGeneratingBanner');
+        if (banner) {
+          banner.querySelector('div').innerHTML = 'Polling stopped <span id="csVideoElapsedPreview"></span>';
+          banner.querySelector('button').textContent = 'Check Again';
+          banner.querySelector('button').onclick = function() { csCheckVideoAgain(); };
+        }
+        return;
+      }
       fetch(WORKER_BASE + '/admin/video/status?video_id=' + encodeURIComponent(csState.videoId), {
         headers: authHeaders()
       }).then(function(r) { return r.json(); }).then(function(data) {
@@ -4467,18 +4517,23 @@ Occasional deals &amp; promotions</textarea>
             fd.append('file', heygenUrl);
             fd.append('upload_preset', 'gkk_napa_mms');
             fd.append('resource_type', 'video');
-            fetch('https://api.cloudinary.com/v1_1/dxkrjbycr/video/upload', {
+            fetch('https://api.cloudinary.com/v1_1/dtpqxuwby/video/upload', {
               method: 'POST', body: fd
             }).then(function(r) { return r.json(); }).then(function(cld) {
               if (cld.secure_url) {
                 csState.videoUrl = cld.secure_url;
+                csUpdatePreview();
                 // Save to library with script snippet as label
                 var label = 'HeyGen — ' + (csState.videoScript || '').substring(0, 60).trim();
                 fetch(WORKER_BASE + '/admin/media-library', {
                   method: 'POST',
                   headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
                   body: JSON.stringify({ url: cld.secure_url, label: label, asset_type: 'video' })
+                }).then(function() {
+                  showToast('HeyGen video saved to library!', 'success', document.getElementById('csBgSection'));
                 });
+              } else {
+                console.warn('HeyGen Cloudinary upload returned no secure_url:', cld);
               }
             }).catch(function(e) { console.warn('HeyGen Cloudinary upload failed:', e); });
           })(data.video_url);
@@ -4508,14 +4563,72 @@ Occasional deals &amp; promotions</textarea>
       if (banner) banner.style.display = 'none';
     }
 
+    window.csCheckVideoAgain = function() {
+      if (!csState.videoId) { showToast('No video ID to check.', 'error'); return; }
+      var banner = document.getElementById('csVideoGeneratingBanner');
+      if (banner) banner.querySelector('div').innerHTML = 'Checking…';
+      fetch(WORKER_BASE + '/admin/video/status?video_id=' + encodeURIComponent(csState.videoId), {
+        headers: authHeaders()
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.status === 'completed' && data.video_url) {
+          csState.videoStatus = 'done';
+          csState.videoUrl = data.video_url;
+          csState.bgType = 'video';
+          if (banner) banner.style.display = 'none';
+          // Upload to Cloudinary + save to library (same as normal completion)
+          (function(heygenUrl) {
+            var fd = new FormData();
+            fd.append('file', heygenUrl);
+            fd.append('upload_preset', 'gkk_napa_mms');
+            fetch('https://api.cloudinary.com/v1_1/dtpqxuwby/video/upload', {
+              method: 'POST', body: fd
+            }).then(function(r) { return r.json(); }).then(function(cld) {
+              if (cld.secure_url) {
+                csState.videoUrl = cld.secure_url;
+                csUpdatePreview();
+                var label = 'HeyGen — ' + (csState.videoScript || '').substring(0, 60).trim();
+                fetch(WORKER_BASE + '/admin/media-library', {
+                  method: 'POST',
+                  headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+                  body: JSON.stringify({ url: cld.secure_url, label: label, asset_type: 'video' })
+                }).then(function() {
+                  showToast('HeyGen video saved to library!', 'success', document.getElementById('csBgSection'));
+                });
+              }
+            }).catch(function(e) { console.warn('Cloudinary upload failed:', e); });
+          })(data.video_url);
+          csRebuildBgOptions();
+          csUpdatePreview();
+          var c = document.getElementById('csBgVideoContent');
+          if (c) c.innerHTML = _csBuildScriptPanel();
+          showToast("Brian's video is ready!", 'success', document.getElementById('csBgSection'));
+        } else if (data.status === 'failed') {
+          csState.videoStatus = 'failed';
+          csState.videoError = data.error || 'Video generation failed';
+          if (banner) banner.style.display = 'none';
+          showToast('Video failed: ' + (data.error || 'unknown'), 'error', document.getElementById('csBgSection'));
+          var c2 = document.getElementById('csBgVideoContent');
+          if (c2) c2.innerHTML = _csBuildScriptPanel();
+        } else {
+          if (banner) {
+            banner.querySelector('div').innerHTML = 'Still processing… <span id="csVideoElapsedPreview"></span>';
+          }
+          showToast('Still processing — try again in a minute.', 'info', document.getElementById('csBgSection'));
+        }
+      }).catch(function(e) {
+        showToast('Check failed: ' + e.message, 'error');
+      });
+    };
+
     window.csCancelVideo = function() {
       _csVideoStopTimers();
       csState.videoStatus = null;
       csState.videoId = null;
-      csState.videoUrl = null;
       csState.videoError = null;
+      // Keep videoUrl if one was already loaded (e.g. from library)
       var c = document.getElementById('csBgVideoContent');
       if (c) c.innerHTML = _csBuildScriptPanel();
+      showToast('Video generation cancelled.', 'info', document.getElementById('csBgSection'));
     };
 
     // Save composited video to library
@@ -5395,6 +5508,8 @@ Occasional deals &amp; promotions</textarea>
       } else {
         prevBg.style.backgroundColor = '#ddd';
       }
+      // Show/hide mute button for video preview
+      csUpdateMuteBtn();
       // Toggle drag hint + cursor (only for photo bg)
       var isBgUpload = csState.bgType === 'photo' && csState.bgRawImage;
       canvas.classList.toggle('bg-draggable', !!isBgUpload);
@@ -5999,12 +6114,16 @@ Occasional deals &amp; promotions</textarea>
           // Upload to Cloudinary so MMS compression transforms work at send time
           btn.textContent = 'Uploading to Cloudinary...';
           try {
-            var uploadResp = await fetch('https://api.cloudinary.com/v1_1/dxkrjbycr/video/upload', {
+            var uploadResp = await fetch('https://api.cloudinary.com/v1_1/dtpqxuwby/video/upload', {
               method: 'POST',
               body: (function() { var fd = new FormData(); fd.append('file', finalUrl); fd.append('upload_preset', 'gkk_napa_mms'); fd.append('resource_type', 'video'); return fd; })(),
             });
             var uploadData = await uploadResp.json();
-            if (uploadData.secure_url) finalUrl = uploadData.secure_url;
+            if (uploadData.secure_url) {
+              finalUrl = uploadData.secure_url;
+            } else {
+              console.warn('Cloudinary video upload returned no secure_url:', uploadData);
+            }
           } catch (uploadErr) {
             console.warn('Cloudinary video upload failed, using Creatomate URL directly:', uploadErr);
           }
@@ -6030,10 +6149,12 @@ Occasional deals &amp; promotions</textarea>
           // Show action buttons
           var actionsDiv = rendered.querySelector('.cs-rendered-actions') || document.createElement('div');
           actionsDiv.className = 'cs-rendered-actions';
-          actionsDiv.innerHTML =
-            '<button class="btn-primary" onclick="csSaveVideoToLibrary(\'' + finalUrl + '\')">Save to Library</button> ' +
-            '<button class="btn-secondary" onclick="this.parentNode.previousElementSibling.remove();this.parentNode.parentNode.style.display=\'none\';">Discard</button> ' +
-            '<button class="btn-primary" onclick="csSaveVideoToLibrary(\'' + finalUrl + '\');csAttachToComposer(\'' + finalUrl + '\')">Save & Use in Campaign</button>';
+          var btnsHtml = '<button class="btn-primary" onclick="csSaveVideoToLibrary(\'' + finalUrl + '\',this);this.disabled=true;this.textContent=\'Saved!\';">Save</button> ';
+          if (composerActiveMessageIndex !== null) {
+            btnsHtml += '<button class="btn-primary" onclick="csSaveVideoToLibrary(\'' + finalUrl + '\',this);csAttachToComposer(\'' + finalUrl + '\');this.disabled=true;this.textContent=\'Done!\';">Use in Campaign</button> ';
+          }
+          btnsHtml += '<button class="btn-secondary" onclick="this.parentNode.previousElementSibling.remove();this.parentNode.parentNode.style.display=\'none\';">Discard</button>';
+          actionsDiv.innerHTML = btnsHtml;
           if (!rendered.querySelector('.cs-rendered-actions')) rendered.appendChild(actionsDiv);
 
           rendered.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -6785,7 +6906,7 @@ Occasional deals &amp; promotions</textarea>
             }
 
             var saveBtn = document.createElement('button');
-            saveBtn.textContent = 'Save to Library';
+            saveBtn.textContent = 'Save';
             saveBtn.className = 'btn btn-primary';
             saveBtn.onclick = function() {
               saveBtn.disabled = true; saveBtn.textContent = 'Saved!';
@@ -6793,20 +6914,11 @@ Occasional deals &amp; promotions</textarea>
               discardBtn.remove();
             };
 
-            var discardBtn = document.createElement('button');
-            discardBtn.textContent = 'Discard';
-            discardBtn.className = 'btn-secondary';
-            discardBtn.style.cssText = 'padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px;';
-            discardBtn.onclick = function() {
-              actionsDiv.innerHTML = '<span style="color:rgba(255,255,255,.4);font-size:13px;">Discarded — image not saved to library.</span>';
-            };
-
             actionsDiv.appendChild(saveBtn);
-            actionsDiv.appendChild(discardBtn);
 
             if (composerActiveMessageIndex !== null) {
               var useBtn = document.createElement('button');
-              useBtn.textContent = 'Save & Use in Campaign';
+              useBtn.textContent = 'Use in Campaign';
               useBtn.className = 'btn btn-primary';
               useBtn.onclick = function() {
                 csSaveToLibrary(data.secure_url);
@@ -6814,6 +6926,15 @@ Occasional deals &amp; promotions</textarea>
               };
               actionsDiv.appendChild(useBtn);
             }
+
+            var discardBtn = document.createElement('button');
+            discardBtn.textContent = 'Discard';
+            discardBtn.className = 'btn-secondary';
+            discardBtn.style.cssText = 'padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px;';
+            discardBtn.onclick = function() {
+              actionsDiv.innerHTML = '<span style="color:rgba(255,255,255,.4);font-size:13px;">Discarded — not saved to library.</span>';
+            };
+            actionsDiv.appendChild(discardBtn);
 
             document.getElementById('csRenderInfo').parentNode.appendChild(actionsDiv);
           }
@@ -6871,6 +6992,32 @@ Occasional deals &amp; promotions</textarea>
     // ─── Init ───
     csRebuildGraphicGrid();
 
+    // ─── Video mute toggle ───
+    var _csMuteSvgOn = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+    var _csMuteSvgOff = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+    window.csToggleVideoMute = function() {
+      var vid = document.querySelector('#csPrevBg video');
+      if (!vid) return;
+      vid.muted = !vid.muted;
+      var btn = document.getElementById('csVideoMuteBtn');
+      if (btn) {
+        btn.innerHTML = vid.muted ? _csMuteSvgOff : _csMuteSvgOn;
+        btn.title = vid.muted ? 'Unmute' : 'Mute';
+      }
+    };
+    function csUpdateMuteBtn() {
+      var btn = document.getElementById('csVideoMuteBtn');
+      if (!btn) return;
+      var hasVideo = csState.bgType === 'video' && csState.videoUrl;
+      btn.style.display = hasVideo ? '' : 'none';
+      if (hasVideo) {
+        var vid = document.querySelector('#csPrevBg video');
+        var muted = !vid || vid.muted;
+        btn.innerHTML = muted ? _csMuteSvgOff : _csMuteSvgOn;
+        btn.title = muted ? 'Unmute' : 'Mute';
+      }
+    }
+
     // ─── Preview size toggle ───
     var CS_SIZES = { s: 240, m: 360, l: 640 };
     var _csCurrentSize = 'm';
@@ -6888,14 +7035,20 @@ Occasional deals &amp; promotions</textarea>
       var wrap = document.querySelector('.cs-canvas-wrap');
       var canvas = document.getElementById('csCanvas');
       if (!wrap || !canvas) return;
+      var isVideoMode = canvas.classList.contains('video-mode');
+      var canvasW = isVideoMode ? 450 : 640;
       var targetW = CS_SIZES[_csCurrentSize] || 360;
-      wrap.style.maxWidth = targetW + 'px';
-      if (targetW >= 640) {
+      // In video mode, scale relative to 450px not 640px
+      var displayW = isVideoMode ? Math.min(targetW, 450) : targetW;
+      wrap.style.maxWidth = displayW + 'px';
+      var controls = document.getElementById('csPreviewControls');
+      if (controls) controls.style.maxWidth = displayW + 'px';
+      if (displayW >= canvasW) {
         canvas.style.transform = '';
         canvas.style.transformOrigin = '';
         wrap.style.height = '';
       } else {
-        var scale = targetW / 640;
+        var scale = displayW / canvasW;
         canvas.style.transform = 'scale(' + scale + ')';
         canvas.style.transformOrigin = 'top left';
         wrap.style.height = Math.round(800 * scale) + 'px';
