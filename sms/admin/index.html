@@ -4460,6 +4460,29 @@ Occasional deals &amp; promotions</textarea>
           csState.videoUrl = data.video_url;
           csState.bgType = 'video';
           _csVideoStopTimers();
+
+          // Save raw HeyGen video to Cloudinary + media library for reuse
+          (function(heygenUrl) {
+            var fd = new FormData();
+            fd.append('file', heygenUrl);
+            fd.append('upload_preset', 'gkk_napa_mms');
+            fd.append('resource_type', 'video');
+            fetch('https://api.cloudinary.com/v1_1/dxkrjbycr/video/upload', {
+              method: 'POST', body: fd
+            }).then(function(r) { return r.json(); }).then(function(cld) {
+              if (cld.secure_url) {
+                csState.videoUrl = cld.secure_url;
+                // Save to library with script snippet as label
+                var label = 'HeyGen — ' + (csState.videoScript || '').substring(0, 60).trim();
+                fetch(WORKER_BASE + '/admin/media-library', {
+                  method: 'POST',
+                  headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+                  body: JSON.stringify({ url: cld.secure_url, label: label, asset_type: 'video' })
+                });
+              }
+            }).catch(function(e) { console.warn('HeyGen Cloudinary upload failed:', e); });
+          })(data.video_url);
+
           // Refresh modal if open
           var c = document.getElementById('csBgVideoContent');
           if (c) c.innerHTML = _csBuildScriptPanel();
