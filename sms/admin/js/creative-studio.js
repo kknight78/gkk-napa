@@ -3118,7 +3118,7 @@
     }
 
     // ─── Preview size toggle ───
-    var CS_SIZES = { s: 240, m: 360, l: 640 };
+    var CS_SIZES = { s: 360, m: 480, l: 640 };
     var _csCurrentSize = 'm';
 
     window.csSetPreviewSize = function(size) {
@@ -3136,13 +3136,13 @@
       if (!wrap || !canvas) return;
       var isVideoMode = canvas.classList.contains('video-mode');
       var canvasW = isVideoMode ? 450 : 640;
-      var targetW = CS_SIZES[_csCurrentSize] || 360;
-      // In video mode, scale relative to 450px not 640px
+      var targetW = CS_SIZES[_csCurrentSize] || 640;
       var displayW = isVideoMode ? Math.min(targetW, 450) : targetW;
       wrap.style.maxWidth = displayW + 'px';
       var controls = document.getElementById('csPreviewControls');
       if (controls) controls.style.maxWidth = displayW + 'px';
-      if (displayW >= canvasW) {
+      var canvasH = isVideoMode ? 800 : 800;
+      if (displayW === canvasW) {
         canvas.style.transform = '';
         canvas.style.transformOrigin = '';
         wrap.style.height = '';
@@ -3150,7 +3150,7 @@
         var scale = displayW / canvasW;
         canvas.style.transform = 'scale(' + scale + ')';
         canvas.style.transformOrigin = 'top left';
-        wrap.style.height = Math.round(800 * scale) + 'px';
+        wrap.style.height = Math.round(canvasH * scale) + 'px';
       }
     }
     window.addEventListener('resize', csScaleCanvas);

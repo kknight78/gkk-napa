@@ -26,7 +26,7 @@
       color: var(--white);
     }
     .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 18px; }
-    h1 { text-transform: uppercase; letter-spacing: .4px; margin: 0 0 8px; font-size: 24px; }
+    h1 { text-transform: uppercase; letter-spacing: .4px; margin: 0 0 20px; font-size: 24px; }
     h2 { font-size: 16px; margin: 24px 0 12px; color: var(--napa-yellow); text-transform: uppercase; letter-spacing: .3px; }
     .logo-banner { background: #0A0094; padding: 20px 16px; text-align: center; }
     .logo-banner a { display: inline-block; }
@@ -128,6 +128,33 @@
     }
     .sub-tabs .tab:hover:not(.active) {
       opacity: .8;
+    }
+
+    /* Third-level view tabs (Show All / Create New) */
+    .camp-views {
+      margin-bottom: 16px;
+      border-bottom: 2px solid var(--napa-yellow);
+      gap: 0;
+    }
+    .camp-views .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      border-radius: 0;
+      background: transparent;
+      color: rgba(255,255,255,.4);
+      margin-bottom: -2px;
+      border-bottom: 2px solid transparent;
+    }
+    .camp-views .tab.active {
+      color: var(--napa-yellow);
+      background: transparent;
+      border-bottom: 2px solid var(--napa-yellow);
+    }
+    .camp-views .tab:hover:not(.active) {
+      color: rgba(255,255,255,.7);
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -1543,19 +1570,20 @@
       <!-- Messaging sub-nav -->
       <div class="tabs sub-tabs" id="subNav">
         <button class="tab active" data-tab="campaigns">Campaigns</button>
-        <button class="tab" data-tab="studio">Studio</button>
-        <button class="tab" data-tab="library">Library</button>
+        <button class="tab" data-tab="studio">Creative Studio</button>
+        <button class="tab" data-tab="library">Media Library</button>
       </div>
 
       <!-- ═══ Tab: Campaigns (list + composer) ═══ -->
       <div class="tab-content active" id="tab-campaigns">
 
+        <div class="tabs camp-views" id="campViewNav">
+          <button class="tab active" data-view="list" onclick="campSwitchView('list',this)">Show All</button>
+          <button class="tab" data-view="create" onclick="campSwitchView('create',this)">Create New</button>
+        </div>
+
         <!-- Campaign List View (default) -->
         <div id="campaignListView">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h2 style="margin:0;font-size:18px;color:var(--napa-yellow);">Campaigns</h2>
-            <button class="btn-primary" onclick="composerNewCampaign()">+ New Campaign</button>
-          </div>
           <div class="cl-toolbar">
             <div class="cl-filters">
               <button class="cl-filter-btn active" data-filter="all" onclick="clSetFilter('all')">All</button>
@@ -1576,7 +1604,6 @@
 
         <!-- Composer View (toggled) -->
         <div id="composerView" style="display:none;">
-          <a href="#" class="composer-back-link" onclick="composerBackToList();return false;">&larr; Back to Campaigns</a>
           <h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin:0 0 8px;">Campaign</h3>
           <div class="form-card" style="margin-bottom:16px;">
             <div class="composer-msg-header" style="margin-bottom:12px;"><h3>Name</h3></div>
@@ -1745,13 +1772,12 @@
       <!-- ═══ Tab: Studio (Creative Studio) ═══ -->
       <div class="tab-content" id="tab-studio">
         <div id="studioBackLink" style="display:none;">
-          <a href="#" class="composer-back-link" onclick="switchToTab('campaigns');composerShowComposer();return false;">&larr; Back to Campaign</a>
         </div>
         <div id="creativeStudioView">
           <div class="cs-layout">
             <!-- ═══ LEFT: Title + Wizard Steps ═══ -->
             <div class="cs-controls">
-              <h2 style="margin:4px 0 12px;font-size:20px;color:var(--napa-yellow);">Creative Studio</h2>
+              <!-- title removed — sub-nav tab says "Creative Studio" -->
               <!-- Step 1: Brand Graphic + Background -->
               <div class="cs-step" id="csStepGraphic">
                 <div class="cs-step-header" onclick="csToggleStep('csStepGraphic')">
@@ -1890,7 +1916,6 @@
               </div>
               <!-- Controls bar below canvas (outside canvas-wrap so overflow:hidden doesn't clip) -->
               <div id="csPreviewControls" style="display:flex;align-items:center;gap:4px;margin-top:6px;">
-                <button class="cs-size-btn" data-size="s" onclick="csSetPreviewSize('s')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">S</button>
                 <button class="cs-size-btn active" data-size="m" onclick="csSetPreviewSize('m')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">M</button>
                 <button class="cs-size-btn" data-size="l" onclick="csSetPreviewSize('l')" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">L</button>
                 <button id="csVideoMuteBtn" class="cs-mute-btn" onclick="csToggleVideoMute()" style="display:none;margin-left:auto;padding:4px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;line-height:0;" title="Unmute"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></button>
@@ -1913,13 +1938,7 @@
 
       <!-- ═══ Tab: Library (standalone) ═══ -->
       <div class="tab-content" id="tab-library">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h2 style="margin:0;font-size:18px;color:var(--napa-yellow);">Media Library</h2>
-          <div class="lib-upload-zone">
-            <button class="btn-primary" onclick="libStandaloneUpload()">Upload</button>
-          </div>
-        </div>
-        <div class="lib-toolbar" style="margin-bottom:14px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
           <input type="search" id="libStandaloneSearch" placeholder="Search by name..." class="lib-search" />
           <div class="lib-filters">
             <button class="lib-filter-btn active" data-filter="all" onclick="libStandaloneSetFilter('all',this)">All</button>
@@ -1928,13 +1947,16 @@
             <button class="lib-filter-btn" data-filter="raw_image" onclick="libStandaloneSetFilter('raw_image',this)">Raw Images</button>
             <button class="lib-filter-btn" data-filter="raw_video" onclick="libStandaloneSetFilter('raw_video',this)">Raw Videos</button>
           </div>
-          <select id="libStandaloneSort" class="lib-sort">
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="name">Name A–Z</option>
-          </select>
         </div>
-        <div class="lib-status"><span id="libStandaloneCount">0 items</span></div>
+        <select id="libStandaloneSort" class="lib-sort" style="width:100%;margin-bottom:12px;">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name">Name A–Z</option>
+        </select>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:12px;color:rgba(255,255,255,.35);" id="libStandaloneCount">0 items</span>
+          <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;padding:6px 16px;border:1px solid rgba(255,255,255,.18);border-radius:6px;" onclick="libStandaloneUpload()" onmouseover="this.style.borderColor='rgba(255,255,255,.4)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(255,255,255,.18)';this.style.color='rgba(255,255,255,.5)'">+ Upload</span>
+        </div>
         <div class="lib-standalone" id="libStandaloneGrid"></div>
       </div>
 
