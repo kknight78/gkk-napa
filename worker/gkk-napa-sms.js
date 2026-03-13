@@ -527,9 +527,15 @@ async function processScheduledEvents(env) {
       let sentCount = 0;
       let failedCount = 0;
 
-      // Shorten URLs in the event body
-      let finalBody = event.body;
-      finalBody = await shortenUrlsInText(finalBody, env);
+      // Shorten URLs in the event body and append opt-out
+      let finalBody = event.body ? event.body.trim() : "";
+      if (finalBody) {
+        finalBody = await shortenUrlsInText(finalBody, env);
+      }
+      // Always include opt-out text (required even for media-only MMS)
+      if (finalBody || event.media_url) {
+        finalBody = (finalBody ? finalBody + "\n\n" : "") + "Reply STOP to opt out.";
+      }
 
       if (promoMeta.dev_mode) {
         // Dev mode: send only to dev_phone / dev_email
@@ -2030,7 +2036,10 @@ async function handleSendTest(request, env, corsHeaders) {
   let finalBody = hasBody ? messageBody.trim() : "";
   if (finalBody) {
     finalBody = await shortenUrlsInText(finalBody, env);
-    finalBody += "\n\nReply STOP to opt out.";
+  }
+  // Always include opt-out text (required even for media-only MMS)
+  if (finalBody || mediaUrl) {
+    finalBody = (finalBody ? finalBody + "\n\n" : "") + "Reply STOP to opt out.";
   }
 
   const result = await sendSms(env, phone, finalBody, mediaUrl);
@@ -2101,7 +2110,10 @@ async function handleSendCampaign(request, env, corsHeaders) {
   let fullMessage = hasBody ? messageBody.trim() : "";
   if (fullMessage) {
     fullMessage = await shortenUrlsInText(fullMessage, env);
-    fullMessage += "\n\nReply STOP to opt out.";
+  }
+  // Always include opt-out text (required even for media-only MMS)
+  if (fullMessage || mediaUrl) {
+    fullMessage = (fullMessage ? fullMessage + "\n\n" : "") + "Reply STOP to opt out.";
   }
 
   // Query subscribed customers
@@ -2289,7 +2301,10 @@ async function handleCampaignCompose(request, env, corsHeaders) {
     let fullMessage = firstMsg.body ? firstMsg.body.trim() : "";
     if (fullMessage) {
       fullMessage = await shortenUrlsInText(fullMessage, env);
-      fullMessage += "\n\nReply STOP to opt out.";
+    }
+    // Always include opt-out text (required even for media-only MMS)
+    if (fullMessage || firstMsg.media_url) {
+      fullMessage = (fullMessage ? fullMessage + "\n\n" : "") + "Reply STOP to opt out.";
     }
 
     if (dev_mode) {
@@ -2986,15 +3001,44 @@ async function handleMediaLibrary(env, corsHeaders) {
       created_at TEXT NOT NULL
     )
   `).run();
+  // Add category column if missing
+  try { await env.DB.prepare("ALTER TABLE media_library ADD COLUMN category TEXT NOT NULL DEFAULT 'raw_image'").run(); } catch { }
 
   const items = await env.DB.prepare(
-    "SELECT id, url, label, created_at FROM media_library ORDER BY created_at DESC"
+    "SELECT id, url, label, category, created_at FROM media_library ORDER BY created_at DESC"
   ).all();
   return jsonOk(corsHeaders, items.results);
 }
 
 async function handleSaveToLibrary(request, env, corsHeaders) {
-  const { url, label } = await request.json();
+  // Support both JSON and FormData (file upload)
+  let url, label, category;
+  const ct = request.headers.get('Content-Type') || '';
+  if (ct.includes('multipart/form-data')) {
+    // File upload — upload to Cloudinary first
+    const fd = await request.formData();
+    const file = fd.get('file');
+    if (!file) return jsonError(corsHeaders, "No file provided.", 400);
+
+    const isVideo = file.type && file.type.startsWith('video/');
+    const cldType = isVideo ? 'video' : 'image';
+    const cldFd = new FormData();
+    cldFd.append('file', file);
+    cldFd.append('upload_preset', 'gkk_napa_mms');
+    const cldResp = await fetch(`https://api.cloudinary.com/v1_1/dtpqxuwby/${cldType}/upload`, { method: 'POST', body: cldFd });
+    const cldData = await cldResp.json();
+    if (!cldData.secure_url) return jsonError(corsHeaders, "Upload failed: " + (cldData.error?.message || "unknown"), 500);
+
+    url = cldData.secure_url;
+    label = file.name ? file.name.replace(/\.[^.]+$/, '') : null;
+    category = isVideo ? 'raw_video' : 'raw_image';
+  } else {
+    const json = await request.json();
+    url = json.url;
+    label = json.label;
+    category = json.category || 'raw_image';
+  }
+
   if (!url) return jsonError(corsHeaders, "URL is required.", 400);
 
   await env.DB.prepare(`
@@ -3005,19 +3049,19 @@ async function handleSaveToLibrary(request, env, corsHeaders) {
       created_at TEXT NOT NULL
     )
   `).run();
+  try { await env.DB.prepare("ALTER TABLE media_library ADD COLUMN category TEXT NOT NULL DEFAULT 'raw_image'").run(); } catch { }
 
   const now = new Date().toISOString();
   try {
     await env.DB.prepare(
-      "INSERT INTO media_library (url, label, created_at) VALUES (?, ?, ?)"
-    ).bind(url, label || null, now).run();
+      "INSERT INTO media_library (url, label, category, created_at) VALUES (?, ?, ?, ?)"
+    ).bind(url, label || null, category, now).run();
   } catch (e) {
-    // UNIQUE constraint — already in library, just update label
-    if (label) {
-      await env.DB.prepare("UPDATE media_library SET label = ? WHERE url = ?").bind(label, url).run();
-    }
+    // UNIQUE constraint — already in library, just update label + category
+    await env.DB.prepare("UPDATE media_library SET label = COALESCE(?, label), category = ? WHERE url = ?")
+      .bind(label || null, category, url).run();
   }
-  return jsonOk(corsHeaders, { ok: true });
+  return jsonOk(corsHeaders, { ok: true, url });
 }
 
 async function handleCampaignDraft(request, env, corsHeaders) {
@@ -3069,7 +3113,7 @@ async function handleListCampaigns(env, corsHeaders) {
   for (const c of campaigns.results) {
     if (c.promo_type === "promo" || c.promo_type === "compose") {
       const events = await env.DB.prepare(
-        "SELECT id, event_index, label, status, sent_count, failed_count, send_at FROM campaign_events WHERE campaign_id = ? ORDER BY event_index ASC"
+        "SELECT id, event_index, label, status, sent_count, failed_count, send_at, body, media_url FROM campaign_events WHERE campaign_id = ? ORDER BY event_index ASC"
       ).bind(c.id).all();
       results.push({ ...c, events: events.results });
     } else {
