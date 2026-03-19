@@ -123,6 +123,45 @@ async function verifySubscribeToken(token, env) {
   }
 }
 
+// ─── Email unsubscribe token helpers (HMAC-SHA256) ───────────
+async function generateUnsubscribeToken(customerId, env) {
+  const payload = `unsubscribe:${customerId}`;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(env.ADMIN_PASSWORD),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+  const hmac = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(`${customerId}:${hmac}`).replace(/\+/g, "-").replace(/_/g, "_").replace(/=+$/, "");
+}
+
+async function verifyUnsubscribeToken(token, env) {
+  try {
+    const decoded = atob(token.replace(/-/g, "+").replace(/_/g, "/"));
+    const [customerId, hmac] = decoded.split(":");
+    if (!customerId || !hmac) return null;
+    const payload = `unsubscribe:${customerId}`;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw", enc.encode(env.ADMIN_PASSWORD),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+    const expected = btoa(String.fromCharCode(...new Uint8Array(sig)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    if (hmac !== expected) return null;
+    return parseInt(customerId);
+  } catch {
+    return null;
+  }
+}
+
+function buildUnsubscribeUrl(token) {
+  return `https://sms.gkk-napa.com/unsubscribe?token=${encodeURIComponent(token)}`;
+}
+
 // ─── Short code helpers ──────────────────────────────────────
 const SHORT_CODE_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -547,7 +586,7 @@ async function processScheduledEvents(env) {
         }
         if (promoMeta.dev_email && promoMeta.email_fallback && env.RESEND_API_KEY) {
           const emailMedia = videoToThumbnail(event.media_url);
-          const html = buildCampaignEmail("Dev Tester", event.body, "https://gkk-napa.com/sms/subscribe", null, emailMedia);
+          const html = buildCampaignEmail("Dev Tester", event.body, "https://gkk-napa.com/sms/subscribe", null, emailMedia, isVideoUrl(event.media_url) ? event.media_url : null);
           try {
             await fetch("https://api.resend.com/emails", {
               method: "POST",
@@ -595,7 +634,7 @@ async function processScheduledEvents(env) {
 
         // Email fallback for scheduled events
         if (promoMeta.email_fallback && env.RESEND_API_KEY) {
-          let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
+          let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
           if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
           const emailCustomers = await env.DB.prepare(emailSql).all();
 
@@ -613,7 +652,8 @@ async function processScheduledEvents(env) {
               subscribeUrl = 'https://gkk-napa.com/sms/subscribe';
             }
             const emailMedia = videoToThumbnail(event.media_url);
-            const html = buildCampaignEmail(greeting, event.body, subscribeUrl, displayPhone, emailMedia);
+            const unsubToken = await generateUnsubscribeToken(customer.id, env);
+            const html = buildCampaignEmail(greeting, event.body, subscribeUrl, displayPhone, emailMedia, isVideoUrl(event.media_url) ? event.media_url : null, buildUnsubscribeUrl(unsubToken));
 
             try {
               await fetch("https://api.resend.com/emails", {
@@ -738,6 +778,11 @@ export default {
       // ── Public: POST /subscribe ──
       if (request.method === "POST" && path === "/subscribe") {
         return handleSubscribe(request, env, corsHeaders);
+      }
+
+      // ── Public: GET /unsubscribe ──
+      if (request.method === "GET" && path === "/unsubscribe") {
+        return handleEmailUnsubscribe(url, env);
       }
 
       // ── Admin: POST /admin/login ──
@@ -1049,6 +1094,38 @@ export default {
 // ═══════════════════════════════════════════════════════════════
 // Phase 2: Subscribe Flow
 // ═══════════════════════════════════════════════════════════════
+
+async function handleEmailUnsubscribe(url, env) {
+  const token = url.searchParams.get('token');
+  if (!token) {
+    return new Response(unsubscribePage('Invalid unsubscribe link.', false), { headers: { 'Content-Type': 'text/html' } });
+  }
+  const customerId = await verifyUnsubscribeToken(token, env);
+  if (!customerId) {
+    return new Response(unsubscribePage('This unsubscribe link is invalid or expired.', false), { headers: { 'Content-Type': 'text/html' } });
+  }
+  // Auto-add column if missing, then set flag
+  try { await env.DB.prepare("ALTER TABLE customers ADD COLUMN email_unsubscribed INTEGER DEFAULT 0").run(); } catch {}
+  await env.DB.prepare("UPDATE customers SET email_unsubscribed = 1 WHERE id = ?").bind(customerId).run();
+  return new Response(unsubscribePage("You've been unsubscribed from our emails. You won't receive any more promotional emails from G&KK NAPA.", true), { headers: { 'Content-Type': 'text/html' } });
+}
+
+function unsubscribePage(message, success) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${success ? 'Unsubscribed' : 'Error'} - G&KK NAPA</title>
+<style>body{margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.card{background:#fff;border-radius:12px;padding:40px;max-width:440px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+.logo{height:60px;margin-bottom:20px;}
+h1{font-size:22px;color:#111;margin:0 0 12px;}
+p{font-size:16px;color:#555;line-height:1.6;margin:0;}
+.check{font-size:48px;margin-bottom:16px;}</style></head>
+<body><div class="card">
+<img src="https://gkk-napa.com/assets/pay-email-logo.png" alt="NAPA" class="logo">
+<div class="check">${success ? '&#10003;' : '&#10007;'}</div>
+<h1>${success ? 'Unsubscribed' : 'Oops'}</h1>
+<p>${message}</p>
+</div></body></html>`;
+}
 
 async function handleSubscribe(request, env, corsHeaders) {
   const body = await request.json();
@@ -1893,30 +1970,45 @@ const QR_CODE_URL = "https://gkk-napa.com/assets/sms_qrcode.svg";
 
 const SMS_LOGO_EMAIL = "https://gkk-napa.com/assets/sms-logo.png";
 
+function isVideoUrl(url) {
+  if (!url) return false;
+  return !!(url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || url.includes('/video/'));
+}
+
 function videoToThumbnail(url) {
   if (!url) return null;
-  const isVideo = url.match(/\.(mp4|mov|webm|mpeg|3gp)(\?|$)/i) || url.includes('/video/');
-  if (!isVideo) return url;
-  // Cloudinary: replace /video/upload/ with /video/upload/so_0,f_jpg/ to get poster frame
+  if (!isVideoUrl(url)) return url;
+  // Cloudinary: first frame as jpg, scaled to 640w, with play button overlay baked into the image
   if (url.includes('cloudinary.com') && url.includes('/video/upload/')) {
-    return url.replace('/video/upload/', '/video/upload/so_0,f_jpg/');
+    return url.replace('/video/upload/', '/video/upload/so_0,f_jpg,w_640/l_play-button-overlay,w_100,g_center/');
   }
   // Non-Cloudinary video — can't generate thumbnail, skip media
   return null;
 }
 
-function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl) {
+function buildCampaignEmail(greeting, messageBody, subscribeUrl, displayPhone, mediaUrl, videoUrl, unsubscribeUrl) {
   // Detect if media is the SMS logo (not a real creative)
   const isLogo = mediaUrl && mediaUrl.includes('sms-logo');
   const hasCreative = mediaUrl && !isLogo;
 
   // With a creative image: show it full-width, plain text above
   // Without creative: show small logo + bigger/bolder message text
-  const mediaSection = hasCreative
-    ? `<tr><td style="padding:0 24px 20px;">
+  // If video: play button is baked into thumbnail via Cloudinary overlay, link to video, show CTA text
+  let mediaSection = '';
+  if (hasCreative && videoUrl) {
+    mediaSection = `<tr><td style="padding:0 24px 8px;">
+<p style="margin:0;font-size:15px;color:#0A0094;font-weight:700;font-style:italic;">Click on the play button to hear a message from Brian!</p>
+</td></tr>
+<tr><td style="padding:0 24px 20px;" align="center">
+<a href="${videoUrl}" target="_blank" style="text-decoration:none;">
+<img src="${mediaUrl}" alt="Click to watch video" style="width:320px;max-width:100%;display:block;border-radius:8px;" />
+</a>
+</td></tr>`;
+  } else if (hasCreative) {
+    mediaSection = `<tr><td style="padding:0 24px 20px;">
 <img src="${mediaUrl}" alt="" style="width:100%;display:block;border-radius:8px;" />
-</td></tr>`
-    : '';
+</td></tr>`;
+  }
 
   const bodySection = messageBody
     ? hasCreative
@@ -2010,6 +2102,9 @@ to sign up at: <a href="https://gkk-napa.com/sms" style="color:#0A0094;font-weig
 </td></tr>
 
 </table>
+${unsubscribeUrl ? `<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;"><tr><td style="padding:16px 24px;text-align:center;">
+<p style="margin:0;font-size:12px;color:#999;line-height:1.5;">Don't want these emails? <a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a></p>
+</td></tr></table>` : ''}
 </td></tr>
 </table>
 </body></html>`;
@@ -2063,7 +2158,7 @@ async function handleSendTestEmail(request, env, corsHeaders) {
   const emailSubject = subject || "G&KK NAPA - SAVINGS ALERT!";
 
   // Use the same branded template as real campaign emails (video → thumbnail for email)
-  const html = buildCampaignEmail("there", sms_text || "", "https://gkk-napa.com/sms/subscribe", null, videoToThumbnail(image_url) || null);
+  const html = buildCampaignEmail("there", sms_text || "", "https://gkk-napa.com/sms/subscribe", null, videoToThumbnail(image_url) || null, isVideoUrl(image_url) ? image_url : null);
 
   try {
     const resp = await fetch("https://api.resend.com/emails", {
@@ -2171,7 +2266,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
   let emailFailed = 0;
 
   if (email_fallback && env.RESEND_API_KEY) {
-    let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
+    let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
     const emailBinds = [];
     if (store) { emailSql += " AND store = ?"; emailBinds.push(store); }
     if (priority_only) { emailSql += " AND is_priority = 1"; }
@@ -2195,8 +2290,8 @@ async function handleSendCampaign(request, env, corsHeaders) {
       }
 
       const emailMedia = videoToThumbnail(mediaUrl);
-
-      const html = buildCampaignEmail(greeting, messageBody.trim(), subscribeUrl, displayPhone, emailMedia);
+      const unsubToken = await generateUnsubscribeToken(customer.id, env);
+      const html = buildCampaignEmail(greeting, messageBody.trim(), subscribeUrl, displayPhone, emailMedia, isVideoUrl(mediaUrl) ? mediaUrl : null, buildUnsubscribeUrl(unsubToken));
 
       try {
         const resp = await fetch("https://api.resend.com/emails", {
@@ -2317,7 +2412,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
       }
       if (dev_email && email_fallback && env.RESEND_API_KEY) {
         const emailMedia = videoToThumbnail(firstMsg.media_url);
-        const html = buildCampaignEmail("Dev Tester", firstMsg.body || "", "https://gkk-napa.com/sms/subscribe", null, emailMedia);
+        const html = buildCampaignEmail("Dev Tester", firstMsg.body || "", "https://gkk-napa.com/sms/subscribe", null, emailMedia, isVideoUrl(firstMsg.media_url) ? firstMsg.media_url : null);
         try {
           const resp = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -2345,7 +2440,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
       }
 
       if (email_fallback && env.RESEND_API_KEY) {
-        let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != ''";
+        let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
         if (priority_only) { emailSql += " AND is_priority = 1"; }
         const emailCustomers = await env.DB.prepare(emailSql).all();
 
@@ -2356,7 +2451,8 @@ async function handleCampaignCompose(request, env, corsHeaders) {
           const shortCode = canSms ? (customer.short_code || await ensureShortCode(env.DB, customer.id)) : null;
           const subscribeUrl = canSms ? `https://gkk-napa.com/s/${shortCode}` : 'https://gkk-napa.com/sms/subscribe';
           const emailMedia = videoToThumbnail(firstMsg.media_url);
-          const html = buildCampaignEmail(greeting, firstMsg.body || "", subscribeUrl, displayPhone, emailMedia);
+          const unsubToken = await generateUnsubscribeToken(customer.id, env);
+          const html = buildCampaignEmail(greeting, firstMsg.body || "", subscribeUrl, displayPhone, emailMedia, isVideoUrl(firstMsg.media_url) ? firstMsg.media_url : null, buildUnsubscribeUrl(unsubToken));
           try {
             const resp = await fetch("https://api.resend.com/emails", {
               method: "POST",
@@ -2783,7 +2879,7 @@ async function handlePromoSchedule(request, env, corsHeaders) {
 
       // Email fallback
       if (emailFallback && env.RESEND_API_KEY) {
-        let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != ''";
+        let emailSql = "SELECT * FROM customers WHERE sms_status != 'subscribed' AND email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
         const emailBinds = [];
         if (storeFilter) { emailSql += " AND store = ?"; emailBinds.push(storeFilter); }
         if (priorityOnly) { emailSql += " AND is_priority = 1"; }
@@ -2798,7 +2894,8 @@ async function handlePromoSchedule(request, env, corsHeaders) {
             ? `https://gkk-napa.com/s/${customer.short_code || await ensureShortCode(env.DB, customer.id)}`
             : 'https://gkk-napa.com/sms/subscribe';
           const emailMedia = videoToThumbnail(mediaUrl);
-          const html = buildCampaignEmail(greeting, firstEvent.body, subscribeUrl, displayPhone, emailMedia);
+          const unsubToken = await generateUnsubscribeToken(customer.id, env);
+          const html = buildCampaignEmail(greeting, firstEvent.body, subscribeUrl, displayPhone, emailMedia, isVideoUrl(mediaUrl) ? mediaUrl : null, buildUnsubscribeUrl(unsubToken));
           try {
             const resp = await fetch("https://api.resend.com/emails", {
               method: "POST",

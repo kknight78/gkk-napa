@@ -646,15 +646,14 @@
         html += '<div class="composer-preview-label">Preview</div>';
         html += '<div class="composer-phone" id="composerPhone' + i + '">';
         if (hasContent) {
-          if (hasBody) {
-            html += '<div class="composer-phone-bubble">' + (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div>';
-          }
+          // Text bubble: body + opt-out combined, always before media
+          var bubbleText = hasBody ? (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span>' : '<span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span>';
+          html += '<div class="composer-phone-bubble">' + bubbleText + '</div>';
           if (isVideo && mediaUrl) {
             html += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
           } else if (mediaUrl) {
             html += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
           }
-          html += '<div class="composer-phone-bubble" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;">Reply STOP to opt out.</div>';
         } else {
           html += '<div class="composer-phone-empty">Message preview<br>will appear here</div>';
         }
