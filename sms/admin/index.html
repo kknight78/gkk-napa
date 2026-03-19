@@ -1844,10 +1844,15 @@
                     <img class="cs-badge-color-opt" data-badge="blue" onclick="csSelectBadgeColor('blue')" src="/assets/small-blue-bolt.svg" style="height:28px;cursor:pointer;border:2px solid transparent;border-radius:4px;padding:1px;" />
                   </div>
                 </div>
+                <div style="margin-bottom:8px;">
+                  <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">
+                    <input type="checkbox" id="csOfferPriceToggle" checked onchange="csUpdateOfferFromVisual()" style="width:auto;"> Include price?
+                  </label>
+                </div>
 
                 <div class="cs-offer-visual-btn" data-offer="price" onclick="csSelectOfferVisual('price')" style="margin-bottom:6px;">
                   <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-radius:4px;overflow:hidden;">
-                    <div style="color:#fff;font-weight:900;line-height:1;padding:8px 12px;">
+                    <div class="cs-offer-price-preview" style="color:#fff;font-weight:900;line-height:1;padding:8px 12px;">
                       <span style="font-size:16px;">$</span><span style="font-size:30px;">34</span><span style="font-size:18px;vertical-align:top;">99</span><span style="font-size:10px;font-weight:300;">/5 qt.</span>
                     </div>
                     <img id="csOfferPreviewBadge1" src="/assets/offer-example-yellow-save.svg" style="height:56px;" />
@@ -1856,7 +1861,7 @@
 
                 <div class="cs-offer-visual-btn" data-offer="starting" onclick="csSelectOfferVisual('starting')">
                   <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-radius:4px;overflow:hidden;">
-                    <div style="color:#fff;font-weight:900;line-height:1;padding:8px 12px;">
+                    <div class="cs-offer-price-preview" style="color:#fff;font-weight:900;line-height:1;padding:8px 12px;">
                       <div style="font-size:10px;text-transform:uppercase;">Starting At</div>
                       <span style="font-size:16px;">$</span><span style="font-size:30px;">34</span><span style="font-size:18px;vertical-align:top;">99</span><span style="font-size:10px;font-weight:300;">/each</span>
                     </div>

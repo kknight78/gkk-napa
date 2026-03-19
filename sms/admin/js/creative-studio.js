@@ -65,6 +65,7 @@
       offerType: null,
       offerMode: null,       // 'text' | 'price' | 'starting'
       offerHasBadge: true,
+      offerHasPrice: true,
       offerBadgeColor: 'yellow',
       offerDollars: '',
       offerCents: '',
@@ -747,18 +748,23 @@
     // ─── Offer Selection (visual) ───
     function csUpdateOfferFromVisual() {
       csState.offerHasBadge = document.getElementById('csOfferBadgeToggle').checked;
+      csState.offerHasPrice = document.getElementById('csOfferPriceToggle').checked;
       if (csState.offerMode === 'text') {
         csState.offerType = 'text-only';
-      } else if (csState.offerMode) {
+      } else if (csState.offerMode && csState.offerMode !== 'none') {
         const prefix = csState.offerMode === 'starting' ? 'starting-save' : 'price-save';
         csState.offerType = prefix + '-' + csState.offerBadgeColor;
       }
-      // Toggle bolt visibility in selector previews (use visibility to prevent layout jump)
+      // Toggle bolt visibility in selector previews
       var boltVis = csState.offerHasBadge ? 'visible' : 'hidden';
       document.getElementById('csOfferPreviewBadge1').style.visibility = boltVis;
       document.getElementById('csOfferPreviewBadge2').style.visibility = boltVis;
       // Toggle color picker visibility
       document.getElementById('csBadgeColorPicker').style.display = csState.offerHasBadge ? 'flex' : 'none';
+      // Toggle price visibility in template selector buttons
+      document.querySelectorAll('.cs-offer-price-preview').forEach(el => {
+        el.style.visibility = csState.offerHasPrice ? 'visible' : 'hidden';
+      });
       csBuildOfferBar();
       csUpdatePreview();
     }
@@ -1537,13 +1543,24 @@
           rightEl.innerHTML = '';
         }
 
+        // Hide price side if "Include price?" is unchecked
+        if (!csState.offerHasPrice) {
+          leftEl.style.display = 'none';
+          rightEl.style.marginLeft = 'auto';
+        }
+
         // Bind inline input listeners (state only, no re-render)
-        document.getElementById('csInlineDollars').addEventListener('input', function() {
-          csState.offerDollars = this.value;
-          this.style.width = Math.max(1, this.value.length) + 'ch';
-        });
-        document.getElementById('csInlineCents').addEventListener('input', function() { csState.offerCents = this.value; });
-        document.getElementById('csInlineUnit').addEventListener('input', function() { csState.offerUnit = this.value; });
+        var dollarsEl = document.getElementById('csInlineDollars');
+        if (dollarsEl) {
+          dollarsEl.addEventListener('input', function() {
+            csState.offerDollars = this.value;
+            this.style.width = Math.max(1, this.value.length) + 'ch';
+          });
+        }
+        var centsEl = document.getElementById('csInlineCents');
+        if (centsEl) centsEl.addEventListener('input', function() { csState.offerCents = this.value; });
+        var unitEl = document.getElementById('csInlineUnit');
+        if (unitEl) unitEl.addEventListener('input', function() { csState.offerUnit = this.value; });
       } else {
         // Text-only — built in csUpdatePreview since it needs bg color context
       }
@@ -2362,30 +2379,29 @@
             const szCents = big ? 60 : 50;
             const szUnit = big ? 28 : 23;
 
-            ctx.save();
-            ctx.translate(25, 0);
-            let priceTop = offerY + (big ? 20 : 49);
-            if (cfg.hasStartingAt) {
+            if (csState.offerHasPrice) {
+              ctx.save();
+              ctx.translate(25, 0);
+              let priceTop = offerY + (big ? 20 : 49);
+              if (cfg.hasStartingAt) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '900 30px "NAPA Sans Cn", system-ui';
+                ctx.fillText('STARTING AT', 0, priceTop);
+                priceTop += 6;
+              }
               ctx.fillStyle = '#fff';
-              ctx.font = '900 30px "NAPA Sans Cn", system-ui';
-              ctx.fillText('STARTING AT', 0, priceTop);
-              priceTop += 6;
+              ctx.font = '900 ' + szDollarSign + 'px "NAPA Sans Cn", system-ui';
+              const dollarSignW = ctx.measureText('$').width;
+              ctx.fillText('$', 0, priceTop + szDollarSign * 0.85);
+              ctx.font = '900 ' + szDollars + 'px "NAPA Sans Cn", system-ui';
+              ctx.fillText(dollars, dollarSignW, priceTop + szDollars * 0.85);
+              const dollarsW = dollarSignW + ctx.measureText(dollars).width;
+              ctx.font = '900 ' + szCents + 'px "NAPA Sans Cn", system-ui';
+              ctx.fillText(cents, dollarsW, priceTop + szCents * 0.85);
+              ctx.font = '300 ' + szUnit + 'px "NAPA Sans Cn", system-ui';
+              ctx.fillText(unit, dollarsW, priceTop + szCents * 0.85 + szUnit);
+              ctx.restore();
             }
-            // $ sign — aligned to top of dollars (flex-start in HTML)
-            ctx.fillStyle = '#fff';
-            ctx.font = '900 ' + szDollarSign + 'px "NAPA Sans Cn", system-ui';
-            const dollarSignW = ctx.measureText('$').width;
-            ctx.fillText('$', 0, priceTop + szDollarSign * 0.85);
-            // Dollars
-            ctx.font = '900 ' + szDollars + 'px "NAPA Sans Cn", system-ui';
-            ctx.fillText(dollars, dollarSignW, priceTop + szDollars * 0.85);
-            const dollarsW = dollarSignW + ctx.measureText(dollars).width;
-            // Cents + unit stacked — aligned to top of dollars
-            ctx.font = '900 ' + szCents + 'px "NAPA Sans Cn", system-ui';
-            ctx.fillText(cents, dollarsW, priceTop + szCents * 0.85);
-            ctx.font = '300 ' + szUnit + 'px "NAPA Sans Cn", system-ui';
-            ctx.fillText(unit, dollarsW, priceTop + szCents * 0.85 + szUnit);
-            ctx.restore();
 
             // Badge
             if (cfg.badge) {
@@ -3089,7 +3105,7 @@
       csState = {
         mediaMode: 'image', color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null, bgRawImage: null, bgNatW: 0, bgNatH: 0, bgScale: 1, bgX: 0, bgY: 0,
         videoSource: null, videoScript: '', videoUrl: null, videoStatus: null, videoId: null, videoError: null, _videoPollTimer: null, _videoElapsedTimer: null, _videoStartTime: null,
-        offerType: null, offerMode: null, offerHasBadge: true, offerBadgeColor: 'yellow',
+        offerType: null, offerMode: null, offerHasBadge: true, offerHasPrice: true, offerBadgeColor: 'yellow',
         offerDollars: '', offerCents: '', offerUnit: '', offerSave: '', offerText: '',
         titleText: 'SALE EVENT', rulesText: 'In store only, while supplies last',
         bodyCount: null, bodyItems: [],
