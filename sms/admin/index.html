@@ -1616,8 +1616,12 @@
                   <span style="font-size:14px;">&#9733; Priority customers only</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                  <input type="checkbox" id="composerEmailFallback" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
-                  <span style="font-size:14px;">Also send email to customers with email addresses</span>
+                  <input type="checkbox" id="composerSendSms" checked style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
+                  <span style="font-size:14px;">Text message</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
+                  <input type="checkbox" id="composerSendEmail" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
+                  <span style="font-size:14px;">Email</span>
                 </label>
               </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1626,7 +1630,7 @@
                   <span id="composerSmsNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
                   <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>
                 </div>
-                <div class="recipient-chip" id="composerEmailCount" onclick="composerViewList('email')" style="cursor:pointer;display:none;" title="Click to view list">
+                <div class="recipient-chip" id="composerEmailCount" onclick="composerViewList('email')" style="cursor:pointer;" title="Click to view list">
                   <span style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;">Email</span>
                   <span id="composerEmailNum" style="font-size:18px;font-weight:700;color:var(--napa-yellow);">0</span>
                   <span style="font-size:11px;color:rgba(255,255,255,.4);">recipients</span>

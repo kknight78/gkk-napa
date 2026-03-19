@@ -249,7 +249,8 @@
         var meta = {};
         try { meta = JSON.parse(data.promo_meta || '{}'); } catch { }
         document.getElementById('composerPriority').checked = !!meta.priority_only;
-        document.getElementById('composerEmailFallback').checked = !!meta.email_fallback;
+        document.getElementById('composerSendSms').checked = !meta.email_only;
+        document.getElementById('composerSendEmail').checked = !!meta.email_fallback || !!meta.email_only;
         if (meta.dev_mode) {
           document.getElementById('composerDevMode').checked = true;
           document.getElementById('composerDevFields').style.display = 'block';
@@ -561,8 +562,10 @@
       if (devMode) { devMode.checked = false; document.getElementById('composerDevFields').style.display = 'none'; }
       var priority = document.getElementById('composerPriority');
       if (priority) priority.checked = false;
-      var emailFallback = document.getElementById('composerEmailFallback');
-      if (emailFallback) emailFallback.checked = false;
+      var sendSmsEl = document.getElementById('composerSendSms');
+      if (sendSmsEl) sendSmsEl.checked = true;
+      var sendEmailEl = document.getElementById('composerSendEmail');
+      if (sendEmailEl) sendEmailEl.checked = false;
       composerShowError('');
       composerShowSuccess('');
       var draftStatus = document.getElementById('composerDraftStatus');
@@ -601,9 +604,9 @@
         // Body
         html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Message Text <span style="font-weight:400;color:rgba(255,255,255,.3);">(optional if media attached)</span></label>';
         html += '<textarea class="composer-msg-body" data-index="' + i + '" maxlength="1500" placeholder="Type your message..." style="min-height:80px;" oninput="composerUpdateBody(' + i + ',this)">' + (msg.body || '') + '</textarea>';
-        var _segInfo = smsSegmentInfo((msg.body || '') + '\nReply STOP to opt out.');
+        var _segInfo = smsSegmentInfo((msg.body || '') + '\n— G&KK NAPA. Reply STOP to opt out. gkk-napa.com');
         var _segColor = _segInfo.segments > 1 ? (_segInfo.segments > 3 ? 'var(--red)' : 'var(--orange)') : 'rgba(255,255,255,.3)';
-        html += '<div style="font-size:11px;color:rgba(255,255,255,.3);margin:2px 0 8px;">' + (msg.body || '').length + '/1,500 &mdash; <span style="color:' + _segColor + ';">' + _segInfo.segments + ' SMS segment' + (_segInfo.segments !== 1 ? 's' : '') + '</span> &mdash; "Reply STOP to opt out." appended automatically</div>';
+        html += '<div style="font-size:11px;color:rgba(255,255,255,.3);margin:2px 0 8px;">' + (msg.body || '').length + '/1,500 &mdash; <span style="color:' + _segColor + ';">' + _segInfo.segments + ' SMS segment' + (_segInfo.segments !== 1 ? 's' : '') + '</span> &mdash; "— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com" appended automatically</div>';
 
         // Media
         html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);">Media</label>';
@@ -645,17 +648,13 @@
         html += '<div class="composer-preview-col">';
         html += '<div class="composer-preview-label">Preview</div>';
         html += '<div class="composer-phone" id="composerPhone' + i + '">';
-        if (hasContent) {
-          // Text bubble: body + opt-out combined, always before media
-          var bubbleText = hasBody ? (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><br><span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span>' : '<span style="font-size:11px;color:rgba(255,255,255,.4);">Reply STOP to opt out.</span>';
-          html += '<div class="composer-phone-bubble">' + bubbleText + '</div>';
-          if (isVideo && mediaUrl) {
-            html += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
-          } else if (mediaUrl) {
-            html += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
-          }
-        } else {
-          html += '<div class="composer-phone-empty">Message preview<br>will appear here</div>';
+        // Always show opt-out text bubble
+        var bubbleText = hasBody ? (msg.body || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><br><span style="font-size:11px;color:rgba(255,255,255,.4);">— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com</span>' : '<span style="font-size:11px;color:rgba(255,255,255,.4);">— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com</span>';
+        html += '<div class="composer-phone-bubble">' + bubbleText + '</div>';
+        if (isVideo && mediaUrl) {
+          html += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
+        } else if (mediaUrl) {
+          html += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
         }
         html += '</div>'; // end phone
 
@@ -707,17 +706,13 @@
       var hasBody = msg.body && msg.body.trim();
       var hasContent = hasBody || mediaUrl;
       var h = '';
-      if (hasContent) {
-        if (hasBody) {
-          h += '<div class="composer-phone-bubble">' + msg.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><br>Reply STOP to opt out.</div>';
-        }
-        if (isVideo && mediaUrl) {
-          h += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
-        } else if (mediaUrl) {
-          h += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
-        }
-      } else {
-        h += '<div class="composer-phone-empty">Message preview<br>will appear here</div>';
+      // Always show opt-out bubble
+      var bubbleText = hasBody ? msg.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '<br><br><span style="font-size:11px;color:rgba(255,255,255,.4);">— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com</span>' : '<span style="font-size:11px;color:rgba(255,255,255,.4);">— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com</span>';
+      h += '<div class="composer-phone-bubble">' + bubbleText + '</div>';
+      if (isVideo && mediaUrl) {
+        h += '<div class="composer-phone-media"><video src="' + mediaUrl + '" controls playsinline style="width:100%;display:block;border-radius:10px;"></video></div>';
+      } else if (mediaUrl) {
+        h += '<div class="composer-phone-media"><img src="' + mediaUrl + '" alt="Media" /></div>';
       }
       phone.innerHTML = h;
       if (testBtn) testBtn.disabled = !hasContent;
@@ -733,7 +728,7 @@
         if (media && el.value.trim()) {
           // Media exists — just update or insert the text bubble
           var escaped = el.value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
-          var html = escaped + '<br><br>Reply STOP to opt out.';
+          var html = escaped + '<br><br>— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com';
           if (bubble) {
             bubble.innerHTML = html;
           } else {
@@ -743,8 +738,16 @@
             phone.insertBefore(div, phone.firstChild);
           }
           return;
-        } else if (media && !el.value.trim() && bubble) {
-          bubble.remove();
+        } else if (media && !el.value.trim()) {
+          // Body cleared but media exists — show just the opt-out text
+          if (bubble) {
+            bubble.innerHTML = '<span style="font-size:11px;color:rgba(255,255,255,.4);">— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com</span>';
+          } else {
+            var div = document.createElement('div');
+            div.className = 'composer-phone-bubble';
+            div.innerHTML = '<span style="font-size:11px;color:rgba(255,255,255,.4);">— G&amp;KK NAPA. Reply STOP to opt out. gkk-napa.com</span>';
+            phone.insertBefore(div, phone.firstChild);
+          }
           return;
         }
       }
@@ -817,38 +820,35 @@
     window.composerUpdateRecipients = function() {
       var devMode = document.getElementById('composerDevMode').checked;
       var priority = document.getElementById('composerPriority').checked;
-      var emailChecked = document.getElementById('composerEmailFallback').checked;
+      var sendSms = document.getElementById('composerSendSms').checked;
+      var sendEmail = document.getElementById('composerSendEmail').checked;
 
       if (devMode) {
-        document.getElementById('composerSmsNum').textContent = '1';
-        var emailChip = document.getElementById('composerEmailCount');
-        if (emailChecked) {
-          emailChip.style.display = '';
-          document.getElementById('composerEmailNum').textContent = '1';
-        } else {
-          emailChip.style.display = 'none';
-        }
+        document.getElementById('composerSmsNum').textContent = sendSms ? '1' : '0';
+        document.getElementById('composerEmailNum').textContent = sendEmail ? '1' : '0';
         return;
       }
 
       // SMS count (subscribed)
-      var smsUrl = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
-      if (priority) smsUrl += '&priority_only=1';
-      fetch(smsUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
-        document.getElementById('composerSmsNum').textContent = data.count || 0;
-      }).catch(function() {});
+      if (sendSms) {
+        var smsUrl = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
+        if (priority) smsUrl += '&priority_only=1';
+        fetch(smsUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
+          document.getElementById('composerSmsNum').textContent = data.count || 0;
+        }).catch(function() {});
+      } else {
+        document.getElementById('composerSmsNum').textContent = '0';
+      }
 
       // Email count (all customers with email)
-      var emailChip = document.getElementById('composerEmailCount');
-      if (emailChecked) {
-        emailChip.style.display = '';
+      if (sendEmail) {
         var emailUrl = WORKER_BASE + '/admin/customers?count_only=1&has_email=1';
         if (priority) emailUrl += '&priority_only=1';
         fetch(emailUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
           document.getElementById('composerEmailNum').textContent = data.count || 0;
         }).catch(function() {});
       } else {
-        emailChip.style.display = 'none';
+        document.getElementById('composerEmailNum').textContent = '0';
       }
     };
 
@@ -918,11 +918,13 @@
       var devEmail = (document.getElementById('composerDevEmail').value || '').trim();
 
       if (devMode && !devPhone && !devEmail) { composerShowError('Test Mode: enter a phone number or email.'); return; }
+      if (!document.getElementById('composerSendSms').checked && !document.getElementById('composerSendEmail').checked) { composerShowError('Select at least one: Text message or Email.'); return; }
 
       // Build review summary
       var smsCount = document.getElementById('composerSmsNum').textContent || '0';
       var emailCount = document.getElementById('composerEmailNum').textContent || '0';
-      var emailChecked = document.getElementById('composerEmailFallback').checked;
+      var showSms = document.getElementById('composerSendSms').checked;
+      var showEmail = document.getElementById('composerSendEmail').checked;
       var sendNowCount = apiMessages.filter(function(m) { return m.send_now; }).length;
       var schedCount = apiMessages.length - sendNowCount;
 
@@ -935,8 +937,8 @@
         if (devPhone) html += '<div class="review-row"><span class="review-label">Test SMS to</span><span style="color:#fff;">' + esc(devPhone) + '</span></div>';
         if (devEmail) html += '<div class="review-row"><span class="review-label">Test email to</span><span style="color:#fff;">' + esc(devEmail) + '</span></div>';
       } else {
-        html += '<div class="review-row"><span class="review-label">SMS recipients</span><span class="review-value">' + smsCount + '</span></div>';
-        if (emailChecked) html += '<div class="review-row"><span class="review-label">Email recipients</span><span class="review-value">' + emailCount + '</span></div>';
+        if (showSms) html += '<div class="review-row"><span class="review-label">SMS recipients</span><span class="review-value">' + smsCount + '</span></div>';
+        if (showEmail) html += '<div class="review-row"><span class="review-label">Email recipients</span><span class="review-value">' + emailCount + '</span></div>';
       }
       html += '<div class="review-row"><span class="review-label">Messages</span><span style="color:#fff;">' + apiMessages.length + ' (' + (sendNowCount > 0 ? sendNowCount + ' now' : '') + (sendNowCount > 0 && schedCount > 0 ? ', ' : '') + (schedCount > 0 ? schedCount + ' scheduled' : '') + ')</span></div>';
 
@@ -964,7 +966,8 @@
         name: devMode ? '[TEST] ' + name : name,
         email_subject: 'G&KK NAPA - SAVINGS ALERT!',
         priority_only: document.getElementById('composerPriority').checked,
-        email_fallback: emailChecked,
+        email_fallback: showEmail,
+        email_only: showEmail && !showSms,
         messages: apiMessages
       };
       if (composerDraftId) reviewModal._payload.draft_id = composerDraftId;
@@ -1031,7 +1034,8 @@
         name: name,
         messages: draftMessages,
         priority_only: document.getElementById('composerPriority').checked,
-        email_fallback: document.getElementById('composerEmailFallback').checked,
+        email_fallback: document.getElementById('composerSendEmail').checked,
+        email_only: document.getElementById('composerSendEmail').checked && !document.getElementById('composerSendSms').checked,
         email_subject: 'G&KK NAPA - SAVINGS ALERT!',
         dev_mode: document.getElementById('composerDevMode').checked,
         dev_phone: (document.getElementById('composerDevPhone').value || '').trim(),

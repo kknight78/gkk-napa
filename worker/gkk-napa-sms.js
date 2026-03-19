@@ -573,7 +573,7 @@ async function processScheduledEvents(env) {
       }
       // Always include opt-out text (required even for media-only MMS)
       if (finalBody || event.media_url) {
-        finalBody = (finalBody ? finalBody + "\n\n" : "") + "Reply STOP to opt out.";
+        finalBody = (finalBody ? finalBody + "\n\n" : "") + "— G&KK NAPA. Reply STOP to opt out. gkk-napa.com";
       }
 
       if (promoMeta.dev_mode) {
@@ -605,35 +605,37 @@ async function processScheduledEvents(env) {
         }
       } else {
         // Normal mode: query eligible customers
-        let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
-        const binds = [];
-        if (campaign.store_filter) { customerSql += " AND store = ?"; binds.push(campaign.store_filter); }
-        if (promoMeta.priority_only) { customerSql += " AND is_priority = 1"; }
+        if (!promoMeta.email_only) {
+          let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+          const binds = [];
+          if (campaign.store_filter) { customerSql += " AND store = ?"; binds.push(campaign.store_filter); }
+          if (promoMeta.priority_only) { customerSql += " AND is_priority = 1"; }
 
-        const stmt = env.DB.prepare(customerSql);
-        const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+          const stmt = env.DB.prepare(customerSql);
+          const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
 
-        for (const customer of customers.results) {
-          const result = await sendSms(env, customer.phone, finalBody, event.media_url);
+          for (const customer of customers.results) {
+            const result = await sendSms(env, customer.phone, finalBody, event.media_url);
 
-          await env.DB.prepare(
-            "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
-          ).bind(
-            result.ok ? result.sid : null,
-            customer.id,
-            event.campaign_id,
-            finalBody,
-            result.ok ? (result.status || "queued") : "failed",
-            result.ok ? null : (result.error || "send_failed"),
-            now, now
-          ).run();
+            await env.DB.prepare(
+              "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+            ).bind(
+              result.ok ? result.sid : null,
+              customer.id,
+              event.campaign_id,
+              finalBody,
+              result.ok ? (result.status || "queued") : "failed",
+              result.ok ? null : (result.error || "send_failed"),
+              now, now
+            ).run();
 
-          if (result.ok) sentCount++;
-          else failedCount++;
+            if (result.ok) sentCount++;
+            else failedCount++;
+          }
         }
 
         // Email fallback for scheduled events
-        if (promoMeta.email_fallback && env.RESEND_API_KEY) {
+        if ((promoMeta.email_fallback || promoMeta.email_only) && env.RESEND_API_KEY) {
           let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
           if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
           const emailCustomers = await env.DB.prepare(emailSql).all();
@@ -2134,7 +2136,7 @@ async function handleSendTest(request, env, corsHeaders) {
   }
   // Always include opt-out text (required even for media-only MMS)
   if (finalBody || mediaUrl) {
-    finalBody = (finalBody ? finalBody + "\n\n" : "") + "Reply STOP to opt out.";
+    finalBody = (finalBody ? finalBody + "\n\n" : "") + "— G&KK NAPA. Reply STOP to opt out. gkk-napa.com";
   }
 
   const result = await sendSms(env, phone, finalBody, mediaUrl);
@@ -2208,7 +2210,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
   }
   // Always include opt-out text (required even for media-only MMS)
   if (fullMessage || mediaUrl) {
-    fullMessage = (fullMessage ? fullMessage + "\n\n" : "") + "Reply STOP to opt out.";
+    fullMessage = (fullMessage ? fullMessage + "\n\n" : "") + "— G&KK NAPA. Reply STOP to opt out. gkk-napa.com";
   }
 
   // Query subscribed customers
@@ -2344,7 +2346,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
 // ─── Campaign Composer ─────────────────────────────────────────
 async function handleCampaignCompose(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, store, priority_only, email_fallback, email_subject, messages, dev_mode, dev_phone, dev_email, draft_id } = body;
+  const { name, store, priority_only, email_fallback, email_only, email_subject, messages, dev_mode, dev_phone, dev_email, draft_id } = body;
 
   if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
   if (!messages || !Array.isArray(messages) || messages.length === 0) return jsonError(corsHeaders, "At least one message is required.", 400);
@@ -2360,7 +2362,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
 
   const now = new Date().toISOString();
   const emailSubj = email_subject || "G&KK NAPA - SAVINGS ALERT!";
-  const metaObj = { priority_only: !!priority_only, email_fallback: !!email_fallback, email_subject: emailSubj };
+  const metaObj = { priority_only: !!priority_only, email_fallback: !!email_fallback, email_only: !!email_only, email_subject: emailSubj };
   if (dev_mode) { metaObj.dev_mode = true; if (dev_phone) metaObj.dev_phone = dev_phone; if (dev_email) metaObj.dev_email = dev_email; }
   const promoMeta = JSON.stringify(metaObj);
   const firstMsg = messages[0];
@@ -2399,18 +2401,18 @@ async function handleCampaignCompose(request, env, corsHeaders) {
     }
     // Always include opt-out text (required even for media-only MMS)
     if (fullMessage || firstMsg.media_url) {
-      fullMessage = (fullMessage ? fullMessage + "\n\n" : "") + "Reply STOP to opt out.";
+      fullMessage = (fullMessage ? fullMessage + "\n\n" : "") + "— G&KK NAPA. Reply STOP to opt out. gkk-napa.com";
     }
 
     if (dev_mode) {
       // Dev mode: send only to the specified phone/email
-      if (dev_phone) {
+      if (dev_phone && !email_only) {
         const phone = dev_phone.replace(/\D/g, "");
         const formattedPhone = phone.length === 10 ? "+1" + phone : "+" + phone;
         const result = await sendSms(env, formattedPhone, fullMessage, firstMsg.media_url);
         if (result.ok) sentCount++; else failedCount++;
       }
-      if (dev_email && email_fallback && env.RESEND_API_KEY) {
+      if (dev_email && (email_fallback || email_only) && env.RESEND_API_KEY) {
         const emailMedia = videoToThumbnail(firstMsg.media_url);
         const html = buildCampaignEmail("Dev Tester", firstMsg.body || "", "https://gkk-napa.com/sms/subscribe", null, emailMedia, isVideoUrl(firstMsg.media_url) ? firstMsg.media_url : null);
         try {
@@ -2424,22 +2426,24 @@ async function handleCampaignCompose(request, env, corsHeaders) {
       }
     } else {
       // Normal mode: send to all eligible customers
-      let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
-      const binds = [];
-      if (store) { customerSql += " AND store = ?"; binds.push(store); }
-      if (priority_only) { customerSql += " AND is_priority = 1"; }
-      const stmt = env.DB.prepare(customerSql);
-      const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
+      if (!email_only) {
+        let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
+        const binds = [];
+        if (store) { customerSql += " AND store = ?"; binds.push(store); }
+        if (priority_only) { customerSql += " AND is_priority = 1"; }
+        const stmt = env.DB.prepare(customerSql);
+        const customers = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
 
-      for (const customer of customers.results) {
-        const result = await sendSms(env, customer.phone, fullMessage, firstMsg.media_url);
-        await env.DB.prepare(
-          "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
-        ).bind(result.ok ? result.sid : null, customer.id, campaignId, fullMessage, result.ok ? (result.status || "queued") : "failed", result.ok ? null : (result.error || "send_failed"), now, now).run();
-        if (result.ok) sentCount++; else failedCount++;
+        for (const customer of customers.results) {
+          const result = await sendSms(env, customer.phone, fullMessage, firstMsg.media_url);
+          await env.DB.prepare(
+            "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
+          ).bind(result.ok ? result.sid : null, customer.id, campaignId, fullMessage, result.ok ? (result.status || "queued") : "failed", result.ok ? null : (result.error || "send_failed"), now, now).run();
+          if (result.ok) sentCount++; else failedCount++;
+        }
       }
 
-      if (email_fallback && env.RESEND_API_KEY) {
+      if ((email_fallback || email_only) && env.RESEND_API_KEY) {
         let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
         if (priority_only) { emailSql += " AND is_priority = 1"; }
         const emailCustomers = await env.DB.prepare(emailSql).all();
