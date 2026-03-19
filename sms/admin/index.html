@@ -135,8 +135,6 @@
       margin-bottom: 16px;
       border-bottom: 2px solid var(--napa-yellow);
       gap: 0;
-      position: relative;
-      z-index: 1;
     }
     .camp-views .tab {
       padding: 8px 16px;
@@ -1779,7 +1777,9 @@
           <div class="cs-layout">
             <!-- ═══ LEFT: Title + Wizard Steps ═══ -->
             <div class="cs-controls">
-              <!-- title removed — sub-nav tab says "Creative Studio" -->
+              <div id="csStartOverRow" style="display:none;text-align:right;margin-bottom:4px;">
+                <button onclick="csReset()" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;">&#8635; Start Over</button>
+              </div>
               <!-- Step 1: Brand Graphic + Background -->
               <div class="cs-step" id="csStepGraphic">
                 <div class="cs-step-header" onclick="csToggleStep('csStepGraphic')">
@@ -1989,6 +1989,7 @@
       <h3 id="csProductEditTitle">Edit Product</h3>
       <div id="csProductEditSourceRow" style="display:flex;gap:8px;margin-bottom:12px;">
         <button class="cs-offer-type-btn" id="csProductEditSrcUpload" onclick="csProductEditSetSource('upload')" style="flex:1;">Upload Photo</button>
+        <button class="cs-offer-type-btn" id="csProductEditSrcLibrary" onclick="csProductEditSetSource('library')" style="flex:1;">From Library</button>
         <button class="cs-offer-type-btn" id="csProductEditSrcNapa" onclick="csProductEditSetSource('napa')" style="flex:1;">NAPA Part #</button>
       </div>
       <div id="csProductEditUploadRow" style="display:none;">

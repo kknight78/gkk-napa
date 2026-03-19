@@ -9,7 +9,18 @@
     var _libOverlay = null;
     var _libBgPickerMode = false;  // true when picking bg for Studio
     var _libBgPickerType = null;   // 'photo' or 'video'
+    var _libProductPickerMode = false; // true when picking product image for Studio
     var _libAllowedCategories = null; // array of allowed categories, or null for all
+
+    window._libCloseOverlay = function() {
+      var wasProductPicker = _libProductPickerMode;
+      _libProductPickerMode = false;
+      if (_libOverlay) _libOverlay.remove();
+      // Re-open product edit overlay if we were picking a product image
+      if (wasProductPicker) {
+        document.getElementById('csProductEditOverlay').classList.add('open');
+      }
+    };
 
     function _libRenderGrid() {
       var grid = document.getElementById('libGrid');
@@ -73,6 +84,13 @@
         cell.addEventListener('click', function(e) {
           if (e.target.closest('.lib-delete')) return;
           var url = cell.dataset.url;
+          if (_libProductPickerMode) {
+            // Studio product image picker — open cropper for positioning
+            _libProductPickerMode = false;
+            if (_libOverlay) _libOverlay.remove();
+            csCropperOpen(url, csEditIndex);
+            return;
+          }
           if (_libBgPickerMode) {
             // Studio bg picker mode
             if (_libBgPickerType === 'video') {
@@ -133,7 +151,10 @@
       _libAllItems = [];
 
       // Set category restrictions and default filter based on mode
-      if (_libBgPickerMode) {
+      if (_libProductPickerMode) {
+        _libFilter = 'image';
+        _libAllowedCategories = ['raw_image'];
+      } else if (_libBgPickerMode) {
         _libFilter = _libBgPickerType === 'video' ? 'video' : 'image';
         if (_libBgPickerType === 'video') {
           _libAllowedCategories = ['raw_video'];
@@ -146,7 +167,7 @@
         _libAllowedCategories = ['finished_image', 'finished_video'];
       }
 
-      var title = _libBgPickerMode ? ('Select ' + (_libBgPickerType === 'video' ? 'Video' : 'Photo')) : 'Select Media';
+      var title = (_libBgPickerMode || _libProductPickerMode) ? ('Select ' + (_libBgPickerType === 'video' ? 'Video' : 'Photo')) : 'Select Media';
 
       var overlay = document.createElement('div');
       overlay.className = 'lib-overlay';
@@ -166,7 +187,7 @@
         '<div class="lib-panel">' +
           '<div class="lib-header">' +
             '<h3 style="margin:0;font-size:18px;font-weight:700;">' + title + '</h3>' +
-            '<button class="lib-close" onclick="this.closest(\'.lib-overlay\').remove()">&times;</button>' +
+            '<button class="lib-close" onclick="_libCloseOverlay()">&times;</button>' +
           '</div>' +
           '<div class="lib-toolbar">' +
             '<input type="search" id="libSearchInput" placeholder="Search by name..." class="lib-search" />' +
@@ -181,7 +202,7 @@
           '<div id="libGrid" class="lib-grid"><div style="grid-column:1/-1;text-align:center;padding:40px 0;color:rgba(255,255,255,.35);">Loading...</div></div>' +
         '</div>';
 
-      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) _libCloseOverlay(); });
       document.body.appendChild(overlay);
 
       // Wire up controls

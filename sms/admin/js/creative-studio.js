@@ -1033,11 +1033,21 @@
 
     window.csProductEditSetSource = function(source) {
       var uploadBtn = document.getElementById('csProductEditSrcUpload');
+      var libraryBtn = document.getElementById('csProductEditSrcLibrary');
       var napaBtn = document.getElementById('csProductEditSrcNapa');
       uploadBtn.classList.toggle('active', source === 'upload');
+      libraryBtn.classList.toggle('active', source === 'library');
       napaBtn.classList.toggle('active', source === 'napa');
       document.getElementById('csProductEditUploadRow').style.display = source === 'upload' ? 'block' : 'none';
       document.getElementById('csProductEditPartRow').style.display = source === 'napa' ? 'block' : 'none';
+      if (source === 'library') {
+        document.getElementById('csProductEditOverlay').classList.remove('open');
+        _libIndex = null;
+        _libBgPickerType = 'photo';
+        _libFilter = 'image';
+        _libProductPickerMode = true;
+        _libOpenOverlay(true);
+      }
     };
 
     window.csEditBodyItem = function(index) {
@@ -1053,6 +1063,7 @@
         csProductEditSetSource(item.source);
       } else {
         document.getElementById('csProductEditSrcUpload').classList.remove('active');
+        document.getElementById('csProductEditSrcLibrary').classList.remove('active');
         document.getElementById('csProductEditSrcNapa').classList.remove('active');
         document.getElementById('csProductEditUploadRow').style.display = 'none';
         document.getElementById('csProductEditPartRow').style.display = 'none';
@@ -1115,7 +1126,9 @@
       // Determine source from which button is active
       var isNapa = document.getElementById('csProductEditSrcNapa').classList.contains('active');
       var isUpload = document.getElementById('csProductEditSrcUpload').classList.contains('active');
+      var isLibrary = document.getElementById('csProductEditSrcLibrary').classList.contains('active');
       if (isNapa) item.source = 'napa';
+      else if (isLibrary) item.source = 'upload';
       else if (isUpload) item.source = 'upload';
 
       // Save image (may have been updated via cropper or part lookup)
@@ -1194,6 +1207,7 @@
         slider.value = Math.round(csCropper.scale * 100);
         csCropperApply();
       };
+      img.crossOrigin = 'anonymous';
       img.src = dataUrl;
       overlay.classList.add('open');
     }
@@ -1337,6 +1351,7 @@
         csProductEditUpdateImgPreview();
       } else {
         csState.bodyItems[csCropper.index].image = croppedData;
+        csState.bodyItems[csCropper.index].source = 'upload';
         csState.bodyItems[csCropper.index]._canvasImage = null;
         csUpdatePreview();
       }
@@ -1411,6 +1426,7 @@
           return;
         }
         document.getElementById('csStepGraphic').classList.add('completed');
+        document.getElementById('csStartOverRow').style.display = 'block';
         csShowStep('csStepOffer');
       } else if (stepId === 'csStepOffer') {
         if (!csState.offerMode) return;
@@ -1781,8 +1797,26 @@
             // Bind blur to save editable text back to state
             var priceEl = document.getElementById('csPrevBodyPrice');
             var nameEl = document.getElementById('csPrevBodyName');
-            if (priceEl) priceEl.addEventListener('blur', function() { csState.bodyItems[0].price = this.textContent; });
-            if (nameEl) nameEl.addEventListener('blur', function() { csState.bodyItems[0].name = this.textContent; });
+            if (priceEl) {
+              priceEl.addEventListener('blur', function() { csState.bodyItems[0].price = this.textContent; });
+              priceEl.addEventListener('focus', function() {
+                var sel = window.getSelection();
+                var range = document.createRange();
+                range.selectNodeContents(this);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              });
+            }
+            if (nameEl) {
+              nameEl.addEventListener('blur', function() { csState.bodyItems[0].name = this.textContent; });
+              nameEl.addEventListener('focus', function() {
+                var sel = window.getSelection();
+                var range = document.createRange();
+                range.selectNodeContents(this);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              });
+            }
           } else {
             // Image only: 590x352 centered (25px padding each side) — clickable
             prevBody.style.justifyContent = 'center';
@@ -3080,12 +3114,17 @@
       var _vidEl = _prevBg.querySelector('video');
       if (_vidEl) _vidEl.remove();
       document.getElementById('csRendered').style.display = 'none';
+      var _prevBody = document.getElementById('csPrevBody');
+      _prevBody.innerHTML = '';
+      _prevBody.style.display = 'none';
+      document.getElementById('csActions').style.display = 'none';
       document.getElementById('csPrevOfferBar').innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
       document.getElementById('csPrevTitleText').value = 'SALE EVENT';
       document.getElementById('csPrevRulesText').value = 'In store only, while supplies last';
       document.getElementById('csTemplateRow').style.display = 'none';
       document.getElementById('csBodyHint').style.display = 'none';
       document.getElementById('csSampleDataBtn').style.display = 'none';
+      document.getElementById('csStartOverRow').style.display = 'none';
     };
 
     // ─── Init ───
