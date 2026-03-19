@@ -487,15 +487,19 @@
       document.getElementById("modalPriority").checked = !!c.is_priority;
       modalError.style.display = "none";
 
-      // Show subscribe URL (prefer short URL if available)
-      if (c.short_code) {
+      // Show subscribe URL only for mobile/nonFixedVoip numbers
+      var isMobile = c.line_type === 'mobile' || c.line_type === 'nonFixedVoip';
+      if (isMobile && c.short_code) {
         document.getElementById("modalSubscribeUrl").value = `https://gkk-napa.com/s/${c.short_code}`;
-      } else {
+        document.getElementById("subscribeUrlRow").style.display = "block";
+      } else if (isMobile) {
         const token = await generateSubscribeToken(c.id);
         document.getElementById("modalSubscribeUrl").value =
           `https://gkk-napa-sms.kellyraeknight78.workers.dev/quick-subscribe?token=${token}`;
+        document.getElementById("subscribeUrlRow").style.display = "block";
+      } else {
+        document.getElementById("subscribeUrlRow").style.display = "none";
       }
-      document.getElementById("subscribeUrlRow").style.display = "block";
 
       customerModal.classList.add("open");
     };

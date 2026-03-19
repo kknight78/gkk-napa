@@ -630,7 +630,10 @@ async function processScheduledEvents(env) {
             ).run();
 
             if (result.ok) sentCount++;
-            else failedCount++;
+            else {
+              failedCount++;
+              if (result.notMobile) await autoMarkLandline(env.DB, customer.id, customer.phone);
+            }
           }
         }
 
@@ -642,7 +645,7 @@ async function processScheduledEvents(env) {
 
           for (const customer of emailCustomers.results) {
             const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
-            const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+            const canSms = customer.phone && (customer.line_type === 'mobile' || customer.line_type === 'nonFixedVoip');
             const displayPhone = canSms
               ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
               : null;
@@ -721,11 +724,19 @@ async function sendSms(env, to, body, mediaUrl) {
 
   const data = await resp.json();
   if (!resp.ok) {
+    const errMsg = data.message || "Twilio error";
     console.error(JSON.stringify({ tag: "TWILIO_SEND_ERROR", status: resp.status, error: data }));
-    return { ok: false, error: data.message || "Twilio error" };
+    const isNotMobile = /is not a mobile number/i.test(errMsg);
+    return { ok: false, error: errMsg, notMobile: isNotMobile };
   }
 
   return { ok: true, sid: data.sid, status: data.status };
+}
+
+// Auto-mark customer as landline and unsubscribe when Twilio rejects as non-mobile
+async function autoMarkLandline(db, customerId, phone) {
+  console.log(JSON.stringify({ tag: "AUTO_MARK_LANDLINE", customer_id: customerId, phone }));
+  await db.prepare("UPDATE customers SET line_type = 'landline', sms_status = 'none' WHERE id = ?").bind(customerId).run();
 }
 
 /**
@@ -836,7 +847,7 @@ export default {
       // ── Admin: POST /admin/check-line-types ──
       if (request.method === "POST" && path === "/admin/check-line-types") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
-        return handleCheckLineTypes(env, corsHeaders);
+        return handleCheckLineTypes(request, env, corsHeaders);
       }
 
       // ── Admin: POST /admin/invite ──
@@ -1469,19 +1480,18 @@ async function lookupLineType(phone, env) {
   return data.line_type_intelligence?.type || null;
 }
 
-async function handleCheckLineTypes(env, corsHeaders) {
-  // Ensure column exists (safe to run multiple times)
-  await env.DB.prepare(
-    "CREATE TABLE IF NOT EXISTS _migration_check (id INTEGER PRIMARY KEY)"
-  ).run();
-  try {
-    await env.DB.prepare("ALTER TABLE customers ADD COLUMN line_type TEXT").run();
-  } catch { /* column already exists */ }
+async function handleCheckLineTypes(request, env, corsHeaders) {
+  // Check if recheck_all flag is set, with optional batch size and offset
+  const url = new URL(request.url);
+  const recheckAll = url.searchParams.get('recheck_all') === '1';
+  const limit = parseInt(url.searchParams.get('limit')) || 20;
+  const offset = parseInt(url.searchParams.get('offset')) || 0;
 
-  // Fetch customers with phone but no line_type
-  const customers = await env.DB.prepare(
-    "SELECT id, phone FROM customers WHERE phone IS NOT NULL AND phone != '' AND line_type IS NULL"
-  ).all();
+  // Fetch customers to check
+  const sql = recheckAll
+    ? "SELECT id, phone, line_type FROM customers WHERE phone IS NOT NULL AND phone != '' LIMIT ? OFFSET ?"
+    : "SELECT id, phone, line_type FROM customers WHERE phone IS NOT NULL AND phone != '' AND line_type IS NULL LIMIT ? OFFSET ?";
+  const customers = await env.DB.prepare(sql).bind(limit, offset).all();
 
   if (customers.results.length === 0) {
     return jsonOk(corsHeaders, { checked: 0, message: "All customers already have line_type set." });
@@ -1490,10 +1500,16 @@ async function handleCheckLineTypes(env, corsHeaders) {
   const now = new Date().toISOString();
   let checked = 0;
   let errors = 0;
+  let changed = 0;
+  const changes = [];
 
   for (const c of customers.results) {
     const lineType = await lookupLineType(c.phone, env);
     if (lineType) {
+      if (lineType !== c.line_type) {
+        changes.push({ id: c.id, phone: c.phone, was: c.line_type, now: lineType });
+        changed++;
+      }
       await env.DB.prepare(
         "UPDATE customers SET line_type = ?, updated_at = ? WHERE id = ?"
       ).bind(lineType, now, c.id).run();
@@ -1503,7 +1519,7 @@ async function handleCheckLineTypes(env, corsHeaders) {
     }
   }
 
-  return jsonOk(corsHeaders, { checked, errors, total: customers.results.length });
+  return jsonOk(corsHeaders, { checked, errors, changed, changes, total: customers.results.length });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1721,7 +1737,8 @@ async function handleExport(env, corsHeaders) {
 
   let csv = headers.join(',') + '\n';
   for (const c of customers.results) {
-    const subscribeUrl = c.short_code ? `https://gkk-napa.com/s/${c.short_code}` : '';
+    const isMobile = c.line_type === 'mobile' || c.line_type === 'nonFixedVoip';
+    const subscribeUrl = (c.short_code && isMobile) ? `https://gkk-napa.com/s/${c.short_code}` : '';
     csv += [
       c.id, csvEscape(c.name), c.phone, csvEscape(c.email),
       STORE_DISPLAY[c.store] || c.store || '', c.sms_status, c.line_type || '',
@@ -1840,7 +1857,7 @@ async function handleInvite(request, env, corsHeaders) {
 
     // Format phone for display: +12174419077 → (217) 441-9077
     // Any non-landline phone can receive SMS (mobile, voip, nonfixedvoip, etc.)
-    const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+    const canSms = customer.phone && (customer.line_type === 'mobile' || customer.line_type === 'nonFixedVoip');
     const displayPhone = canSms
       ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
       : null;
@@ -2260,7 +2277,10 @@ async function handleSendCampaign(request, env, corsHeaders) {
     ).run();
 
     if (result.ok) sentCount++;
-    else failedCount++;
+    else {
+      failedCount++;
+      if (result.notMobile) await autoMarkLandline(env.DB, customer.id, customer.phone);
+    }
   }
 
   // ── Email fallback: email non-subscribed customers ──
@@ -2278,7 +2298,7 @@ async function handleSendCampaign(request, env, corsHeaders) {
 
     for (const customer of emailCustomers.results) {
       const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
-      const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+      const canSms = customer.phone && (customer.line_type === 'mobile' || customer.line_type === 'nonFixedVoip');
       const displayPhone = canSms
         ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')
         : null;
@@ -2439,7 +2459,11 @@ async function handleCampaignCompose(request, env, corsHeaders) {
           await env.DB.prepare(
             "INSERT INTO messages (twilio_sid, customer_id, campaign_id, direction, body, status, error_code, created_at, updated_at) VALUES (?, ?, ?, 'outbound', ?, ?, ?, ?, ?)"
           ).bind(result.ok ? result.sid : null, customer.id, campaignId, fullMessage, result.ok ? (result.status || "queued") : "failed", result.ok ? null : (result.error || "send_failed"), now, now).run();
-          if (result.ok) sentCount++; else failedCount++;
+          if (result.ok) sentCount++;
+          else {
+            failedCount++;
+            if (result.notMobile) await autoMarkLandline(env.DB, customer.id, customer.phone);
+          }
         }
       }
 
@@ -2450,7 +2474,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
 
         for (const customer of emailCustomers.results) {
           const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
-          const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+          const canSms = customer.phone && (customer.line_type === 'mobile' || customer.line_type === 'nonFixedVoip');
           const displayPhone = canSms ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : null;
           const shortCode = canSms ? (customer.short_code || await ensureShortCode(env.DB, customer.id)) : null;
           const subscribeUrl = canSms ? `https://gkk-napa.com/s/${shortCode}` : 'https://gkk-napa.com/sms/subscribe';
@@ -2878,7 +2902,10 @@ async function handlePromoSchedule(request, env, corsHeaders) {
           result.ok ? null : (result.error || "send_failed"), now, now
         ).run();
         if (result.ok) sentCount++;
-        else failedCount++;
+        else {
+          failedCount++;
+          if (result.notMobile) await autoMarkLandline(env.DB, customer.id, customer.phone);
+        }
       }
 
       // Email fallback
@@ -2892,7 +2919,7 @@ async function handlePromoSchedule(request, env, corsHeaders) {
 
         for (const customer of emailCustomers.results) {
           const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
-          const canSms = customer.phone && customer.line_type && customer.line_type !== 'landline';
+          const canSms = customer.phone && (customer.line_type === 'mobile' || customer.line_type === 'nonFixedVoip');
           const displayPhone = canSms ? customer.phone.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : null;
           let subscribeUrl = canSms
             ? `https://gkk-napa.com/s/${customer.short_code || await ensureShortCode(env.DB, customer.id)}`
