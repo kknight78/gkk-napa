@@ -63,15 +63,17 @@
       _videoElapsedTimer: null,
       _videoStartTime: null,
       offerType: null,
-      offerMode: null,       // 'text' | 'price' | 'starting'
-      offerHasBadge: true,
-      offerHasPrice: true,
+      offerMode: null,       // 'none' | 'text' | 'price'
+      offerHasBadge: false,
+      offerBadgeType: 'save', // 'save' | 'saveupto'
       offerBadgeColor: 'yellow',
+      offerShortText: '',    // short text next to price when no bolt
       offerDollars: '',
       offerCents: '',
       offerUnit: '',
       offerSave: '',
       offerText: '',
+      showTitle: true,
       titleText: 'SALE EVENT',
       rulesText: 'In store only, while supplies last',
       bodyCount: null,
@@ -143,10 +145,15 @@
       // Highlight
       document.querySelectorAll('.cs-graphic-thumb').forEach(t => t.classList.toggle('active', t.dataset.id === id));
       csRebuildBgOptions();
-      // Show bg section and auto-select first solid color
+      // Show bg section and auto-select background based on filter
       document.getElementById('csBgSection').style.display = 'block';
-      var defaultColor = csState.color === 'blue' ? '#F9C842' : '#D8AC4B';
-      if (!csState.bgType || (csState.bgType !== 'photo' && csState.bgType !== 'video')) {
+      var filterSel = document.querySelector('input[name="csGraphicFilter"]:checked');
+      var activeFilter = filterSel ? filterSel.value : 'all';
+      if (activeFilter === 'bolt') {
+        var boltColor = csState.color === 'blue' ? '#F9C842' : '#D8AC4B';
+        csSelectBg('bolt', boltColor);
+      } else if (!csState.bgType || (csState.bgType !== 'photo' && csState.bgType !== 'video')) {
+        var defaultColor = csState.color === 'blue' ? '#F9C842' : '#D8AC4B';
         csSelectBg('graphic', defaultColor);
       }
       // Hide placeholder
@@ -317,7 +324,7 @@
       html += '<div id="csBgPhotoContent">';
       html += '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;">Image</div>';
       html += '<input type="file" id="csBgPhotoFileInput" accept="image/*" style="width:100%;margin-bottom:10px;" />';
-      html += '<div id="csBgPhotoPreview" style="min-height:100px;background:rgba(255,255,255,.05);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>';
+      html += '<div id="csBgPhotoPreview" style="min-height:100px;background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;color:rgba(255,255,255,.4);font-size:13px;transition:border-color .2s,background .2s;" onclick="document.getElementById(\'csBgPhotoFileInput\').click()">Drag or click to add image</div>';
       html += '</div>';
       html += '<div style="display:flex;gap:10px;margin-top:16px;">';
       html += '<button class="btn-secondary" style="flex:1;padding:12px;font-size:15px;font-weight:700;" onclick="_csCloseBgModal()">Cancel</button>';
@@ -341,6 +348,36 @@
         };
         reader.readAsDataURL(file);
       });
+
+      // Drag-and-drop on preview area
+      var preview = document.getElementById('csBgPhotoPreview');
+      preview.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        preview.style.borderColor = '#f5c518';
+        preview.style.background = 'rgba(245,197,24,.1)';
+      });
+      preview.addEventListener('dragleave', function() {
+        preview.style.borderColor = 'rgba(255,255,255,.2)';
+        preview.style.background = 'rgba(255,255,255,.05)';
+      });
+      preview.addEventListener('drop', function(e) {
+        e.preventDefault();
+        preview.style.borderColor = 'rgba(255,255,255,.2)';
+        preview.style.background = 'rgba(255,255,255,.05)';
+        var file = e.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          _csBgModal._photoData = ev.target.result;
+          preview.innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%;max-height:200px;object-fit:contain;" />';
+          document.getElementById('csBgPhotoSaveBtn').disabled = false;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Prevent browser default drop on the whole modal
+      overlay.addEventListener('dragover', function(e) { e.preventDefault(); });
+      overlay.addEventListener('drop', function(e) { e.preventDefault(); });
     };
 
     window.csBgPhotoSetSrc = function(src) {
@@ -745,26 +782,52 @@
       });
     };
 
-    // ─── Offer Selection (visual) ───
+    // ─── Offer Selection ───
+
+    // Render the offer step content area (controls only — preview is in the canvas)
+    function csRenderOfferContent() {
+      var el = document.getElementById('csOfferContent');
+      if (!el) return;
+      var mode = csState.offerMode;
+
+      if (mode === 'price') {
+        // Price / Starting At toggle
+        var startAt = csState.offerBadgeType === 'saveupto';
+        el.innerHTML = '<div style="display:flex;gap:6px;">' +
+          '<button class="cs-offer-type-btn' + (!startAt ? ' active' : '') + '" onclick="csSelectPriceType(\'save\')" style="padding:4px 10px;font-size:11px;">Price</button>' +
+          '<button class="cs-offer-type-btn' + (startAt ? ' active' : '') + '" onclick="csSelectPriceType(\'saveupto\')" style="padding:4px 10px;font-size:11px;">Starting At</button>' +
+          '</div>';
+      } else {
+        el.innerHTML = '';
+      }
+    }
+
     function csUpdateOfferFromVisual() {
       csState.offerHasBadge = document.getElementById('csOfferBadgeToggle').checked;
-      csState.offerHasPrice = document.getElementById('csOfferPriceToggle').checked;
-      if (csState.offerMode === 'text') {
+      var mode = csState.offerMode;
+
+      // Derive offerType
+      if (mode === 'none' || !mode) {
+        csState.offerType = 'none';
+      } else if (mode === 'text' && !csState.offerHasBadge) {
         csState.offerType = 'text-only';
-      } else if (csState.offerMode && csState.offerMode !== 'none') {
-        const prefix = csState.offerMode === 'starting' ? 'starting-save' : 'price-save';
-        csState.offerType = prefix + '-' + csState.offerBadgeColor;
+      } else if (mode === 'text' && csState.offerHasBadge) {
+        // Text + badge: need a price-type offerType so badge renders
+        csState.offerType = (csState.offerBadgeType === 'saveupto' ? 'starting-save' : 'price-save') + '-' + csState.offerBadgeColor;
+      } else if (mode === 'price') {
+        csState.offerType = (csState.offerBadgeType === 'saveupto' ? 'starting-save' : 'price-save') + '-' + csState.offerBadgeColor;
       }
-      // Toggle bolt visibility in selector previews
-      var boltVis = csState.offerHasBadge ? 'visible' : 'hidden';
-      document.getElementById('csOfferPreviewBadge1').style.visibility = boltVis;
-      document.getElementById('csOfferPreviewBadge2').style.visibility = boltVis;
-      // Toggle color picker visibility
-      document.getElementById('csBadgeColorPicker').style.display = csState.offerHasBadge ? 'flex' : 'none';
-      // Toggle price visibility in template selector buttons
-      document.querySelectorAll('.cs-offer-price-preview').forEach(el => {
-        el.style.visibility = csState.offerHasPrice ? 'visible' : 'hidden';
-      });
+
+      // Show/hide bolt sub-options (SAVE/SAVE UP TO + color) only when bolt is checked and mode is not none
+      var showBoltOpts = csState.offerHasBadge && mode && mode !== 'none';
+      document.getElementById('csBadgeTypeRow').style.display = showBoltOpts ? 'flex' : 'none';
+      document.getElementById('csBadgeColorPicker').style.display = showBoltOpts ? 'flex' : 'none';
+
+      // Update badge type button states
+      document.getElementById('csBadgeTypeSave').classList.toggle('active', csState.offerBadgeType !== 'saveupto');
+      document.getElementById('csBadgeTypeSaveUpTo').classList.toggle('active', csState.offerBadgeType === 'saveupto');
+
+      csRenderOfferContent();
       csBuildOfferBar();
       csUpdatePreview();
     }
@@ -779,16 +842,24 @@
         document.getElementById('csBodyHint').style.display = 'none';
       }
       csState.offerMode = mode;
-      document.querySelectorAll('.cs-offer-visual-btn').forEach(b => b.classList.toggle('active', b.dataset.offer === mode));
+      // Update radio buttons
+      document.querySelectorAll('input[name="csOfferMode"]').forEach(function(r) { r.checked = r.value === mode; });
       // Update 9-item button visibility
       var btn9 = document.getElementById('csBodyCount9Btn');
       if (btn9) btn9.style.display = mode === 'none' ? '' : 'none';
+      // Dim bolt row when No Offer
+      document.getElementById('csOfferBoltRow').style.opacity = mode === 'none' ? '0.3' : '1';
+      document.getElementById('csOfferBoltRow').style.pointerEvents = mode === 'none' ? 'none' : 'auto';
+      // Show edit hint when text or price selected
+      var hint = document.getElementById('csOfferEditHint');
+      if (hint) hint.style.display = (mode === 'text' || mode === 'price') ? 'block' : 'none';
+      // Uncheck bolt when switching to No Offer
       if (mode === 'none') {
-        csState.offerType = 'none';
-        csUpdatePreview();
-      } else {
-        csUpdateOfferFromVisual();
+        document.getElementById('csOfferBadgeToggle').checked = false;
+        csState.offerHasBadge = false;
       }
+
+      csUpdateOfferFromVisual();
     };
 
     window.csSelectBadgeColor = function(color) {
@@ -796,10 +867,23 @@
       document.querySelectorAll('.cs-badge-color-opt').forEach(b => {
         b.style.borderColor = b.dataset.badge === color ? 'var(--napa-yellow)' : 'transparent';
       });
-      // Update preview badge images in the offer step
-      document.getElementById('csOfferPreviewBadge1').src = '/assets/offer-example-' + color + '-save.svg';
-      document.getElementById('csOfferPreviewBadge2').src = '/assets/offer-example-' + color + '-save-up-to.svg';
-      if (csState.offerMode && csState.offerMode !== 'text') csUpdateOfferFromVisual();
+      csUpdateOfferFromVisual();
+    };
+
+    window.csSelectBadgeType = function(type) {
+      csState.offerBadgeType = type;
+      csUpdateOfferFromVisual();
+    };
+
+    window.csSelectPriceType = function(type) {
+      csState.offerBadgeType = type === 'saveupto' ? 'saveupto' : 'save';
+      csUpdateOfferFromVisual();
+    };
+
+    // ─── Title & Fine Print ───
+    window.csToggleTitleBar = function() {
+      csState.showTitle = document.getElementById('csTitleToggle').checked;
+      csUpdatePreview();
     };
 
 
@@ -1094,7 +1178,8 @@
       if (csEditTempImage) {
         wrap.innerHTML = '<img class="cs-product-edit-img-preview" src="' + csEditTempImage + '" onclick="document.getElementById(\'csProductEditFile\').click()" title="Click to change image" />';
       } else {
-        wrap.innerHTML = '<div class="cs-product-edit-img-placeholder" onclick="document.getElementById(\'csProductEditFile\').click()">Click to add image</div>';
+        wrap.innerHTML = '<div class="cs-product-edit-img-placeholder" onclick="document.getElementById(\'csProductEditFile\').click()">Drag or click to add image</div>';
+        csInitDropZone();
       }
     }
 
@@ -1109,6 +1194,34 @@
       };
       reader.readAsDataURL(file);
     });
+
+    // Drag-and-drop on image placeholder / preview
+    function csInitDropZone() {
+      const wrap = document.getElementById('csProductEditImgWrap');
+      if (!wrap) return;
+      wrap.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const ph = wrap.querySelector('.cs-product-edit-img-placeholder');
+        if (ph) ph.classList.add('drag-over');
+      });
+      wrap.addEventListener('dragleave', function(e) {
+        const ph = wrap.querySelector('.cs-product-edit-img-placeholder');
+        if (ph) ph.classList.remove('drag-over');
+      });
+      wrap.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const ph = wrap.querySelector('.cs-product-edit-img-placeholder');
+        if (ph) ph.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          csCropperOpen(ev.target.result, csEditIndex);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    csInitDropZone();
 
     // Part # lookup in overlay
     document.getElementById('csProductEditPartNum').addEventListener('keydown', function(e) {
@@ -1433,9 +1546,20 @@
         }
         document.getElementById('csStepGraphic').classList.add('completed');
         document.getElementById('csStartOverRow').style.display = 'block';
+        csShowStep('csStepTitle');
+        csUpdatePreview();
+      } else if (stepId === 'csStepTitle') {
+        document.getElementById('csStepTitle').classList.add('completed');
         csShowStep('csStepOffer');
+        // Initialize offer content if not yet set
+        if (!csState.offerMode) {
+          csState.offerMode = 'none';
+          csState.offerType = 'none';
+          csRenderOfferContent();
+          document.getElementById('csOfferBoltRow').style.opacity = '0.3';
+          document.getElementById('csOfferBoltRow').style.pointerEvents = 'none';
+        }
       } else if (stepId === 'csStepOffer') {
-        if (!csState.offerMode) return;
         document.getElementById('csStepOffer').classList.add('completed');
         if (csState.bgType === 'video') {
           // Skip Products step for video — go straight to actions
@@ -1479,7 +1603,7 @@
       }
     };
     function csHideStepsAfter(id) {
-      const steps = ['csStepGraphic', 'csStepOffer', 'csStepBody'];
+      const steps = ['csStepGraphic', 'csStepTitle', 'csStepOffer', 'csStepBody'];
       let found = false;
       steps.forEach(s => {
         if (found) {
@@ -1494,21 +1618,73 @@
     // ─── Build Offer Bar (called once per offer type selection) ───
     function csBuildOfferBar() {
       const prevOfferBar = document.getElementById('csPrevOfferBar');
-      if (!csState.offerType) return;
-      const cfg = CS_OFFER_TYPES[csState.offerType];
+      if (!csState.offerType || csState.offerType === 'none') return;
+      var mode = csState.offerMode;
       // Scale factor for video mode (450/640 ≈ 0.703)
       var vm = csState.bgType === 'video';
       var s = function(v) { return Math.round(vm ? v * 0.703 : v); };
+      const i = 'border:0;outline:0;background:transparent;padding:0;margin:0;border-radius:0;font-family:inherit;font-weight:inherit;color:inherit;';
 
-      if (cfg.hasPrice) {
-        // Restore left/right containers
-        prevOfferBar.innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
-        const leftEl = document.getElementById('csPrevOfferLeft');
-        const rightEl = document.getElementById('csPrevOfferRight');
+      // Helper: build badge HTML
+      function buildBadgeHtml() {
+        var cfg = CS_OFFER_TYPES[csState.offerType];
+        if (!cfg || !cfg.badge) return '';
+        const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#fff';
+        const isUpTo = cfg.hasStartingAt;
+        const numTop = isUpTo ? '70%' : '61%';
+        const numSize = s(isUpTo ? 65 : 78);
+        const pctSize = s(isUpTo ? 32 : 34);
+        const pctTop = s(isUpTo ? 14 : 18) + 'px';
+        var badgeW = s(171), badgeH = s(151);
+        return '<div style="position:relative;width:' + badgeW + 'px;height:' + badgeH + 'px;">' +
+          '<img src="/assets/mms/offer-badges/' + cfg.badge + '.svg" style="width:100%;height:100%;" />' +
+          '<div style="position:absolute;top:' + numTop + ';left:0;right:0;transform:translateY(-50%);color:' + badgeTextColor + ';font-weight:900;line-height:1;text-align:center;">' +
+            '<span style="position:relative;font-size:' + numSize + 'px;letter-spacing:-.5px;">' +
+              '<input id="csInlineSave" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerSave || '') + '" placeholder="0" maxlength="2" inputmode="numeric" style="' + i + 'font-size:inherit;width:2ch;height:1em;text-align:center;color:inherit;letter-spacing:inherit;" />' +
+              '<span style="position:absolute;left:100%;top:' + pctTop + ';font-size:' + pctSize + 'px;">%</span>' +
+            '</span>' +
+          '</div>' +
+        '</div>';
+      }
 
-        const big = !cfg.hasStartingAt;
-        const i = 'border:0;outline:0;background:transparent;padding:0;margin:0;border-radius:0;font-family:inherit;font-weight:inherit;color:inherit;';
-        const startAt = cfg.hasStartingAt ? '<div style="color:#fff;font-weight:900;font-size:' + s(30) + 'px;text-transform:uppercase;line-height:1;">STARTING AT</div>' : '';
+      prevOfferBar.innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
+      const leftEl = document.getElementById('csPrevOfferLeft');
+      const rightEl = document.getElementById('csPrevOfferRight');
+
+      if (mode === 'text') {
+        // Text offer
+        const txt = csState.offerText || 'Click here to edit offer.';
+        const isGrayBg = csState.bgValue === '#D1D3D4';
+        const textColor = isGrayBg ? '#F9C842' : '#fff';
+        var fontSize = s(48);
+        var lineH = Math.round(fontSize * 1.15);
+        var maxH = lineH * 2 + 4; // 2 lines max
+        if (csState.offerHasBadge) {
+          // Text + badge: text on left (clipped to 2 lines), badge on right
+          leftEl.style.cssText = 'flex:1;display:flex;align-items:center;overflow:hidden;';
+          leftEl.innerHTML = '<div style="width:100%;color:' + textColor + ';font-weight:900;font-size:' + fontSize + 'px;line-height:' + lineH + 'px;max-height:' + maxH + 'px;overflow:hidden;" class="cs-editable" contenteditable="true" id="csPrevOfferTextEdit">' + txt + '</div>';
+          rightEl.innerHTML = buildBadgeHtml();
+          var saveEl = document.getElementById('csInlineSave');
+          if (saveEl) saveEl.addEventListener('input', function() { csState.offerSave = this.value; });
+        } else {
+          // Text only, full width
+          leftEl.style.cssText = 'flex:1;display:flex;align-items:center;';
+          leftEl.innerHTML = '<div style="width:100%;text-align:center;color:' + textColor + ';font-weight:900;font-size:' + fontSize + 'px;line-height:' + lineH + 'px;" class="cs-editable" contenteditable="true" id="csPrevOfferTextEdit">' + txt + '</div>';
+          rightEl.innerHTML = '';
+        }
+        var textEditEl = document.getElementById('csPrevOfferTextEdit');
+        if (textEditEl) {
+          var offerLastGood = txt;
+          textEditEl.addEventListener('input', function() {
+            if (this.scrollHeight > 146) { this.textContent = offerLastGood; } else { offerLastGood = this.textContent; }
+          });
+          textEditEl.addEventListener('blur', function() { csState.offerText = this.textContent; });
+        }
+      } else if (mode === 'price') {
+        // Price offer
+        var cfg = CS_OFFER_TYPES[csState.offerType];
+        var big = !cfg.hasStartingAt;
+        var startAt = cfg.hasStartingAt ? '<div style="color:#fff;font-weight:900;font-size:' + s(30) + 'px;text-transform:uppercase;line-height:1;">STARTING AT</div>' : '';
         leftEl.innerHTML = startAt +
           '<div style="display:flex;align-items:flex-start;line-height:1;font-weight:900;color:#fff;">' +
             '<span style="font-size:' + s(big ? 59 : 49) + 'px;">$</span>' +
@@ -1519,37 +1695,35 @@
             '</span>' +
           '</div>';
 
-        // Badge (optional)
-        if (csState.offerHasBadge && cfg.badge) {
-          const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#fff';
-          const isUpTo = cfg.hasStartingAt;
-          const numTop = isUpTo ? '70%' : '61%';
-          const numSize = s(isUpTo ? 65 : 78);
-          const pctSize = s(isUpTo ? 32 : 34);
-          const pctTop = s(isUpTo ? 14 : 18) + 'px';
-          var badgeW = s(171), badgeH = s(151);
-          rightEl.innerHTML =
-            '<div style="position:relative;width:' + badgeW + 'px;height:' + badgeH + 'px;">' +
-              '<img src="/assets/mms/offer-badges/' + cfg.badge + '.svg" style="width:100%;height:100%;" />' +
-              '<div style="position:absolute;top:' + numTop + ';left:0;right:0;transform:translateY(-50%);color:' + badgeTextColor + ';font-weight:900;line-height:1;text-align:center;">' +
-                '<span style="position:relative;font-size:' + numSize + 'px;letter-spacing:-.5px;">' +
-                  '<input id="csInlineSave" autocomplete="off" onfocus="this.select()" type="text" value="' + (csState.offerSave || '') + '" placeholder="0" maxlength="2" inputmode="numeric" style="' + i + 'font-size:inherit;width:2ch;height:1em;text-align:center;color:inherit;letter-spacing:inherit;" />' +
-                  '<span style="position:absolute;left:100%;top:' + pctTop + ';font-size:' + pctSize + 'px;">%</span>' +
-                '</span>' +
-              '</div>' +
-            '</div>';
-          document.getElementById('csInlineSave').addEventListener('input', function() { csState.offerSave = this.value; });
+        if (csState.offerHasBadge) {
+          rightEl.innerHTML = buildBadgeHtml();
+          var saveEl2 = document.getElementById('csInlineSave');
+          if (saveEl2) saveEl2.addEventListener('input', function() { csState.offerSave = this.value; });
         } else {
-          rightEl.innerHTML = '';
+          // Short text to the right of price — 2 line max
+          var shortTxt = csState.offerShortText || 'Click to add quick offer.';
+          var fontSize = s(40);
+          var lineH = Math.round(fontSize * 1.15);
+          var maxH = lineH * 2 + 4; // 2 lines + small buffer
+          rightEl.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-left:' + s(22) + 'px;';
+          rightEl.innerHTML = '<div style="color:#fff;font-weight:900;font-size:' + fontSize + 'px;line-height:' + lineH + 'px;text-align:center;max-height:' + maxH + 'px;overflow:hidden;" class="cs-editable" contenteditable="true" id="csPrevOfferShortTextEdit">' + shortTxt + '</div>';
+          var shortEditEl = document.getElementById('csPrevOfferShortTextEdit');
+          if (shortEditEl) {
+            var shortLastGood = shortTxt;
+            shortEditEl.addEventListener('input', function() {
+              if (this.scrollHeight > maxH) {
+                this.textContent = shortLastGood;
+              } else {
+                shortLastGood = this.textContent;
+              }
+            });
+            shortEditEl.addEventListener('blur', function() {
+              csState.offerShortText = this.textContent;
+            });
+          }
         }
 
-        // Hide price side if "Include price?" is unchecked
-        if (!csState.offerHasPrice) {
-          leftEl.style.display = 'none';
-          rightEl.style.marginLeft = 'auto';
-        }
-
-        // Bind inline input listeners (state only, no re-render)
+        // Bind inline price input listeners
         var dollarsEl = document.getElementById('csInlineDollars');
         if (dollarsEl) {
           dollarsEl.addEventListener('input', function() {
@@ -1561,8 +1735,6 @@
         if (centsEl) centsEl.addEventListener('input', function() { csState.offerCents = this.value; });
         var unitEl = document.getElementById('csInlineUnit');
         if (unitEl) unitEl.addEventListener('input', function() { csState.offerUnit = this.value; });
-      } else {
-        // Text-only — built in csUpdatePreview since it needs bg color context
       }
     }
 
@@ -1682,7 +1854,9 @@
         prevTitleBar.style.top = '0';
         prevTitleBar.style.bottom = 'auto';
       }
-      prevTitleBar.style.display = 'block';
+      // Only show title bar once user has reached the Title step
+      var titleStepReached = !document.getElementById('csStepTitle').classList.contains('hidden');
+      prevTitleBar.style.display = (csState.showTitle && titleStepReached) ? 'block' : 'none';
 
       // ── Offer Bar ──
       if (csState.offerType && csState.offerType !== 'none') {
@@ -1702,30 +1876,8 @@
         prevOfferBar.style.height = isVideoMode ? '13.3%' : '18.875%';
         prevOfferBar.style.padding = '0 3.9%';
 
-        if (!cfg.hasPrice) {
-          // Text-only offer — rebuild each time (needs bg color context)
-          const txt = csState.offerText || 'Huge Discounts on all Motor Oil Brands!!';
-          const isGrayBg = csState.bgValue === '#D1D3D4';
-          const textColor = isGrayBg ? '#F9C842' : '#fff';
-          var offerFontSize = isVideoMode ? 42 : 60;
-          prevOfferBar.innerHTML = '<div style="width:100%;text-align:center;color:' + textColor + ';font-weight:900;font-size:' + offerFontSize + 'px;line-height:1.2;" class="cs-editable" contenteditable="true" id="csPrevOfferTextEdit">' + txt + '</div>';
-          const el = document.getElementById('csPrevOfferTextEdit');
-          if (el) {
-            let offerLastGood = txt;
-            el.addEventListener('input', function() {
-              if (this.scrollHeight > 146) {
-                this.textContent = offerLastGood;
-              } else {
-                offerLastGood = this.textContent;
-              }
-            });
-            el.addEventListener('blur', function() {
-              csState.offerText = this.textContent;
-            });
-          }
-        }
-        // Price types: rebuild if video mode changed (font sizes differ)
-        if (cfg.hasPrice) csBuildOfferBar();
+        // Rebuild offer bar (handles text, text+badge, price, price+badge, price+shorttext)
+        csBuildOfferBar();
       } else {
         prevOfferBar.style.display = 'none';
       }
@@ -2217,12 +2369,13 @@
           var offerText = null;
           if (csState.offerMode === 'text' && csState.offerText) {
             offerText = csState.offerText;
-          } else if (csState.offerMode === 'price' || csState.offerMode === 'starting') {
+          } else if (csState.offerMode === 'price') {
             var parts = [];
-            if (csState.offerMode === 'starting') parts.push('Starting At');
+            if (csState.offerBadgeType === 'saveupto') parts.push('Starting At');
             parts.push('$' + csState.offerDollars + (csState.offerCents ? '.' + csState.offerCents : ''));
             if (csState.offerUnit) parts.push(csState.offerUnit);
-            if (csState.offerSave) parts.push('SAVE ' + csState.offerSave + '%');
+            if (csState.offerHasBadge && csState.offerSave) parts.push('SAVE ' + csState.offerSave + '%');
+            if (!csState.offerHasBadge && csState.offerShortText) parts.push(csState.offerShortText);
             offerText = parts.join(' ');
           }
 
@@ -2364,93 +2517,125 @@
           ctx.fillStyle = 'rgba(0,0,0,0.45)';
           ctx.fillRect(0, offerY, 640, 151);
 
-          // Load NAPA Sans
           await document.fonts.ready;
 
-          if (cfg.hasPrice) {
+          // Helper: draw badge on canvas
+          async function drawCanvasBadge() {
+            if (!cfg.badge) return;
+            try {
+              const badgeImg = await csLoadImage('/assets/mms/offer-badges/' + cfg.badge + '.svg');
+              const bw = 171, bh = 151;
+              const bx = 640 - bw - 25;
+              ctx.drawImage(badgeImg, bx, offerY, bw, bh);
+              const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#ffffff';
+              const isUpTo = cfg.hasStartingAt;
+              const numYRatio = isUpTo ? 0.88 : 0.82;
+              const numPx = isUpTo ? 65 : 78;
+              const pctSize = isUpTo ? 32 : 34;
+              const pctTopPx = isUpTo ? 9 : 12;
+              ctx.save();
+              ctx.fillStyle = badgeTextColor;
+              const saveNum = csState.offerSave || '0';
+              const badgeCx = bx + bw / 2;
+              const badgeCy = offerY + bh * numYRatio;
+              ctx.font = '900 ' + numPx + 'px "NAPA Sans Cn", system-ui';
+              const numW = ctx.measureText(saveNum).width;
+              ctx.textAlign = 'center';
+              ctx.fillText(saveNum, badgeCx, badgeCy);
+              ctx.font = '900 ' + pctSize + 'px "NAPA Sans Cn", system-ui';
+              ctx.textAlign = 'left';
+              const pctY = badgeCy - numPx + pctTopPx + pctSize;
+              ctx.fillText('%', badgeCx + numW / 2, pctY);
+              ctx.restore();
+            } catch (e) { console.warn('Badge load failed', e); }
+          }
+
+          // Helper: draw price on canvas
+          function drawCanvasPrice() {
             const dollars = csState.offerDollars || '0';
             const cents = csState.offerCents || '99';
             const unit = csState.offerUnit || '';
-            const yBase = offerY + 75;
-
             const big = !cfg.hasStartingAt;
             const szDollarSign = big ? 59 : 49;
             const szDollars = big ? 101 : 84;
             const szCents = big ? 60 : 50;
             const szUnit = big ? 28 : 23;
-
-            if (csState.offerHasPrice) {
-              ctx.save();
-              ctx.translate(25, 0);
-              let priceTop = offerY + (big ? 20 : 49);
-              if (cfg.hasStartingAt) {
-                ctx.fillStyle = '#fff';
-                ctx.font = '900 30px "NAPA Sans Cn", system-ui';
-                ctx.fillText('STARTING AT', 0, priceTop);
-                priceTop += 6;
-              }
+            ctx.save();
+            ctx.translate(25, 0);
+            let priceTop = offerY + (big ? 20 : 49);
+            if (cfg.hasStartingAt) {
               ctx.fillStyle = '#fff';
-              ctx.font = '900 ' + szDollarSign + 'px "NAPA Sans Cn", system-ui';
-              const dollarSignW = ctx.measureText('$').width;
-              ctx.fillText('$', 0, priceTop + szDollarSign * 0.85);
-              ctx.font = '900 ' + szDollars + 'px "NAPA Sans Cn", system-ui';
-              ctx.fillText(dollars, dollarSignW, priceTop + szDollars * 0.85);
-              const dollarsW = dollarSignW + ctx.measureText(dollars).width;
-              ctx.font = '900 ' + szCents + 'px "NAPA Sans Cn", system-ui';
-              ctx.fillText(cents, dollarsW, priceTop + szCents * 0.85);
-              ctx.font = '300 ' + szUnit + 'px "NAPA Sans Cn", system-ui';
-              ctx.fillText(unit, dollarsW, priceTop + szCents * 0.85 + szUnit);
-              ctx.restore();
+              ctx.font = '900 30px "NAPA Sans Cn", system-ui';
+              ctx.fillText('STARTING AT', 0, priceTop);
+              priceTop += 6;
             }
+            ctx.fillStyle = '#fff';
+            ctx.font = '900 ' + szDollarSign + 'px "NAPA Sans Cn", system-ui';
+            const dollarSignW = ctx.measureText('$').width;
+            ctx.fillText('$', 0, priceTop + szDollarSign * 0.85);
+            ctx.font = '900 ' + szDollars + 'px "NAPA Sans Cn", system-ui';
+            ctx.fillText(dollars, dollarSignW, priceTop + szDollars * 0.85);
+            const dollarsW = dollarSignW + ctx.measureText(dollars).width;
+            ctx.font = '900 ' + szCents + 'px "NAPA Sans Cn", system-ui';
+            ctx.fillText(cents, dollarsW, priceTop + szCents * 0.85);
+            ctx.font = '300 ' + szUnit + 'px "NAPA Sans Cn", system-ui';
+            ctx.fillText(unit, dollarsW, priceTop + szCents * 0.85 + szUnit);
+            ctx.restore();
+          }
 
-            // Badge
-            if (cfg.badge) {
-              try {
-                const badgeImg = await csLoadImage('/assets/mms/offer-badges/' + cfg.badge + '.svg');
-                const bw = 171, bh = 151;
-                const bx = 640 - bw - 25;
-                ctx.drawImage(badgeImg, bx, offerY, bw, bh);
-                // Yellow badge = dark blue text, blue badge = white text
-                const badgeTextColor = cfg.badge.startsWith('yellow') ? '#1D3489' : '#ffffff';
-                const isUpTo = cfg.hasStartingAt;
-                const numYRatio = isUpTo ? 0.88 : 0.82;
-                const numPx = isUpTo ? 65 : 78;
-                const pctSize = isUpTo ? 32 : 34;
-                const pctTopPx = isUpTo ? 9 : 12;
-                ctx.save();
-                ctx.fillStyle = badgeTextColor;
-                const saveNum = csState.offerSave || '0';
-                const badgeCx = bx + bw / 2;
-                const badgeCy = offerY + bh * numYRatio;
-                // Center number, % superscript at top-right
-                ctx.font = '900 ' + numPx + 'px "NAPA Sans Cn", system-ui';
-                const numW = ctx.measureText(saveNum).width;
-                ctx.textAlign = 'center';
-                ctx.fillText(saveNum, badgeCx, badgeCy);
-                // % positioned at top of number + offset (matches CSS top:14px/18px)
-                ctx.font = '900 ' + pctSize + 'px "NAPA Sans Cn", system-ui';
-                ctx.textAlign = 'left';
-                const pctY = badgeCy - numPx + pctTopPx + pctSize;
-                ctx.fillText('%', badgeCx + numW / 2, pctY);
-                ctx.restore();
-              } catch (e) { console.warn('Badge load failed', e); }
+          if (csState.offerMode === 'price') {
+            // Price on left
+            drawCanvasPrice();
+            if (csState.offerHasBadge) {
+              // Badge on right
+              await drawCanvasBadge();
+            } else if (csState.offerShortText) {
+              // Short text on right
+              const shortFont = '900 40px "NAPA Sans Cn", system-ui';
+              const shortLines = csWrapText(ctx, csState.offerShortText, shortFont, 280);
+              ctx.fillStyle = '#fff';
+              ctx.font = shortFont;
+              ctx.textAlign = 'center';
+              const shortLineH = 46;
+              const shortTop = offerY + (151 - shortLines.length * shortLineH) / 2 + 34;
+              for (let li = 0; li < shortLines.length; li++) {
+                ctx.fillText(shortLines[li], 490, shortTop + li * shortLineH);
+              }
+              ctx.textAlign = 'start';
             }
-          } else {
-            // Text-only (word-wrapped)
+          } else if (csState.offerMode === 'text') {
             const isGray = csState.bgValue === '#D1D3D4';
             const offerColor = isGray ? '#F9C842' : '#fff';
-            const offerFont = '900 60px "NAPA Sans Cn", system-ui';
-            const txt = csState.offerText || 'Huge Discounts on all Motor Oil Brands!!';
-            const offerLines = csWrapText(ctx, txt, offerFont, 580);
-            ctx.fillStyle = offerColor;
-            ctx.font = offerFont;
-            ctx.textAlign = 'center';
-            const offerLineH = 68;
-            const offerTextTop = offerY + (151 - offerLines.length * offerLineH) / 2 + 50;
-            for (let li = 0; li < offerLines.length; li++) {
-              ctx.fillText(offerLines[li], 320, offerTextTop + li * offerLineH);
+            const txt = csState.offerText || 'Click here to edit offer.';
+            if (csState.offerHasBadge) {
+              // Text on left, badge on right
+              const textFont = '900 48px "NAPA Sans Cn", system-ui';
+              const textLines = csWrapText(ctx, txt, textFont, 400);
+              ctx.fillStyle = offerColor;
+              ctx.font = textFont;
+              const lineH = 55;
+              const textTop = offerY + (151 - textLines.length * lineH) / 2 + 40;
+              ctx.save();
+              ctx.translate(25, 0);
+              for (let li = 0; li < textLines.length; li++) {
+                ctx.fillText(textLines[li], 0, textTop + li * lineH);
+              }
+              ctx.restore();
+              await drawCanvasBadge();
+            } else {
+              // Text-only centered
+              const offerFont = '900 48px "NAPA Sans Cn", system-ui';
+              const offerLines = csWrapText(ctx, txt, offerFont, 580);
+              ctx.fillStyle = offerColor;
+              ctx.font = offerFont;
+              ctx.textAlign = 'center';
+              const offerLineH = 68;
+              const offerTextTop = offerY + (151 - offerLines.length * offerLineH) / 2 + 50;
+              for (let li = 0; li < offerLines.length; li++) {
+                ctx.fillText(offerLines[li], 320, offerTextTop + li * offerLineH);
+              }
+              ctx.textAlign = 'start';
             }
-            ctx.textAlign = 'start';
           }
         }
 
@@ -2991,17 +3176,19 @@
         }
 
         // 5. Title/Rules bar (on top of everything)
-        const titleH = 18 + 38 + 24 + 15; // trim-adjusted: top + title + rules + bottom = 95
-        const titleY = g.position === 'top' ? (800 - titleH) : 0;
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, titleY, 640, titleH);
+        if (csState.showTitle) {
+          const titleH = 18 + 38 + 24 + 15; // trim-adjusted: top + title + rules + bottom = 95
+          const titleY = g.position === 'top' ? (800 - titleH) : 0;
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, titleY, 640, titleH);
 
-        ctx.fillStyle = '#F9C842';
-        ctx.font = '700 38px "NAPA Sans Cn", system-ui';
-        ctx.fillText((csState.titleText || 'SALE EVENT').toUpperCase(), 25, titleY + 18 + 34);
-        ctx.fillStyle = '#fff';
-        ctx.font = '500 24px "NAPA Sans Cn", system-ui';
-        ctx.fillText(csState.rulesText || 'In store only, while supplies last', 25, titleY + 18 + 38 + 22);
+          ctx.fillStyle = '#F9C842';
+          ctx.font = '700 38px "NAPA Sans Cn", system-ui';
+          ctx.fillText((csState.titleText || 'CLICK HERE TO ADD EVENT NAME!!').toUpperCase(), 25, titleY + 18 + 34);
+          ctx.fillStyle = '#fff';
+          ctx.font = '500 24px "NAPA Sans Cn", system-ui';
+          ctx.fillText(csState.rulesText || 'Add fine print like: in-store only, sale dates, while supplies last, etc.', 25, titleY + 18 + 38 + 22);
+        }
 
         // 5. Export
         // MMS carrier limits: T-Mobile 1MB, Verizon 1.2MB, AT&T 600KB (short code only)
@@ -3105,9 +3292,9 @@
       csState = {
         mediaMode: 'image', color: 'blue', graphicId: null, bgType: null, bgValue: null, bgImageData: null, bgRawImage: null, bgNatW: 0, bgNatH: 0, bgScale: 1, bgX: 0, bgY: 0,
         videoSource: null, videoScript: '', videoUrl: null, videoStatus: null, videoId: null, videoError: null, _videoPollTimer: null, _videoElapsedTimer: null, _videoStartTime: null,
-        offerType: null, offerMode: null, offerHasBadge: true, offerHasPrice: true, offerBadgeColor: 'yellow',
+        offerType: null, offerMode: null, offerHasBadge: false, offerBadgeType: 'save', offerBadgeColor: 'yellow', offerShortText: '',
         offerDollars: '', offerCents: '', offerUnit: '', offerSave: '', offerText: '',
-        titleText: 'SALE EVENT', rulesText: 'In store only, while supplies last',
+        showTitle: true, titleText: 'CLICK HERE TO ADD EVENT NAME!!', rulesText: 'Add fine print like: in-store only, sale dates, while supplies last, etc.',
         bodyCount: null, bodyItems: [],
       };
       // Reset filter radio to "All"
@@ -3135,8 +3322,8 @@
       _prevBody.style.display = 'none';
       document.getElementById('csActions').style.display = 'none';
       document.getElementById('csPrevOfferBar').innerHTML = '<div id="csPrevOfferLeft"></div><div id="csPrevOfferRight"></div>';
-      document.getElementById('csPrevTitleText').value = 'SALE EVENT';
-      document.getElementById('csPrevRulesText').value = 'In store only, while supplies last';
+      document.getElementById('csPrevTitleText').value = 'CLICK HERE TO ADD EVENT NAME!!';
+      document.getElementById('csPrevRulesText').value = 'Add fine print like: in-store only, sale dates, while supplies last, etc.';
       document.getElementById('csTemplateRow').style.display = 'none';
       document.getElementById('csBodyHint').style.display = 'none';
       document.getElementById('csSampleDataBtn').style.display = 'none';

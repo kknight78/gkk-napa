@@ -874,6 +874,12 @@ export default {
         return handleSendCampaign(request, env, corsHeaders);
       }
 
+      // ── Admin: POST /admin/facebook/post ──
+      if (request.method === "POST" && path === "/admin/facebook/post") {
+        if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
+        return handleFacebookPost(request, env, corsHeaders);
+      }
+
       // ── Admin: POST /admin/campaign-compose ──
       if (request.method === "POST" && path === "/admin/campaign-compose") {
         if (!checkAdmin(request, env)) return jsonError(corsHeaders, "Unauthorized", 401);
@@ -3501,7 +3507,7 @@ async function handleListCreatives(env, corsHeaders) {
 
 const HEYGEN_API_KEY = "OWQxZDRjZmUxMmI4NDIzMDg2NjI3NTRmYWJlNTdmMTgtMTc1OTM0MjExNQ==";
 const HEYGEN_VOICE_ID = "846b356ee5dd41379d521cb7f612775f";
-const HEYGEN_TALKING_PHOTO_ID = "0b74ce8af81540c2b81a4acbf7ef0dfc";
+const HEYGEN_TALKING_PHOTO_ID = "64d05e85ca9349d995e5cbed7ef17461";
 
 async function handleVideoCreate(request, env, corsHeaders) {
   const body = await request.json();
@@ -3701,5 +3707,79 @@ async function handleVideoCompositeStatus(request, env, corsHeaders) {
   } catch (err) {
     console.error("Creatomate status failed:", err.message);
     return jsonError(corsHeaders, "Failed to check composite status: " + err.message, 500);
+  }
+}
+
+// ── Facebook Page Posting ──
+async function handleFacebookPost(request, env, corsHeaders) {
+  try {
+    const body = await request.json();
+    const { message, image_url, video_url, scheduled_time } = body;
+
+    if (!message && !image_url && !video_url) {
+      return jsonError(corsHeaders, "Provide a message, image_url, or video_url.", 400);
+    }
+
+    const pageId = env.FB_PAGE_ID;
+    const token = env.FB_PAGE_TOKEN;
+    if (!pageId || !token) {
+      return jsonError(corsHeaders, "Facebook not configured (missing FB_PAGE_ID or FB_PAGE_TOKEN).", 500);
+    }
+
+    let result;
+
+    if (video_url) {
+      // Video post via resumable upload
+      const params = new URLSearchParams({ access_token: token });
+      if (message) params.set("description", message);
+      params.set("file_url", video_url);
+      if (scheduled_time) {
+        params.set("scheduled_publish_time", String(Math.floor(new Date(scheduled_time).getTime() / 1000)));
+        params.set("published", "false");
+      }
+      const resp = await fetch(`https://graph.facebook.com/v21.0/${pageId}/videos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      result = await resp.json();
+    } else if (image_url) {
+      // Photo post
+      const params = new URLSearchParams({ access_token: token, url: image_url });
+      if (message) params.set("message", message);
+      if (scheduled_time) {
+        params.set("scheduled_publish_time", String(Math.floor(new Date(scheduled_time).getTime() / 1000)));
+        params.set("published", "false");
+      }
+      const resp = await fetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      result = await resp.json();
+    } else {
+      // Text-only post
+      const params = new URLSearchParams({ access_token: token, message });
+      if (scheduled_time) {
+        params.set("scheduled_publish_time", String(Math.floor(new Date(scheduled_time).getTime() / 1000)));
+        params.set("published", "false");
+      }
+      const resp = await fetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      result = await resp.json();
+    }
+
+    if (result.error) {
+      console.error("Facebook API error:", JSON.stringify(result.error));
+      return jsonError(corsHeaders, result.error.message || "Facebook posting failed.", 400);
+    }
+
+    return jsonOk(corsHeaders, { ok: true, post_id: result.id || result.post_id, result });
+  } catch (err) {
+    console.error("Facebook post failed:", err.message);
+    return jsonError(corsHeaders, "Facebook posting failed: " + err.message, 500);
   }
 }

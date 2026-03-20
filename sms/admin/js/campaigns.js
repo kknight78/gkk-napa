@@ -241,7 +241,7 @@
             if (m.media_url === SMS_LOGO_URL) mediaType = 'logo';
             else if (m.media_url) mediaType = 'library';
           }
-          return { body: m.body || '', mediaType: mediaType, mediaUrl: m.media_url || null, sendNow: !!m.send_now, sendAt: m.send_at || null };
+          return { body: m.body || '', mediaType: mediaType, mediaUrl: m.media_url || null, sendNow: !!m.send_now, sendAt: m.send_at || null, channels: m.channels || { sms: true, email: false, facebook: false } };
         });
         document.getElementById('composerName').value = data.name || '';
 
@@ -249,8 +249,6 @@
         var meta = {};
         try { meta = JSON.parse(data.promo_meta || '{}'); } catch { }
         document.getElementById('composerPriority').checked = !!meta.priority_only;
-        document.getElementById('composerSendSms').checked = !meta.email_only;
-        document.getElementById('composerSendEmail').checked = !!meta.email_fallback || !!meta.email_only;
         if (meta.dev_mode) {
           document.getElementById('composerDevMode').checked = true;
           document.getElementById('composerDevFields').style.display = 'block';
@@ -512,7 +510,7 @@
     // ─── Send Mode Toggle ───
     // ─── Campaign Composer ───
     var composerMessages = [
-      { body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }
+      { body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null, channels: { sms: true, email: true, facebook: false } }
     ];
     var composerActiveMessageIndex = null;
     var composerDraftId = null;
@@ -553,7 +551,7 @@
     // New Campaign button
     window.composerNewCampaign = function() {
       // Reset composer state
-      composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }];
+      composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null, channels: { sms: true, email: true, facebook: false } }];
       composerActiveMessageIndex = null;
       composerDraftId = null;
       var nameEl = document.getElementById('composerName');
@@ -562,10 +560,6 @@
       if (devMode) { devMode.checked = false; document.getElementById('composerDevFields').style.display = 'none'; }
       var priority = document.getElementById('composerPriority');
       if (priority) priority.checked = false;
-      var sendSmsEl = document.getElementById('composerSendSms');
-      if (sendSmsEl) sendSmsEl.checked = true;
-      var sendEmailEl = document.getElementById('composerSendEmail');
-      if (sendEmailEl) sendEmailEl.checked = false;
       composerShowError('');
       composerShowSuccess('');
       var draftStatus = document.getElementById('composerDraftStatus');
@@ -632,6 +626,19 @@
         }
         html += '</div>';
 
+        // Channels
+        var ch = msg.channels || { sms: true, email: false, facebook: false };
+        var isPriority = document.getElementById('composerPriority') && document.getElementById('composerPriority').checked;
+        var hasMedia = msg.mediaType !== 'none';
+        html += '<label style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);margin-top:10px;display:block;">Channels</label>';
+        html += '<div class="composer-media-btns">';
+        html += '<button class="composer-media-btn' + (ch.sms ? ' active' : '') + '" onclick="composerToggleChannel(' + i + ',\'sms\')" title="Send as text message">SMS</button>';
+        html += '<button class="composer-media-btn' + (ch.email ? ' active' : '') + '" onclick="composerToggleChannel(' + i + ',\'email\')" title="Send as email">Email</button>';
+        if (!isPriority) {
+          html += '<button class="composer-media-btn' + (ch.facebook ? ' active' : '') + '"' + (hasMedia ? '' : ' disabled title="Attach media to enable Facebook"') + ' onclick="composerToggleChannel(' + i + ',\'facebook\')" ' + (hasMedia ? 'title="Post to Facebook page"' : '') + '>Facebook</button>';
+        }
+        html += '</div>';
+
         html += '</div>'; // end controls col
 
         // ── Right column: preview + test send ──
@@ -681,7 +688,7 @@
         d.setDate(d.getDate() + 2);
         defaultDate = d.toISOString().slice(0, 16);
       }
-      composerMessages.push({ body: '', mediaType: 'none', mediaUrl: null, sendNow: false, sendAt: defaultDate });
+      composerMessages.push({ body: '', mediaType: 'none', mediaUrl: null, sendNow: false, sendAt: defaultDate, channels: { sms: true, email: true, facebook: false } });
       composerRender();
     };
 
@@ -758,7 +765,19 @@
     window.composerSetMedia = function(index, type) {
       composerMessages[index].mediaType = type;
       if (type === 'logo') composerMessages[index].mediaUrl = SMS_LOGO_URL;
-      else if (type === 'none') composerMessages[index].mediaUrl = null;
+      else if (type === 'none') {
+        composerMessages[index].mediaUrl = null;
+        // Disable Facebook when no media
+        if (composerMessages[index].channels) composerMessages[index].channels.facebook = false;
+      }
+      composerRender();
+    };
+
+    window.composerToggleChannel = function(index, channel) {
+      var msg = composerMessages[index];
+      if (!msg.channels) msg.channels = { sms: true, email: false, facebook: false };
+      msg.channels[channel] = !msg.channels[channel];
+      composerUpdateRecipients();
       composerRender();
     };
 
@@ -820,17 +839,19 @@
     window.composerUpdateRecipients = function() {
       var devMode = document.getElementById('composerDevMode').checked;
       var priority = document.getElementById('composerPriority').checked;
-      var sendSms = document.getElementById('composerSendSms').checked;
-      var sendEmail = document.getElementById('composerSendEmail').checked;
+
+      // Derive channel flags from per-message channels
+      var anySms = composerMessages.some(function(m) { return m.channels && m.channels.sms; });
+      var anyEmail = composerMessages.some(function(m) { return m.channels && m.channels.email; });
 
       if (devMode) {
-        document.getElementById('composerSmsNum').textContent = sendSms ? '1' : '0';
-        document.getElementById('composerEmailNum').textContent = sendEmail ? '1' : '0';
+        document.getElementById('composerSmsNum').textContent = anySms ? '1' : '0';
+        document.getElementById('composerEmailNum').textContent = anyEmail ? '1' : '0';
         return;
       }
 
       // SMS count (subscribed)
-      if (sendSms) {
+      if (anySms) {
         var smsUrl = WORKER_BASE + '/admin/customers?count_only=1&status=subscribed';
         if (priority) smsUrl += '&priority_only=1';
         fetch(smsUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
@@ -841,7 +862,7 @@
       }
 
       // Email count (all customers with email)
-      if (sendEmail) {
+      if (anyEmail) {
         var emailUrl = WORKER_BASE + '/admin/customers?count_only=1&has_email=1';
         if (priority) emailUrl += '&priority_only=1';
         fetch(emailUrl, { headers: authHeaders() }).then(function(r) { return r.json(); }).then(function(data) {
@@ -849,6 +870,13 @@
         }).catch(function() {});
       } else {
         document.getElementById('composerEmailNum').textContent = '0';
+      }
+
+      // If priority is checked, disable Facebook on all messages
+      if (priority) {
+        composerMessages.forEach(function(m) {
+          if (m.channels) m.channels.facebook = false;
+        });
       }
     };
 
@@ -896,21 +924,28 @@
       if (!name) { composerShowError('Campaign name is required.'); return; }
 
       var apiMessages = [];
+      var anyChannel = false;
+      var anyFacebook = false;
       for (var i = 0; i < composerMessages.length; i++) {
         var msg = composerMessages[i];
+        var ch = msg.channels || { sms: true, email: false, facebook: false };
         var mediaUrl = null;
         if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
         else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
 
         var hasBody = msg.body && msg.body.trim();
+        if (!ch.sms && !ch.email && !ch.facebook) { composerShowError('Message ' + (i + 1) + ' needs at least one channel selected.'); return; }
         if (!hasBody && !mediaUrl) { composerShowError('Message ' + (i + 1) + ' needs text or media.'); return; }
         if (i > 0 && !msg.sendAt) { composerShowError('Message ' + (i + 1) + ' needs a scheduled time.'); return; }
         if (i === 0 && !msg.sendNow && !msg.sendAt) { composerShowError('Message 1 needs a scheduled time or "Send Now".'); return; }
 
+        if (ch.sms || ch.email) anyChannel = true;
+        if (ch.facebook) anyFacebook = true;
+
         var sendAt = null;
         if (!msg.sendNow && msg.sendAt) sendAt = new Date(msg.sendAt).toISOString();
 
-        apiMessages.push({ body: msg.body || '', media_url: mediaUrl, send_now: i === 0 && msg.sendNow, send_at: sendAt });
+        apiMessages.push({ body: msg.body || '', media_url: mediaUrl, send_now: i === 0 && msg.sendNow, send_at: sendAt, channels: ch });
       }
 
       var devMode = document.getElementById('composerDevMode').checked;
@@ -918,13 +953,14 @@
       var devEmail = (document.getElementById('composerDevEmail').value || '').trim();
 
       if (devMode && !devPhone && !devEmail) { composerShowError('Test Mode: enter a phone number or email.'); return; }
-      if (!document.getElementById('composerSendSms').checked && !document.getElementById('composerSendEmail').checked) { composerShowError('Select at least one: Text message or Email.'); return; }
+
+      // Derive campaign-level flags from per-message channels
+      var showSms = apiMessages.some(function(m) { return m.channels.sms; });
+      var showEmail = apiMessages.some(function(m) { return m.channels.email; });
 
       // Build review summary
       var smsCount = document.getElementById('composerSmsNum').textContent || '0';
       var emailCount = document.getElementById('composerEmailNum').textContent || '0';
-      var showSms = document.getElementById('composerSendSms').checked;
-      var showEmail = document.getElementById('composerSendEmail').checked;
       var sendNowCount = apiMessages.filter(function(m) { return m.send_now; }).length;
       var schedCount = apiMessages.length - sendNowCount;
 
@@ -940,14 +976,22 @@
         if (showSms) html += '<div class="review-row"><span class="review-label">SMS recipients</span><span class="review-value">' + smsCount + '</span></div>';
         if (showEmail) html += '<div class="review-row"><span class="review-label">Email recipients</span><span class="review-value">' + emailCount + '</span></div>';
       }
+      if (anyFacebook) {
+        html += '<div class="review-row"><span class="review-label">Facebook</span><span class="review-value" style="color:#4267B2;">Will post to page</span></div>';
+      }
       html += '<div class="review-row"><span class="review-label">Messages</span><span style="color:#fff;">' + apiMessages.length + ' (' + (sendNowCount > 0 ? sendNowCount + ' now' : '') + (sendNowCount > 0 && schedCount > 0 ? ', ' : '') + (schedCount > 0 ? schedCount + ' scheduled' : '') + ')</span></div>';
 
       // Message summaries
       for (var j = 0; j < apiMessages.length; j++) {
         var am = apiMessages[j];
         var timing = am.send_now ? 'Send immediately' : new Date(am.send_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        var channelTags = [];
+        if (am.channels.sms) channelTags.push('SMS');
+        if (am.channels.email) channelTags.push('Email');
+        if (am.channels.facebook) channelTags.push('Facebook');
         html += '<div class="review-msg-card">';
         html += '<div style="display:flex;justify-content:space-between;align-items:center;"><strong style="color:var(--napa-yellow);">Message ' + (j + 1) + '</strong><span style="font-size:12px;color:rgba(255,255,255,.4);">' + timing + '</span></div>';
+        html += '<div style="font-size:11px;color:rgba(255,255,255,.4);margin:4px 0;">' + channelTags.join(' &middot; ') + '</div>';
         if (am.body) html += '<div class="review-msg-body">' + esc(am.body) + '</div>';
         if (am.media_url) html += '<div style="margin-top:4px;font-size:12px;color:rgba(255,255,255,.4);">+ media attached</div>';
         html += '</div>';
@@ -996,19 +1040,46 @@
         headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       }).then(function(r) { return r.json(); }).then(function(data) {
-        reviewModal.classList.remove('open');
-        if (data.error) { composerShowError(data.error); return; }
-        var msg = 'Campaign created!';
-        if (data.sent > 0) msg += ' Sent to ' + data.sent + ' subscribers.';
-        if (data.scheduled > 0) msg += ' ' + data.scheduled + ' message(s) scheduled.';
-        composerShowSuccess(msg);
-        showToast(msg, 'success', 'btnReviewConfirm');
-        // Reset composer
-        composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null }];
-        composerDraftId = null;
-        document.getElementById('composerName').value = '';
-        document.getElementById('composerDraftStatus').style.display = 'none';
-        composerRender();
+        if (data.error) { reviewModal.classList.remove('open'); composerShowError(data.error); return; }
+
+        // Fire Facebook posts for messages with facebook channel enabled
+        var fbPromises = [];
+        payload.messages.forEach(function(m) {
+          if (!m.channels || !m.channels.facebook || !m.media_url) return;
+          var isVideo = /\.(mp4|mov|webm|3gp)(\?|$)/i.test(m.media_url);
+          var fbPayload = { message: m.body || '' };
+          if (isVideo) fbPayload.video_url = m.media_url;
+          else fbPayload.image_url = m.media_url;
+          // If scheduled (not send_now), pass the scheduled time to Facebook
+          if (m.send_at && !m.send_now) fbPayload.scheduled_time = m.send_at;
+          fbPromises.push(
+            fetch(WORKER_BASE + '/admin/facebook/post', {
+              method: 'POST',
+              headers: Object.assign({}, authHeaders(), { 'Content-Type': 'application/json' }),
+              body: JSON.stringify(fbPayload)
+            }).then(function(r) { return r.json(); })
+          );
+        });
+
+        return Promise.all(fbPromises).then(function(fbResults) {
+          reviewModal.classList.remove('open');
+          var msg = 'Campaign created!';
+          if (data.sent > 0) msg += ' Sent to ' + data.sent + ' subscribers.';
+          if (data.scheduled > 0) msg += ' ' + data.scheduled + ' message(s) scheduled.';
+          // Report Facebook results
+          var fbOk = fbResults.filter(function(r) { return r && r.ok; }).length;
+          var fbFail = fbResults.filter(function(r) { return r && !r.ok; }).length;
+          if (fbOk > 0) msg += ' Posted to Facebook.';
+          if (fbFail > 0) msg += ' Facebook post failed (' + fbFail + ').';
+          composerShowSuccess(msg);
+          showToast(msg, 'success', 'btnReviewConfirm');
+          // Reset composer
+          composerMessages = [{ body: '', mediaType: 'logo', mediaUrl: null, sendNow: true, sendAt: null, channels: { sms: true, email: true, facebook: false } }];
+          composerDraftId = null;
+          document.getElementById('composerName').value = '';
+          document.getElementById('composerDraftStatus').style.display = 'none';
+          composerRender();
+        });
       }).catch(function(e) {
         reviewModal.classList.remove('open');
         composerShowError('Error: ' + e.message);
@@ -1027,15 +1098,19 @@
         var mediaUrl = null;
         if (msg.mediaType === 'logo') mediaUrl = SMS_LOGO_URL;
         else if ((msg.mediaType === 'library' || msg.mediaType === 'studio') && msg.mediaUrl) mediaUrl = msg.mediaUrl;
-        draftMessages.push({ body: msg.body || '', media_url: mediaUrl, media_type: msg.mediaType, send_now: i === 0 && msg.sendNow, send_at: msg.sendAt || null });
+        draftMessages.push({ body: msg.body || '', media_url: mediaUrl, media_type: msg.mediaType, send_now: i === 0 && msg.sendNow, send_at: msg.sendAt || null, channels: msg.channels || { sms: true, email: false, facebook: false } });
       }
+
+      // Derive email flags from per-message channels
+      var anySms = composerMessages.some(function(m) { return m.channels && m.channels.sms; });
+      var anyEmail = composerMessages.some(function(m) { return m.channels && m.channels.email; });
 
       var payload = {
         name: name,
         messages: draftMessages,
         priority_only: document.getElementById('composerPriority').checked,
-        email_fallback: document.getElementById('composerSendEmail').checked,
-        email_only: document.getElementById('composerSendEmail').checked && !document.getElementById('composerSendSms').checked,
+        email_fallback: anyEmail,
+        email_only: anyEmail && !anySms,
         email_subject: 'G&KK NAPA - SAVINGS ALERT!',
         dev_mode: document.getElementById('composerDevMode').checked,
         dev_phone: (document.getElementById('composerDevPhone').value || '').trim(),

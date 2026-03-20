@@ -1364,6 +1364,11 @@
       background: rgba(255,255,255,.06); border: 2px dashed rgba(255,255,255,.2);
       display: flex; align-items: center; justify-content: center;
       color: rgba(255,255,255,.4); font-size: 13px; cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .cs-product-edit-img-placeholder.drag-over {
+      border-color: #f5c518; background: rgba(245,197,24,.1);
+      color: #f5c518;
     }
     .cs-product-edit-actions { display: flex; gap: 8px; margin-top: 16px; }
     .cs-product-edit-actions button { flex: 1; padding: 12px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
@@ -1612,16 +1617,8 @@
             <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:200px;">
                 <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                  <input type="checkbox" id="composerPriority" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
+                  <input type="checkbox" id="composerPriority" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients();composerRender()" />
                   <span style="font-size:14px;">&#9733; Priority customers only</span>
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                  <input type="checkbox" id="composerSendSms" checked style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
-                  <span style="font-size:14px;">Text message</span>
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
-                  <input type="checkbox" id="composerSendEmail" style="width:auto;accent-color:var(--napa-yellow);" onchange="composerUpdateRecipients()" />
-                  <span style="font-size:14px;">Email</span>
                 </label>
               </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1791,19 +1788,23 @@
                   <span class="cs-step-check">&#10003;</span>
                 </div>
                 <div class="cs-step-body">
-                  <div style="margin-bottom:10px;">
-                    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin-bottom:6px;">Background type:</div>
+                  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin-bottom:8px;">Filter by:</div>
+                  <fieldset style="border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px 12px;margin:0 0 10px;">
+                    <legend style="font-size:11px;color:rgba(255,255,255,.35);padding:0 6px;">Background type</legend>
                     <div style="display:flex;align-items:center;gap:14px;font-size:13px;">
                       <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="all" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()" checked> All</label>
                       <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="bolt" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Bolt</label>
                       <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="photo" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Photo</label>
                       <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:rgba(255,255,255,.7);margin:0;line-height:1;"><input type="radio" name="csGraphicFilter" value="video" style="width:16px;height:16px;margin:0;accent-color:var(--napa-yellow);flex-shrink:0;" onchange="csApplyGraphicFilter()"> Video</label>
                     </div>
-                  </div>
+                  </fieldset>
+                  <fieldset style="border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px 12px;margin:0 0 10px;">
+                    <legend style="font-size:11px;color:rgba(255,255,255,.35);padding:0 6px;">Main graphic color</legend>
                   <div class="cs-color-toggle">
                     <button class="cs-color-btn active" data-color="blue" onclick="csSelectColor('blue')">Blue</button>
                     <button class="cs-color-btn" data-color="black" onclick="csSelectColor('black')">Black</button>
                   </div>
+                  </fieldset>
                   <div class="cs-graphic-grid" id="csGraphicGrid"></div>
                   <div id="csBgSection" style="display:none;">
                     <h4 style="margin:12px 0 6px;font-size:14px;font-weight:700;">Background</h4>
@@ -1816,63 +1817,67 @@
                 </div>
               </div>
 
-              <!-- Step 3: Offer -->
+              <!-- Step: Title & Fine Print -->
+              <div class="cs-step hidden" id="csStepTitle">
+                <div class="cs-step-header" onclick="csToggleStep('csStepTitle')">
+                  <h3>Title &amp; Fine Print</h3>
+                  <span class="cs-step-check">&#10003;</span>
+                </div>
+                <div class="cs-step-body">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                  <label style="font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0;">
+                    <input type="checkbox" id="csTitleToggle" checked onchange="csToggleTitleBar()" style="width:auto;margin:0;accent-color:var(--napa-yellow);"> Show title &amp; fine print
+                  </label>
+                </div>
+                <div id="csTitleEditHint" style="font-size:11px;color:rgba(255,255,255,.35);font-style:italic;">Edit text in preview &#8594;</div>
+                <button class="cs-step-next" onclick="csStepNext('csStepTitle')">Next &#8594;</button>
+                </div>
+              </div>
+
+              <!-- Step: Offer Bar -->
               <div class="cs-step hidden" id="csStepOffer">
                 <div class="cs-step-header" onclick="csToggleStep('csStepOffer')">
-                  <h3>Offer</h3>
+                  <h3>Offer Bar</h3>
                   <span class="cs-step-check">&#10003;</span>
                 </div>
                 <div class="cs-step-body">
 
-                <div class="cs-offer-visual-btn" data-offer="none" onclick="csSelectOfferVisual('none')" style="margin-bottom:12px;">
-                  <div style="background:rgba(255,255,255,.08);border-radius:4px;padding:12px;text-align:center;color:rgba(255,255,255,.5);font-weight:700;font-size:15px;">No Offer Bar</div>
-                </div>
-                <hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:0 0 12px;" />
-
-                <h4 style="margin:0 0 6px;font-size:14px;font-weight:700;">Text</h4>
-                <div class="cs-offer-visual-btn" data-offer="text" onclick="csSelectOfferVisual('text')">
-                  <div style="background:rgba(0,0,0,.45);border-radius:4px;padding:10px;text-align:center;color:#fff;font-weight:900;font-size:18px;line-height:1.2;">Huge Discounts on all Motor Oil Brands!!</div>
-                </div>
-
-                <h4 style="margin:12px 0 6px;font-size:14px;font-weight:700;">Numeric</h4>
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-                  <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">
-                    <input type="checkbox" id="csOfferBadgeToggle" checked onchange="csUpdateOfferFromVisual()" style="width:auto;"> Include bolt?
+                <!-- Offer mode radio buttons -->
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+                  <label style="font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0;">
+                    <input type="radio" name="csOfferMode" value="none" checked onchange="csSelectOfferVisual('none')" style="width:auto;margin:0;accent-color:var(--napa-yellow);"> None
                   </label>
-                  <div style="display:flex;gap:6px;margin-left:auto;" id="csBadgeColorPicker">
+                  <label style="font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0;">
+                    <input type="radio" name="csOfferMode" value="text" onchange="csSelectOfferVisual('text')" style="width:auto;margin:0;accent-color:var(--napa-yellow);"> Text
+                  </label>
+                  <label style="font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin:0;">
+                    <input type="radio" name="csOfferMode" value="price" onchange="csSelectOfferVisual('price')" style="width:auto;margin:0;accent-color:var(--napa-yellow);"> Price
+                  </label>
+                </div>
+
+                <!-- Offer content area (dynamically populated by JS) -->
+                <div id="csOfferContent"></div>
+
+                <!-- Include bolt? + badge options (below content) -->
+                <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;" id="csOfferBoltRow">
+                  <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">
+                    <input type="checkbox" id="csOfferBadgeToggle" onchange="csUpdateOfferFromVisual()" style="width:auto;"> Include bolt?
+                  </label>
+                  <div id="csBadgeTypeRow" style="display:none;gap:6px;">
+                    <button class="cs-offer-type-btn active" id="csBadgeTypeSave" onclick="csSelectBadgeType('save')" style="padding:4px 10px;font-size:11px;">SAVE</button>
+                    <button class="cs-offer-type-btn" id="csBadgeTypeSaveUpTo" onclick="csSelectBadgeType('saveupto')" style="padding:4px 10px;font-size:11px;">SAVE UP TO</button>
+                  </div>
+                  <div style="display:none;gap:6px;" id="csBadgeColorPicker">
                     <img class="cs-badge-color-opt active" data-badge="yellow" onclick="csSelectBadgeColor('yellow')" src="/assets/small-yellow-bolt.svg" style="height:28px;cursor:pointer;border:2px solid var(--napa-yellow);border-radius:4px;padding:1px;" />
                     <img class="cs-badge-color-opt" data-badge="blue" onclick="csSelectBadgeColor('blue')" src="/assets/small-blue-bolt.svg" style="height:28px;cursor:pointer;border:2px solid transparent;border-radius:4px;padding:1px;" />
                   </div>
                 </div>
-                <div style="margin-bottom:8px;">
-                  <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;">
-                    <input type="checkbox" id="csOfferPriceToggle" checked onchange="csUpdateOfferFromVisual()" style="width:auto;"> Include price?
-                  </label>
-                </div>
-
-                <div class="cs-offer-visual-btn" data-offer="price" onclick="csSelectOfferVisual('price')" style="margin-bottom:6px;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-radius:4px;overflow:hidden;">
-                    <div class="cs-offer-price-preview" style="color:#fff;font-weight:900;line-height:1;padding:8px 12px;">
-                      <span style="font-size:16px;">$</span><span style="font-size:30px;">34</span><span style="font-size:18px;vertical-align:top;">99</span><span style="font-size:10px;font-weight:300;">/5 qt.</span>
-                    </div>
-                    <img id="csOfferPreviewBadge1" src="/assets/offer-example-yellow-save.svg" style="height:56px;" />
-                  </div>
-                </div>
-
-                <div class="cs-offer-visual-btn" data-offer="starting" onclick="csSelectOfferVisual('starting')">
-                  <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-radius:4px;overflow:hidden;">
-                    <div class="cs-offer-price-preview" style="color:#fff;font-weight:900;line-height:1;padding:8px 12px;">
-                      <div style="font-size:10px;text-transform:uppercase;">Starting At</div>
-                      <span style="font-size:16px;">$</span><span style="font-size:30px;">34</span><span style="font-size:18px;vertical-align:top;">99</span><span style="font-size:10px;font-weight:300;">/each</span>
-                    </div>
-                    <img id="csOfferPreviewBadge2" src="/assets/offer-example-yellow-save-up-to.svg" style="height:56px;" />
-                  </div>
-                </div>
+                <div id="csOfferEditHint" style="display:none;font-size:11px;color:rgba(255,255,255,.35);font-style:italic;margin-top:8px;">Edit text in preview &#8594;</div>
                 <button class="cs-step-next" onclick="csStepNext('csStepOffer')">Next &#8594;</button>
                 </div>
               </div>
 
-              <!-- Step 4: Products -->
+              <!-- Step: Products -->
               <div class="cs-step hidden" id="csStepBody">
                 <div class="cs-step-header" onclick="csToggleStep('csStepBody')">
                   <h3>Products</h3>
@@ -1908,8 +1913,8 @@
                   <div class="cs-prev-bg" id="csPrevBg"></div>
                   <img class="cs-prev-graphic" id="csPrevGraphic" style="display:none;" />
                   <div class="cs-prev-title-bar" id="csPrevTitleBar" style="display:none;">
-                    <input type="text" id="csPrevTitleText" autocomplete="off" maxlength="32" value="SALE EVENT" />
-                    <input type="text" id="csPrevRulesText" autocomplete="off" value="In store only, while supplies last" />
+                    <input type="text" id="csPrevTitleText" autocomplete="off" maxlength="40" value="CLICK HERE TO ADD EVENT NAME!!" />
+                    <input type="text" id="csPrevRulesText" autocomplete="off" value="Add fine print like: in-store only, sale dates, while supplies last, etc." />
                   </div>
                   <div class="cs-prev-subtitle-zone" id="csPrevSubtitleZone" style="display:none;">
                     <span>Subtitles will appear here</span>
@@ -1966,7 +1971,10 @@
         </select>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span style="font-size:12px;color:rgba(255,255,255,.35);" id="libStandaloneCount">0 items</span>
-          <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;padding:6px 16px;border:1px solid rgba(255,255,255,.18);border-radius:6px;" onclick="libStandaloneUpload()" onmouseover="this.style.borderColor='rgba(255,255,255,.4)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(255,255,255,.18)';this.style.color='rgba(255,255,255,.5)'">+ Upload</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;padding:6px 16px;border:1px solid rgba(255,255,255,.18);border-radius:6px;" onclick="libStandaloneUpload()" onmouseover="this.style.borderColor='rgba(255,255,255,.4)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(255,255,255,.18)';this.style.color='rgba(255,255,255,.5)'">+ Upload</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">or drag & drop files here</span>
+          </div>
         </div>
         <div class="lib-standalone" id="libStandaloneGrid"></div>
       </div>
@@ -2005,7 +2013,7 @@
         <label>Image</label>
         <input type="file" accept="image/*" id="csProductEditFile" />
         <div id="csProductEditImgWrap">
-          <div class="cs-product-edit-img-placeholder" id="csProductEditPlaceholder" onclick="document.getElementById('csProductEditFile').click()">Click to add image</div>
+          <div class="cs-product-edit-img-placeholder" id="csProductEditPlaceholder" onclick="document.getElementById('csProductEditFile').click()">Drag or click to add image</div>
         </div>
       </div>
       <div id="csProductEditPartRow" style="display:none;">

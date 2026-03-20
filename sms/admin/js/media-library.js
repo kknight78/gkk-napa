@@ -423,25 +423,63 @@
       });
     };
 
+    function _libUploadFile(file) {
+      if (!file) return;
+      var formData = new FormData();
+      formData.append('file', file);
+      showToast('Uploading...', 'info');
+      fetch(WORKER_BASE + '/admin/media-library', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + authToken },
+        body: formData
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { showToast('Upload failed: ' + data.error, 'error'); return; }
+        showToast('Uploaded!', 'success');
+        loadLibraryStandalone();
+      }).catch(function() { showToast('Upload failed', 'error'); });
+    }
+
     window.libStandaloneUpload = function() {
       var input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*,video/mp4,video/quicktime,video/webm';
       input.onchange = function() {
         if (!input.files || !input.files[0]) return;
-        var file = input.files[0];
-        var formData = new FormData();
-        formData.append('file', file);
-        showToast('Uploading...', 'info');
-        fetch(WORKER_BASE + '/admin/media-library', {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + authToken },
-          body: formData
-        }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data.error) { showToast('Upload failed: ' + data.error, 'error'); return; }
-          showToast('Uploaded!', 'success');
-          loadLibraryStandalone();
-        }).catch(function() { showToast('Upload failed', 'error'); });
+        _libUploadFile(input.files[0]);
       };
       input.click();
     };
+
+    // Drag-and-drop on Media Library tab
+    (function() {
+      var tab = document.getElementById('tab-library');
+      if (!tab) return;
+      var _dragOverlay = null;
+
+      tab.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (!_dragOverlay) {
+          _dragOverlay = document.createElement('div');
+          _dragOverlay.style.cssText = 'position:absolute;inset:0;background:rgba(245,197,24,.08);border:3px dashed #f5c518;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#f5c518;z-index:10;pointer-events:none;';
+          _dragOverlay.textContent = 'Drop to upload';
+          tab.style.position = 'relative';
+          tab.appendChild(_dragOverlay);
+        }
+      });
+      tab.addEventListener('dragleave', function(e) {
+        if (!tab.contains(e.relatedTarget)) {
+          if (_dragOverlay) { _dragOverlay.remove(); _dragOverlay = null; }
+        }
+      });
+      tab.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (_dragOverlay) { _dragOverlay.remove(); _dragOverlay = null; }
+        var files = e.dataTransfer.files;
+        for (var i = 0; i < files.length; i++) {
+          var f = files[i];
+          if (f.type.startsWith('image/') || f.type.startsWith('video/')) {
+            _libUploadFile(f);
+          }
+        }
+      });
+    })();
