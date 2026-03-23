@@ -83,6 +83,32 @@
     // Preloaded images for canvas
     const csImageCache = {};
 
+    // ─── Step validation: enable/disable Next buttons ───
+    function csValidateGraphicStep() {
+      var btn = document.getElementById('csGraphicNextBtn');
+      var hint = document.getElementById('csGraphicHint');
+      if (!btn) return;
+      var ready = csState.graphicId && csState.bgType;
+      if (csState.bgType === 'video' && !csState.videoUrl) ready = false;
+      btn.disabled = !ready;
+      if (ready && hint) hint.style.display = 'none';
+    }
+
+    // Wrapper click handler for Next buttons — shows hint if disabled, fires step if enabled
+    window.csStepNextClick = function(stepId) {
+      if (stepId === 'csStepGraphic') {
+        var btn = document.getElementById('csGraphicNextBtn');
+        var hint = document.getElementById('csGraphicHint');
+        if (btn.disabled) {
+          if (!csState.graphicId) hint.textContent = 'Select a graphic above';
+          else if (!csState.bgType) hint.textContent = 'Choose a background';
+          else if (csState.bgType === 'video' && !csState.videoUrl) hint.textContent = 'Generate or select a video first';
+          hint.style.display = 'block';
+          return;
+        }
+      }
+      csStepNext(stepId);
+    };
 
     // ─── Graphic Filter Checkboxes ───
     window.csApplyGraphicFilter = function() {
@@ -159,6 +185,7 @@
       // Hide placeholder
       document.getElementById('csPlaceholder').style.display = 'none';
       csUpdatePreview();
+      csValidateGraphicStep();
     };
 
     // ─── Background Options ───
@@ -2230,6 +2257,8 @@
         prevBody.style.display = 'none';
         prevBody.innerHTML = '';
       }
+
+      csValidateGraphicStep();
     }
 
 
@@ -2348,6 +2377,37 @@
 
     window.csGenerate = async function() {
       const btn = document.querySelector('.cs-actions-row .btn-primary');
+
+      // ── Validation ──
+      var errors = [];
+      // Title bar
+      if (csState.showTitle) {
+        var title = (document.getElementById('csPrevTitleText').value || csState.titleText || '').trim();
+        if (!title || title === 'CLICK HERE TO ADD EVENT NAME!!') errors.push('Add an event name in the title bar');
+        var rules = (document.getElementById('csPrevRulesText').value || csState.rulesText || '').trim();
+        if (rules === 'Add fine print like: in-store only, sale dates, while supplies last, etc.') errors.push('Update or clear the fine print text');
+      }
+      // Offer bar
+      if (csState.offerMode === 'text') {
+        var offerTxt = csState.offerText || '';
+        if (!offerTxt || offerTxt === 'Click here to edit offer.') errors.push('Add your offer text');
+      }
+      if (csState.offerMode === 'price') {
+        if (!csState.offerDollars) errors.push('Enter a price amount');
+      }
+      if (csState.offerMode && csState.offerMode !== 'none' && csState.offerHasBadge && !csState.offerSave) {
+        errors.push('Enter the save percentage on the bolt');
+      }
+      // Products
+      if (csState.bodyCount > 0 && csState.bodyItems.length > 0) {
+        var missingImg = csState.bodyItems.filter(function(it) { return !it.image; });
+        if (missingImg.length > 0) errors.push('Add images to all ' + csState.bodyCount + ' product slots');
+      }
+      if (errors.length > 0) {
+        showToast(errors[0], 'error', btn);
+        return;
+      }
+
       btn.textContent = 'Generating...';
       btn.disabled = true;
 

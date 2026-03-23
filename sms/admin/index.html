@@ -131,31 +131,6 @@
     }
 
     /* Third-level view tabs (Show All / Create New) */
-    .camp-views {
-      margin-bottom: 16px;
-      border-bottom: 2px solid var(--napa-yellow);
-      gap: 0;
-    }
-    .camp-views .tab {
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .3px;
-      border-radius: 0;
-      background: transparent;
-      color: rgba(255,255,255,.4);
-      margin-bottom: -2px;
-      border-bottom: 2px solid transparent;
-    }
-    .camp-views .tab.active {
-      color: var(--napa-yellow);
-      background: transparent;
-      border-bottom: 2px solid var(--napa-yellow);
-    }
-    .camp-views .tab:hover:not(.active) {
-      color: rgba(255,255,255,.7);
-    }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .campaign-list-card {
@@ -1055,7 +1030,10 @@
       cursor: pointer;
       margin-left: auto;
     }
-    .cs-step-next:hover { filter: brightness(1.1); }
+    .cs-step-next:hover:not(:disabled) { filter: brightness(1.1); }
+    .cs-step-next:disabled { opacity: 0.35; cursor: not-allowed; filter: none; pointer-events: none; }
+    .cs-step-next-wrap { display: flex; flex-direction: column; align-items: flex-end; margin-top: 12px; }
+    .cs-step-hint { font-size: 11px; color: #f59e0b; margin-top: 6px; text-align: right; display: none; }
     .cs-color-toggle {
       display: flex;
       gap: 6px;
@@ -1582,17 +1560,18 @@
       <!-- ═══ Tab: Campaigns (list + composer) ═══ -->
       <div class="tab-content active" id="tab-campaigns">
 
-        <div class="tabs camp-views" id="campViewNav">
-          <button class="tab active" data-view="list" onclick="campSwitchView('list',this)">Show All</button>
-          <button class="tab" data-view="create" onclick="campSwitchView('create',this)">Create New</button>
-        </div>
-
         <!-- Campaign List View (default) -->
         <div id="campaignListView">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;">Send texts, emails, and Facebook posts to your customers</div>
+            </div>
+            <button class="btn-primary" onclick="composerNewCampaign()" style="padding:10px 20px;font-size:14px;font-weight:700;white-space:nowrap;">+ New Campaign</button>
+          </div>
           <div class="cl-toolbar">
             <div class="cl-filters">
               <button class="cl-filter-btn active" data-filter="all" onclick="clSetFilter('all')">All</button>
-              <button class="cl-filter-btn" data-filter="in-flight" onclick="clSetFilter('in-flight')">In-Flight</button>
+              <button class="cl-filter-btn" data-filter="in-flight" onclick="clSetFilter('in-flight')">Scheduled</button>
               <button class="cl-filter-btn" data-filter="draft" onclick="clSetFilter('draft')">Drafts</button>
               <button class="cl-filter-btn" data-filter="completed" onclick="clSetFilter('completed')">Completed</button>
             </div>
@@ -1609,6 +1588,7 @@
 
         <!-- Composer View (toggled) -->
         <div id="composerView" style="display:none;">
+          <a onclick="composerBackToList()" style="font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;display:inline-block;margin-bottom:8px;">&larr; Back to Campaigns</a>
           <h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin:0 0 8px;">Campaign</h3>
           <div class="form-card" style="margin-bottom:16px;">
             <div class="composer-msg-header" style="margin-bottom:12px;"><h3>Name</h3></div>
@@ -1813,7 +1793,10 @@
                     <input type="file" id="csBgFileInput" accept="image/*" style="display:none;" />
                     <input type="file" id="csBgVideoFileInput" accept="video/mp4,video/quicktime,video/webm" style="display:none;" />
                   </div>
-                  <button class="cs-step-next" onclick="csStepNext('csStepGraphic')">Next &#8594;</button>
+                  <div class="cs-step-next-wrap" onclick="csStepNextClick('csStepGraphic')">
+                    <div class="cs-step-hint" id="csGraphicHint"></div>
+                    <button class="cs-step-next" id="csGraphicNextBtn" disabled style="margin-top:0;">Next &#8594;</button>
+                  </div>
                 </div>
               </div>
 

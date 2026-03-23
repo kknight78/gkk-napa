@@ -68,7 +68,7 @@
       });
 
       if (items.length === 0) {
-        campaignList.innerHTML = '<div class="cl-empty">' + (_clAllCampaigns.length === 0 ? 'No campaigns yet. Create your first one!' : 'No campaigns match your filters.') + '</div>';
+        campaignList.innerHTML = '<div class="cl-empty">' + (_clAllCampaigns.length === 0 ? 'No campaigns yet — click <strong>+ New Campaign</strong> above to get started!' : 'No campaigns match your filters.') + '</div>';
         return;
       }
 
@@ -528,23 +528,9 @@
     };
 
     // Show composer view (within campaigns tab)
-    window.campSwitchView = function(view, btn) {
-      document.querySelectorAll('#campViewNav .tab').forEach(function(t) { t.classList.remove('active'); });
-      if (btn) btn.classList.add('active');
-      if (view === 'create') {
-        composerNewCampaign();
-      } else {
-        composerBackToList();
-      }
-    };
-
     window.composerShowComposer = function() {
       document.getElementById('campaignListView').style.display = 'none';
       document.getElementById('composerView').style.display = 'block';
-      // Update view nav to Create New
-      document.querySelectorAll('#campViewNav .tab').forEach(function(t) {
-        t.classList.toggle('active', t.dataset.view === 'create');
-      });
       composerUpdateRecipients();
     };
 
@@ -572,10 +558,6 @@
     window.composerBackToList = function() {
       document.getElementById('composerView').style.display = 'none';
       document.getElementById('campaignListView').style.display = 'block';
-      // Reset view nav to Show All
-      document.querySelectorAll('#campViewNav .tab').forEach(function(t) {
-        t.classList.toggle('active', t.dataset.view === 'list');
-      });
       loadCampaigns();
     };
 
