@@ -2494,9 +2494,14 @@ async function handleCampaignCompose(request, env, corsHeaders) {
               headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
               body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: emailSubj, html }),
             });
-            if (resp.ok) emailSent++; else emailFailed++;
-          } catch (e) { emailFailed++; }
-          await new Promise(r => setTimeout(r, 600));
+            if (resp.ok) {
+              emailSent++;
+            } else {
+              emailFailed++;
+              try { const errBody = await resp.json(); console.error("Email failed for", customer.email, resp.status, JSON.stringify(errBody)); } catch (_) { console.error("Email failed for", customer.email, resp.status); }
+            }
+          } catch (e) { emailFailed++; console.error("Email exception for", customer.email, e.message); }
+          await new Promise(r => setTimeout(r, 200));
         }
       }
     }
