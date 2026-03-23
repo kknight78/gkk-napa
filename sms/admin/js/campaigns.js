@@ -992,6 +992,7 @@
         name: devMode ? '[TEST] ' + name : name,
         email_subject: 'G&KK NAPA - SAVINGS ALERT!',
         priority_only: document.getElementById('composerPriority').checked,
+        sms_enabled: showSms,
         email_fallback: showEmail,
         email_only: showEmail && !showSms,
         messages: apiMessages

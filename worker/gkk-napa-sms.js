@@ -2372,7 +2372,8 @@ async function handleSendCampaign(request, env, corsHeaders) {
 // ─── Campaign Composer ─────────────────────────────────────────
 async function handleCampaignCompose(request, env, corsHeaders) {
   const body = await request.json();
-  const { name, store, priority_only, email_fallback, email_only, email_subject, messages, dev_mode, dev_phone, dev_email, draft_id } = body;
+  const { name, store, priority_only, sms_enabled, email_fallback, email_only, email_subject, messages, dev_mode, dev_phone, dev_email, draft_id } = body;
+  const sendSms = sms_enabled !== false && !email_only; // backwards compatible: default true if not set
 
   if (!name || !name.trim()) return jsonError(corsHeaders, "Campaign name is required.", 400);
   if (!messages || !Array.isArray(messages) || messages.length === 0) return jsonError(corsHeaders, "At least one message is required.", 400);
@@ -2432,7 +2433,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
 
     if (dev_mode) {
       // Dev mode: send only to the specified phone/email
-      if (dev_phone && !email_only) {
+      if (dev_phone && sendSms) {
         const phone = dev_phone.replace(/\D/g, "");
         const formattedPhone = phone.length === 10 ? "+1" + phone : "+" + phone;
         const result = await sendSms(env, formattedPhone, fullMessage, firstMsg.media_url);
@@ -2452,7 +2453,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
       }
     } else {
       // Normal mode: send to all eligible customers
-      if (!email_only) {
+      if (sendSms) {
         let customerSql = "SELECT * FROM customers WHERE sms_status = 'subscribed'";
         const binds = [];
         if (store) { customerSql += " AND store = ?"; binds.push(store); }
