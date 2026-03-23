@@ -1048,6 +1048,7 @@
           reviewModal.classList.remove('open');
           var msg = 'Campaign created!';
           if (data.sent > 0) msg += ' Sent to ' + data.sent + ' subscribers.';
+          if (data.email_queued > 0) msg += ' ' + data.email_queued + ' emails queued — sending shortly.';
           if (data.scheduled > 0) msg += ' ' + data.scheduled + ' message(s) scheduled.';
           // Report Facebook results
           var fbOk = fbResults.filter(function(r) { return r && r.ok; }).length;

@@ -637,11 +637,12 @@ async function processScheduledEvents(env) {
           }
         }
 
-        // Email fallback for scheduled events
+        // Email fallback for scheduled events — queue for async processing
         if ((promoMeta.email_fallback || promoMeta.email_only) && env.RESEND_API_KEY) {
           let emailSql = "SELECT * FROM customers WHERE email IS NOT NULL AND email != '' AND (email_unsubscribed IS NULL OR email_unsubscribed = 0)";
           if (promoMeta.priority_only) { emailSql += " AND is_priority = 1"; }
           const emailCustomers = await env.DB.prepare(emailSql).all();
+          const emailSubj = promoMeta.email_subject || `${campaign.name} \u2014 G&KK NAPA`;
 
           for (const customer of emailCustomers.results) {
             const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
@@ -659,23 +660,9 @@ async function processScheduledEvents(env) {
             const emailMedia = videoToThumbnail(event.media_url);
             const unsubToken = await generateUnsubscribeToken(customer.id, env);
             const html = buildCampaignEmail(greeting, event.body, subscribeUrl, displayPhone, emailMedia, isVideoUrl(event.media_url) ? event.media_url : null, buildUnsubscribeUrl(unsubToken));
-
-            try {
-              await fetch("https://api.resend.com/emails", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  from: env.FROM_EMAIL,
-                  to: [customer.email],
-                  reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
-                  subject: promoMeta.email_subject || `${campaign.name} \u2014 G&KK NAPA`,
-                  html,
-                }),
-              });
-            } catch (e) {
-              console.error(JSON.stringify({ tag: "CRON_EMAIL_ERROR", customer_id: customer.id, error: e.message }));
-            }
-            await new Promise(r => setTimeout(r, 600));
+            await env.DB.prepare(
+              "INSERT INTO email_queue (campaign_id, event_id, customer_id, email, greeting, subject, body_html, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)"
+            ).bind(event.campaign_id, event.id, customer.id, customer.email, greeting, emailSubj, html, now).run();
           }
         }
       }
@@ -772,10 +759,73 @@ async function validateTwilioSignature(request, env, body) {
   return signature === expected;
 }
 
+// ─── Email Queue Processor (called by cron every 5 min) ──────
+async function processEmailQueue(env) {
+  if (!env.RESEND_API_KEY) return;
+
+  // Grab up to 50 pending emails per cron run
+  const pending = await env.DB.prepare(
+    "SELECT * FROM email_queue WHERE status = 'pending' ORDER BY created_at, id LIMIT 50"
+  ).all();
+
+  if (pending.results.length === 0) return;
+
+  console.log(JSON.stringify({ tag: "EMAIL_QUEUE_START", count: pending.results.length }));
+
+  // Track per-campaign counts to update totals
+  const campaignCounts = {};
+
+  for (const item of pending.results) {
+    const now = new Date().toISOString();
+    try {
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: env.FROM_EMAIL,
+          to: [item.email],
+          reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net",
+          subject: item.subject,
+          html: item.body_html,
+        }),
+      });
+
+      if (resp.ok) {
+        await env.DB.prepare("UPDATE email_queue SET status = 'sent', sent_at = ? WHERE id = ?").bind(now, item.id).run();
+        if (!campaignCounts[item.campaign_id]) campaignCounts[item.campaign_id] = { sent: 0, failed: 0 };
+        campaignCounts[item.campaign_id].sent++;
+      } else {
+        let errMsg = `HTTP ${resp.status}`;
+        try { const errBody = await resp.json(); errMsg = errBody.message || JSON.stringify(errBody); } catch (_) {}
+        await env.DB.prepare("UPDATE email_queue SET status = 'failed', error = ? WHERE id = ?").bind(errMsg, item.id).run();
+        if (!campaignCounts[item.campaign_id]) campaignCounts[item.campaign_id] = { sent: 0, failed: 0 };
+        campaignCounts[item.campaign_id].failed++;
+        console.error(JSON.stringify({ tag: "EMAIL_QUEUE_FAIL", id: item.id, email: item.email, error: errMsg }));
+      }
+    } catch (e) {
+      await env.DB.prepare("UPDATE email_queue SET status = 'failed', error = ? WHERE id = ?").bind(e.message, item.id).run();
+      if (!campaignCounts[item.campaign_id]) campaignCounts[item.campaign_id] = { sent: 0, failed: 0 };
+      campaignCounts[item.campaign_id].failed++;
+      console.error(JSON.stringify({ tag: "EMAIL_QUEUE_EXCEPTION", id: item.id, email: item.email, error: e.message }));
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  // Update campaign email counts
+  for (const [campId, counts] of Object.entries(campaignCounts)) {
+    await env.DB.prepare(
+      "UPDATE campaigns SET email_count = COALESCE(email_count, 0) + ?, email_failed_count = COALESCE(email_failed_count, 0) + ? WHERE id = ?"
+    ).bind(counts.sent, counts.failed, campId).run();
+  }
+
+  console.log(JSON.stringify({ tag: "EMAIL_QUEUE_DONE", processed: pending.results.length, campaigns: campaignCounts }));
+}
+
 // ─── Main fetch + scheduled handler ──────────────────────────
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(processScheduledEvents(env));
+    ctx.waitUntil(processEmailQueue(env));
   },
   async fetch(request, env) {
     const corsHeaders = getCorsHeaders(request);
@@ -2479,6 +2529,8 @@ async function handleCampaignCompose(request, env, corsHeaders) {
         if (priority_only) { emailSql += " AND is_priority = 1"; }
         const emailCustomers = await env.DB.prepare(emailSql).all();
 
+        // Queue emails for async processing by cron
+        let emailQueued = 0;
         for (const customer of emailCustomers.results) {
           const greeting = customer.name ? customer.name.split(' ')[0] : "Valued Customer";
           const canSms = customer.phone && (customer.line_type === 'mobile' || customer.line_type === 'nonFixedVoip');
@@ -2488,26 +2540,17 @@ async function handleCampaignCompose(request, env, corsHeaders) {
           const emailMedia = videoToThumbnail(firstMsg.media_url);
           const unsubToken = await generateUnsubscribeToken(customer.id, env);
           const html = buildCampaignEmail(greeting, firstMsg.body || "", subscribeUrl, displayPhone, emailMedia, isVideoUrl(firstMsg.media_url) ? firstMsg.media_url : null, buildUnsubscribeUrl(unsubToken));
-          try {
-            const resp = await fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ from: env.FROM_EMAIL, to: [customer.email], reply_to: env.REPLY_TO || "brian@danvillenapa.comcastbiz.net", subject: emailSubj, html }),
-            });
-            if (resp.ok) {
-              emailSent++;
-            } else {
-              emailFailed++;
-              try { const errBody = await resp.json(); console.error("Email failed for", customer.email, resp.status, JSON.stringify(errBody)); } catch (_) { console.error("Email failed for", customer.email, resp.status); }
-            }
-          } catch (e) { emailFailed++; console.error("Email exception for", customer.email, e.message); }
-          await new Promise(r => setTimeout(r, 200));
+          await env.DB.prepare(
+            "INSERT INTO email_queue (campaign_id, event_id, customer_id, email, greeting, subject, body_html, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)"
+          ).bind(campaignId, eventIds[0], customer.id, customer.email, greeting, emailSubj, html, now).run();
+          emailQueued++;
         }
+        emailSent = emailQueued; // Report queued count (will be updated by cron as they send)
       }
     }
 
     await env.DB.prepare("UPDATE campaign_events SET status = 'sent', sent_count = ?, failed_count = ? WHERE id = ?").bind(sentCount, failedCount, eventIds[0]).run();
-    await env.DB.prepare("UPDATE campaigns SET recipient_count = ?, sent_count = ?, failed_count = ?, email_count = ?, email_failed_count = ? WHERE id = ?").bind(sentCount + failedCount, sentCount, failedCount, emailSent, emailFailed, campaignId).run();
+    await env.DB.prepare("UPDATE campaigns SET recipient_count = ?, sent_count = ?, failed_count = ? WHERE id = ?").bind(sentCount + failedCount, sentCount, failedCount, campaignId).run();
   }
 
   return jsonOk(corsHeaders, {
@@ -2515,7 +2558,7 @@ async function handleCampaignCompose(request, env, corsHeaders) {
     events: eventIds.length,
     sent: sentCount,
     failed: failedCount,
-    email_sent: emailSent,
+    email_queued: emailSent,
     scheduled: messages.filter((m, i) => i > 0 || !m.send_now).length,
   });
 }
